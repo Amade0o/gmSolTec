@@ -1,0 +1,2 @@
+# gmSolTec
+Software for GMSolucionesTecnologicas

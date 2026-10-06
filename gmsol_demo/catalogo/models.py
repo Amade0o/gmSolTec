@@ -33,6 +33,7 @@ class Producto(models.Model):
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
     activo = models.BooleanField(default=True)
+    actions = None
 
     @property
     def margen(self):
@@ -59,6 +60,7 @@ class Telefono(models.Model):
     # Relación 1 cliente -> 1..n teléfonos
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="telefonos")
     numero = models.CharField(max_length=30)
+    principal = models.BooleanField(default=False)
 
     def __str__(self):
         return self.numero

@@ -3,6 +3,18 @@
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
 from django.db import models
 
+EQUIPO_CHOICES = [
+    ('Celular', 'Celular'),
+    ('Notebook', 'Notebook'),
+    ('Pc','Pc')
+]
+
+BLOQUEO_CHOICES = [
+    ('Pin', 'Pin'),
+    ('Patron', 'Patron'),
+    ('Contraseña', 'Contraseña'),
+    ('None', 'None')
+]
 
 class CategoriaProducto(models.Model):
     nombre = models.CharField(max_length=60)
@@ -64,3 +76,39 @@ class Telefono(models.Model):
 
     def __str__(self):
         return self.numero
+
+class ModeloEquipo(models.Model): 
+    nombre = models.CharField(max_length=60)
+    marca = models.ForeignKey(Marca, on_delete=models.CASCADE, related_name="modelos") #Quiza sea otro "on delete..."
+    tipo = EQUIPO_CHOICES
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+class TipoReparacion(models.Model):  #Por ahora no se si sive, que opina claude?
+    nombre = models.CharField(max_length=60)
+    activo = models.BooleanField(default=True)
+    reparacion = models.ForeignKey(Reparacion, on_delete=models.CASCADE, related_name="reparacion_y_tipos") #Quiza sea otro "on delete..."
+
+class Reparacion(models.Model): #Por ahora no se si sive, que opina claude?
+    nombre = models.CharField(max_length=60)
+    activo = models.BooleanField(default=True)
+
+class Orden(models.Model):
+    cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT) #Quiza sea otro "on delete..."
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Orden #{self.id}"
+
+class EquipoOrden(models.Model):
+    tipo = models.CharField(max_length=20, choices=EQUIPO_CHOICES)
+    problema = models.TextField(max_length=500) 
+    tipo_bloqueo = BLOQUEO_CHOICES
+    clave_bloqueo = #no se como diseñar para guardar la clave (ejemplo patron), el pin y contraseña si se puede
+    accesorios_dejados = models.TextField(max_length=300)
+
+class ReparacionRealizada(models.Model):
+    precio_orden = DecimalField(max_digits=10, decimal_places=2)
+    nota = models.TextField(max_length=300) #opcional

@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, TipoReparacion #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
+from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
 #Estas clases indican cómo se muestran y administran esos modelos.
@@ -23,6 +23,7 @@ class ProductoAdmin(admin.ModelAdmin):
     list_display = ("nombre", "categoria", "marca", "precio_compra", "precio_venta", "margen", "activo")
     list_filter = ("categoria", "activo")
     search_fields = ("nombre",)
+    actions = None  # Deshabilita la acción de borrado masivo
 
 
 #Regla personalizada
@@ -55,7 +56,12 @@ class ModeloEquipoAdmin(admin.ModelAdmin):
     list_display = ("nombre", "marca", "tipo", "activo")
     search_fields = ("nombre", "marca__nombre", "tipo")
 
-@admin.register(TipoReparacion)
-class TipoReparacionAdmin(admin.ModelAdmin):
+@admin.register(CategoriaReparacion)
+class CategoriaReparacionAdmin(admin.ModelAdmin):
     list_display = ("nombre", "activo")
     search_fields = ("nombre",)
+
+@admin.register(Reparacion)
+class ReparacionAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "categoria", "activo")
+    search_fields = ("nombre", "categoria")

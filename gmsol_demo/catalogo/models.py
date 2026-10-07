@@ -3,15 +3,21 @@
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
 from django.db import models
 
-EQUIPO_ORDEN_CHOICES = [
+EQUIPO_ORDEN_TIPO_CHOICES = [
     ('celular', 'Celular'),
     ('notebook', 'Notebook')
+]
+
+EQUIPO_ORDEN_ESTADO_CHOICES = [
+    ('pendiente', 'Pendiente'),
+    ('arreglado', 'Arreglado'),
+    ('no_arreglable', 'No Arreglable')
 ]
 
 MODELO_EQUIPO_CHOICES = [
     ('celular', 'Celular'),
     ('notebook', 'Notebook'),
-    ('Pc','Pc')
+    ('pc','Pc')
 ]
 
 BLOQUEO_CHOICES = [
@@ -20,6 +26,7 @@ BLOQUEO_CHOICES = [
     ('contraseña', 'Contraseña'),
     ('none', 'None')
 ]
+
 
 class CategoriaProducto(models.Model):
     nombre = models.CharField(max_length=60)
@@ -50,7 +57,6 @@ class Producto(models.Model):
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
     activo = models.BooleanField(default=True)
-    actions = None
 
     @property
     def margen(self):
@@ -85,43 +91,71 @@ class Telefono(models.Model):
 class ModeloEquipo(models.Model): 
     nombre = models.CharField(max_length=60)
     marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="modelos") 
-    tipo = models.CharField(max_length=20, choices= EQUIPO_ORDEN_CHOICES)
+    tipo = models.CharField(max_length=20, choices= EQUIPO_ORDEN_TIPO_CHOICES)
     activo = models.BooleanField(default=True)
+    
 
     def __str__(self):
         return f"{self.nombre} | {self.marca} | {self.tipo}"
 
-
-class Reparacion(models.Model): #Por ahora no se si sive, que opina claude?
+class CategoriaReparacion(models.Model):  
     nombre = models.CharField(max_length=60)
     activo = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.nombre
+
+class Reparacion(models.Model): 
+    nombre = models.CharField(max_length=60)
+    activo = models.BooleanField(default=True)
+    categoria = models.ForeignKey(CategoriaReparacion, on_delete=models.CASCADE, related_name="reparacion_y_tipos")
 
     def __str__(self):
         return self.nombre
 
-class TipoReparacion(models.Model):  #Por ahora no se si sive, que opina claude?
-    nombre = models.CharField(max_length=60)
-    activo = models.BooleanField(default=True)
-    reparacion = models.ForeignKey(Reparacion, on_delete=models.CASCADE, related_name="reparacion_y_tipos") #Quiza sea otro "on delete..."
-    def __str__(self):
-        return self.nombre
+
+class OrdenTrabajo(models.Model):
+    cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT, related_name="ordenes")
+    fecha_recepcion = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def estado(self):
+        # El estado de la orden depende del estado de los equipos asociados
+        equipos = list(self.equipos.all())
+        if not equipos:
+            return 'pendiente'
 
 
-class Orden(models.Model):
-    cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT) 
-    fecha = models.DateTimeField(auto_now_add=True)
+        if (len(equipos) == 0):
+            return 'arreglado'
+        elif all(equipo.estado == 'arreglado' for equipo in equipos):
+            return 'arreglado'
+        elif all(equipo.estado == 'no_arreglable' for equipo in equipos):
+            return 'no_arreglable'
+        elif not any(equipo.estado == 'pendiente' for equipo in equipos):
+            return 'arreglado'
+        else:
+            return 'pendiente'
 
     def __str__(self):
         return f"Orden #{self.id}"
 
-class EquipoOrden(models.Model):
-    orden = models.ForeignKey(Orden, on_delete=models.CASCADE, related_name="equipos")
+class EquipoRecibido(models.Model):
+    orden = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
     tipo = models.CharField(max_length=20, choices=MODELO_EQUIPO_CHOICES)
+    modelo = models.ForeignKey(ModeloEquipo, on_delete=models.PROTECT, related_name="modelo")
     problema = models.TextField(max_length=500) 
     tipo_bloqueo = models.CharField(max_length=20, choices=BLOQUEO_CHOICES)
-    clave_bloqueo = #no se como diseñar para guardar la clave (ejemplo patron), el pin y contraseña si se puede
-    accesorios_dejados = models.TextField(max_length=300)
+    clave_bloqueo = models.CharField(max_length=100, blank=True)
+    accesorios_dejados = models.TextField(max_length=300, blank = True)
+    estado = models.CharField(max_length=20, default= 'pendiente', choices=EQUIPO_ORDEN_ESTADO_CHOICES)
 
-class ReparacionRealizada(models.Model):
+    def __str__(self):
+        return f"Equipo #{self.id} | Orden #{self.orden.id}"
+
+class LineaReparacion(models.Model):    
     precio_orden = models.DecimalField(max_digits=10, decimal_places=2)
-    nota = models.TextField(max_length=300) #opcional
+    nota = models.TextField(max_length=300, blank=True) #opcional
+
+    def __str__(self):
+        return f"Linea de Reparacion #{self.id}"

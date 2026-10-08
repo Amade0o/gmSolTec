@@ -3,7 +3,13 @@
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
 from django.db import models
 
-EQUIPO_ORDEN_TIPO_CHOICES = [
+EQUIPO_RECIBIDO_ORDEN_CHOICES= [
+    ('celular', 'Celular'),
+    ('notebook', 'Notebook'),
+    ('pc','PC')
+]
+
+MODELO_EQUIPO_TIPO_CHOICES = [
     ('celular', 'Celular'),
     ('notebook', 'Notebook')
 ]
@@ -14,17 +20,11 @@ EQUIPO_ORDEN_ESTADO_CHOICES = [
     ('no_arreglable', 'No Arreglable')
 ]
 
-MODELO_EQUIPO_CHOICES = [
-    ('celular', 'Celular'),
-    ('notebook', 'Notebook'),
-    ('pc','Pc')
-]
-
 BLOQUEO_CHOICES = [
     ('pin', 'Pin'),
     ('patron', 'Patron'),
-    ('contraseña', 'Contraseña'),
-    ('none', 'None')
+    ('contrasena', 'Contrasena'),
+    ('ninguno', 'Ninguno')
 ]
 
 
@@ -91,7 +91,7 @@ class Telefono(models.Model):
 class ModeloEquipo(models.Model): 
     nombre = models.CharField(max_length=60)
     marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="modelos") 
-    tipo = models.CharField(max_length=20, choices= EQUIPO_ORDEN_TIPO_CHOICES)
+    tipo = models.CharField(max_length=20, choices= MODELO_EQUIPO_TIPO_CHOICES)
     activo = models.BooleanField(default=True)
     
 
@@ -101,6 +101,7 @@ class ModeloEquipo(models.Model):
 class CategoriaReparacion(models.Model):  
     nombre = models.CharField(max_length=60)
     activo = models.BooleanField(default=True)
+
     
     def __str__(self):
         return self.nombre
@@ -108,12 +109,12 @@ class CategoriaReparacion(models.Model):
 class Reparacion(models.Model): 
     nombre = models.CharField(max_length=60)
     activo = models.BooleanField(default=True)
-    categoria = models.ForeignKey(CategoriaReparacion, on_delete=models.CASCADE, related_name="reparacion_y_tipos")
+    categoria = models.ForeignKey(CategoriaReparacion, on_delete=models.PROTECT, related_name="reparacion_y_tipos")
 
     def __str__(self):
         return self.nombre
 
-
+# HAY QUE REVISAR ESTO (los no arreglable)
 class OrdenTrabajo(models.Model):
     cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT, related_name="ordenes")
     fecha_recepcion = models.DateTimeField(auto_now_add=True)
@@ -142,8 +143,8 @@ class OrdenTrabajo(models.Model):
 
 class EquipoRecibido(models.Model):
     orden = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
-    tipo = models.CharField(max_length=20, choices=MODELO_EQUIPO_CHOICES)
-    modelo = models.ForeignKey(ModeloEquipo, on_delete=models.PROTECT, related_name="modelo")
+    tipo = models.CharField(max_length=20, choices=EQUIPO_RECIBIDO_ORDEN_CHOICES)
+    modelo = models.ForeignKey(ModeloEquipo, on_delete=models.PROTECT, related_name="equipos", blank = True, null = True)
     problema = models.TextField(max_length=500) 
     tipo_bloqueo = models.CharField(max_length=20, choices=BLOQUEO_CHOICES)
     clave_bloqueo = models.CharField(max_length=100, blank=True)
@@ -153,9 +154,12 @@ class EquipoRecibido(models.Model):
     def __str__(self):
         return f"Equipo #{self.id} | Orden #{self.orden.id}"
 
+#Falta agregar la/s relacion/es 
 class LineaReparacion(models.Model):    
     precio_orden = models.DecimalField(max_digits=10, decimal_places=2)
     nota = models.TextField(max_length=300, blank=True) #opcional
+    equipo = models.ForeignKey(EquipoRecibido, on_delete=models.CASCADE, related_name="lineas_reparacion")
+    reparacion = models.ForeignKey(Reparacion, on_delete=models.PROTECT, related_name="lineas")
 
     def __str__(self):
         return f"Linea de Reparacion #{self.id}"

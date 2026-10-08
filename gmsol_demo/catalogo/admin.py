@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
+from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
 #Estas clases indican cómo se muestran y administran esos modelos.

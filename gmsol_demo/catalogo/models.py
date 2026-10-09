@@ -109,7 +109,13 @@ class CategoriaReparacion(models.Model):
 class Reparacion(models.Model): 
     nombre = models.CharField(max_length=60)
     activo = models.BooleanField(default=True)
-    categoria = models.ForeignKey(CategoriaReparacion, on_delete=models.PROTECT, related_name="reparacion_y_tipos")
+    categoria = models.ForeignKey(
+        CategoriaReparacion,
+        on_delete=models.PROTECT,
+        related_name="reparacion_y_tipos",
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return self.nombre
@@ -154,7 +160,6 @@ class EquipoRecibido(models.Model):
     def __str__(self):
         return f"Equipo #{self.id} | Orden #{self.orden.id}"
 
-#Falta agregar la/s relacion/es 
 class LineaReparacion(models.Model):    
     precio_orden = models.DecimalField(max_digits=10, decimal_places=2)
     nota = models.TextField(max_length=300, blank=True) #opcional

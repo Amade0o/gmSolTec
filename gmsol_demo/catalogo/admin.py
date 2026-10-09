@@ -20,7 +20,9 @@ class MarcaAdmin(admin.ModelAdmin):
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
+    #Define que columnas se muestran en el listado de objetos
     list_display = ("nombre", "categoria", "marca", "precio_compra", "precio_venta", "margen", "activo")
+    #Define que campos se pueden buscar usando el cuadro de busqueda
     list_filter = ("categoria", "activo")
     search_fields = ("nombre",)
     actions = None  # Deshabilita la acción de borrado masivo
@@ -65,3 +67,10 @@ class CategoriaReparacionAdmin(admin.ModelAdmin):
 class ReparacionAdmin(admin.ModelAdmin):
     list_display = ("nombre", "categoria", "activo")
     search_fields = ("nombre", "categoria")
+
+@admin.register(LineaReparacion)
+class LineaReparacionAdmin(admin.ModelAdmin):
+    #Define que columnas se muestran en el listado de objetos
+    list_display = ("reparacion", "equipo", "nota", "precio_orden")
+    #Define que campos se pueden buscar usando el cuadro de busqueda
+    list_filter = ("equipo", "reparacion")

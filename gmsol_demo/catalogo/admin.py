@@ -10,6 +10,7 @@ from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, Model
 
 @admin.register(CategoriaProducto)
 class CategoriaProductoAdmin(admin.ModelAdmin):
+    # Define las columnas que se muestran en el listado del modelo.
     list_display = ("nombre", "activa")
 
 
@@ -20,11 +21,12 @@ class MarcaAdmin(admin.ModelAdmin):
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    #Define que columnas se muestran en el listado de objetos
     list_display = ("nombre", "categoria", "marca", "precio_compra", "precio_venta", "margen", "activo")
-    #Define que campos se pueden buscar usando el cuadro de busqueda
+    # Permite filtrar el listado mediante opciones en el panel lateral.
     list_filter = ("categoria", "activo")
+    # Define los campos que se pueden buscar desde el cuadro de búsqueda.
     search_fields = ("nombre",)
+    # Define las acciones disponibles para los objetos seleccionados.
     actions = None  # Deshabilita la acción de borrado masivo
 
 class TelefonoInline(admin.TabularInline):
@@ -36,6 +38,7 @@ class TelefonoInline(admin.TabularInline):
 class ClienteAdmin(admin.ModelAdmin):
     list_display = ("nombre",)
     search_fields = ("nombre", "telefonos__numero")
+    # Define los inlines que se administran dentro de este modelo.
     inlines = [TelefonoInline]
 
 @admin.register(ModeloEquipo)
@@ -55,9 +58,7 @@ class ReparacionAdmin(admin.ModelAdmin):
 
 @admin.register(LineaReparacion)
 class LineaReparacionAdmin(admin.ModelAdmin):
-    #Define que columnas se muestran en el listado de objetos
     list_display = ("reparacion", "equipo", "nota", "precio_en_orden")
-    #Define que campos se pueden buscar usando el cuadro de busqueda
     list_filter = ("equipo", "reparacion")
 
 #ES OBLIGATORIO DESDE EL LADO DERECHO DE LA RELACION, es solo para verificar que haya un elemento
@@ -79,20 +80,19 @@ class EquipoRecibidoInline(admin.TabularInline):
 
 @admin.register(LineaProducto)
 class LineaProductoAdmin(admin.ModelAdmin):
-    #Define que columnas se muestran en el listado de objetos
     list_display = ("producto", "cantidad_adquirida", "precio_en_orden")
-    #Define que campos se pueden buscar usando el cuadro de busqueda
     list_filter = ("producto",)
 
-class ProductoAgregadoInline(admin.TabularInline):
+class LineaProductoInline(admin.TabularInline):
     model = LineaProducto
     extra = 1        
+    autocomplete_fields = ("producto",)
+    readonly_fields = ("subtotal",)
 
 
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
     list_display = ("id", "cliente", "fecha_recepcion", "estado")
     search_fields = ("cliente__nombre",)
-    inlines = [EquipoRecibidoInline, ProductoAgregadoInline]
-
-
+    list_filter = ("fecha_recepcion",)
+    inlines = [EquipoRecibidoInline, LineaProductoInline]

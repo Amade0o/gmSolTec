@@ -145,7 +145,7 @@ class OrdenTrabajo(models.Model):
         return f"Orden #{self.id}"
 
 class EquipoRecibido(models.Model):
-    orden = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
+    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
     tipo = models.CharField(max_length=20, choices=EQUIPO_RECIBIDO_ORDEN_CHOICES)
     modelo = models.ForeignKey(ModeloEquipo, on_delete=models.PROTECT, related_name="equipos", blank = True, null = True)
     problema = models.TextField(max_length=500) 
@@ -155,14 +155,18 @@ class EquipoRecibido(models.Model):
     estado = models.CharField(max_length=20, default= 'pendiente', choices=EQUIPO_ORDEN_ESTADO_CHOICES)
 
     def __str__(self):
-        return f"Equipo #{self.id} | Orden #{self.orden.id}"
+        return f"Equipo #{self.id} | Orden #{self.orden_trabajo.id}"
 
 class LineaReparacion(models.Model):    
-    precio_en_orden = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_en_orden = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     nota = models.TextField(max_length=300, blank=True) #opcional
     equipo = models.ForeignKey(EquipoRecibido, on_delete=models.CASCADE, related_name="lineas_reparacion")
     reparacion = models.ForeignKey(Reparacion, on_delete=models.PROTECT, related_name="lineas")
 
+    @property
+    def subtotal(self):
+            return self.precio_en_orden
+    
     def __str__(self):
         return f"{self.reparacion}"
 
@@ -170,9 +174,13 @@ class LineaProducto(models.Model):
     cantidad_adquirida = models.PositiveIntegerField(
         validators=[MinValueValidator(1)]
     )
-    precio_en_orden = models.DecimalField(max_digits=10, decimal_places = 2)
+    precio_en_orden = models.DecimalField(max_digits=10, decimal_places = 2, validators=[MinValueValidator(0)])
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete= models.CASCADE, related_name = "lineas_producto")
-    producto = models.ForeignKey(Producto, on_delete = models.PROTECT, related_name = "ventas_lineas")
+    producto = models.ForeignKey(Producto, on_delete = models.PROTECT, related_name = "lineas")
+    
+    @property
+    def subtotal(self):
+        return self.cantidad_adquirida * self.precio_en_orden
 
     def __str__(self):
         return f"{self.cantidad_adquirida}x {self.producto} — ${self.precio_en_orden}"

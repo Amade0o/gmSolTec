@@ -118,22 +118,20 @@ class Reparacion(models.Model):
     def __str__(self):
         return self.nombre
 
-# HAY QUE REVISAR ESTO (los no arreglable)
 class OrdenTrabajo(models.Model):
     cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT, related_name="ordenes")
     fecha_recepcion = models.DateTimeField(auto_now_add=True)
 
+    
     @property
     def estado(self):
         # El estado de la orden depende del estado de los equipos asociados
         equipos = list(self.equipos.all())
-        if not equipos:
+        if not equipos: 
             return 'pendiente'
 
 
-        if (len(equipos) == 0):
-            return 'arreglado'
-        elif all(equipo.estado == 'arreglado' for equipo in equipos):
+        if all(equipo.estado == 'arreglado' for equipo in equipos):
             return 'arreglado'
         elif all(equipo.estado == 'no_arreglable' for equipo in equipos):
             return 'no_arreglable'

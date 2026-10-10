@@ -113,8 +113,6 @@ class Reparacion(models.Model):
         CategoriaReparacion,
         on_delete=models.PROTECT,
         related_name="reparacion_y_tipos",
-        null=True,
-        blank=True,
     )
 
     def __str__(self):

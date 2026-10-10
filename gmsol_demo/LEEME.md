@@ -18,7 +18,7 @@ Abrí http://127.0.0.1:8000/admin e ingresá con el usuario que creaste.
 
 1. Creá una **categoría** ("Cables") y una **marca** ("Samsung").
 2. Creá un **producto**: la marca es opcional, la categoría no. Mirá la columna **margen**: se calcula, no se guarda.
-3. Creá un **cliente** sin teléfono: no te deja (regla 1..n).
+3. Creá un **cliente**, el telefono es muy importante
 4. Agregá dos teléfonos al mismo cliente.
 5. Intentá borrar una categoría que tiene productos: está protegida.
 

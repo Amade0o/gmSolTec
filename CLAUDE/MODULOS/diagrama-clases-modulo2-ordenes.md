@@ -1,9 +1,10 @@
 # GMSol — Diagrama de clases (v3, módulos 1 y 2)
 
 > **Uso:** documento autosuficiente para cargar como contexto. Reemplaza versiones anteriores del diagrama de clases. Complementa a [Decisiones_diseño_extra.md](Decisiones_diseño_extra.md), [BPMN_nuevo.md](BPMN_nuevo.md) y [stack_tecnologico.md](stack_tecnologico.md).
-> **Estado:** módulo 1 (catálogo) cerrado. Módulo 2: orden en tres niveles y estados cerrados, salvo lo marcado ❓. Faltan `LineaProducto` y los módulos 3 a 5.
-> **Código:** las clases del diagrama ya existen como modelos de Django en la demo (`gmsol_demo/catalogo/models.py`), salvo `Producto.codigo`, `Proveedor`, `Configuracion` y `LineaProducto`.
-> **Leyenda:** ✅ decisión del desarrollador · 💡 propuesta (falta confirmar) · ❓ pendiente
+> **Estado:** módulo 1 (catálogo) cerrado. Módulo 2: casi listo
+> **Código:** las clases del diagrama ya existen como modelos de Django en la demo (`gmsol_demo/catalogo/models.py`), salvo `Producto.codigo`, `Proveedor`, y  `Configuracion` 
+> **Pendiente:** Linea producto 
+
 
 ---
 
@@ -78,14 +79,14 @@ classDiagram
     precio
   }
 
-  Cliente "1" -- "1..n" Telefono
+  Cliente "1" -- "0..n" Telefono
   CategoriaProducto "1" -- "0..n" Producto
   Producto "0..n" -- "0..1" Marca
   Marca "1" -- "0..n" ModeloEquipo
   CategoriaReparacion "1" -- "0..n" Reparacion
   Cliente "1" -- "0..n" OrdenTrabajo
   OrdenTrabajo "1" -- "1..n" EquipoRecibido
-  EquipoRecibido "1" -- "1..n" LineaReparacion
+  EquipoRecibido "1" -- "0..n" LineaReparacion
   EquipoRecibido "0..n" -- "0..1" ModeloEquipo
   Reparacion "1" -- "0..n" LineaReparacion
   OrdenTrabajo "1" -- "0..n" LineaProducto
@@ -102,8 +103,8 @@ classDiagram
 
 | Clase | Módulo | Nota |
 |---|---|---|
-| Cliente | 1 | ✅ Obligatorios: nombre y al menos un teléfono. Opcionales: email y dirección. Sin DNI. ❓ `codigo` (estaba en v2): el `id` ya distingue a dos clientes con el mismo nombre; decidir si se mantiene |
-| Telefono | 1 | ✅ Clase separada, con `principal` (sí/no). ❓ Falta etiqueta y regla de un solo principal |
+| Cliente | 1 | ✅ Obligatorios: nombre, el telefono queda con la regla suave. Opcionales: email y dirección. Sin DNI. ❓ `codigo` (estaba en v2): el `id` ya distingue a dos clientes con el mismo nombre; decidir si se mantiene |
+| Telefono | 1 | "Opcional (regla suave)" Es muy importante que lo tenga pero no es 100% obligarorio |
 | Proveedor | 1 | ❓ "Otros datos" sin definir |
 | Configuracion | 1 | ✅ Un solo margen por defecto para todos los productos |
 | CategoriaProducto | 1 | ✅ Editable por el dueño |
@@ -123,14 +124,14 @@ classDiagram
 
 | Relación | Cardinalidad | `on_delete` en el código | Regla |
 |---|---|---|---|
-| Cliente — Telefono | 1 — 1..n | `CASCADE` | Un cliente tiene al menos un teléfono |
+| Cliente — Telefono | 1 — 0..n | `CASCADE` | Regla suave: se pide siempre, se puede guardar sin telefono confirmandolo; el sistema lista los pendientes para completarlos |
 | CategoriaProducto — Producto | 1 — 0..n | `PROTECT` | ✅ Un producto tiene una sola categoría |
 | Producto — Marca | 0..n — 0..1 | `PROTECT` | ✅ Marca opcional (hay marcas "truchas") |
 | Marca — ModeloEquipo | 1 — 0..n | `PROTECT` | Un modelo es de una sola marca |
 | CategoriaReparacion — Reparacion | 1 — 0..n | `PROTECT` | Una reparación es de una sola categoría |
 | Cliente — OrdenTrabajo | 1 — 0..n | `PROTECT` | Toda orden tiene cliente |
 | OrdenTrabajo — EquipoRecibido | 1 — 1..n | `CASCADE` | ✅ Una orden puede tener varios equipos |
-| EquipoRecibido — LineaReparacion | 1 — 1..n | `CASCADE` | Todo equipo lleva al menos una reparación |
+| EquipoRecibido — LineaReparacion | 1 — 0..n | `CASCADE` |Un equipo puede no tener reparaciones (sano, no arreglable, solo diagnostico) |
 | EquipoRecibido — ModeloEquipo | 0..n — 0..1 | `PROTECT` | Opcional: la PC no lleva modelo |
 | Reparacion — LineaReparacion | 1 — 0..n | `PROTECT` | Cada línea apunta al catálogo |
 | OrdenTrabajo — LineaProducto | 1 — 0..n | — | 💡 Borrador |

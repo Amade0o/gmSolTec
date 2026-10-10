@@ -1,6 +1,6 @@
 # GMSol — Modelo BPMN v2 (reparación + venta de productos)
 
-> **Uso:** documento único y autosuficiente para cargar como contexto. **Reemplaza** a `GMSol-modelo-BPMN-taller.md` y `GMSol-notas-abiertas.md`.
+> **Uso:** documento único y autosuficiente para cargar como contexto. Consolida el modelo BPMN y las notas abiertas anteriores.
 > **Fuente:** diagrama dibujado en pizarra (foto del 29/09/2026). Está rotado y algo borroso; los puntos dudosos están marcados con ⚠️.
 > **Negocio:** GM Soluciones Tecnológicas. Lo gestiona una sola persona (el dueño). Hace **servicio técnico** (celulares, PCs, notebooks) y **venta de productos**.
 

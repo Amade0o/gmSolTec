@@ -1,6 +1,6 @@
 # GMSol — Diagrama de clases (v3, módulos 1 y 2)
 
-> **Uso:** documento autosuficiente para cargar como contexto. **Reemplaza** a `GMSol-diagrama-clases-v2.md`. Complementa a `GMSol-decisiones-diagrama-clases.md`, `GMSol-modelo-BPMN-taller-v2.md` y `GMSol-stack-y-arquitectura.md`.
+> **Uso:** documento autosuficiente para cargar como contexto. Reemplaza versiones anteriores del diagrama de clases. Complementa a [Decisiones_diseño_extra.md](Decisiones_diseño_extra.md), [BPMN_nuevo.md](BPMN_nuevo.md) y [stack_tecnologico.md](stack_tecnologico.md).
 > **Estado:** módulo 1 (catálogo) cerrado. Módulo 2: orden en tres niveles y estados cerrados, salvo lo marcado ❓. Faltan `LineaProducto` y los módulos 3 a 5.
 > **Código:** las clases del diagrama ya existen como modelos de Django en la demo (`gmsol_demo/catalogo/models.py`), salvo `Producto.codigo`, `Proveedor`, `Configuracion` y `LineaProducto`.
 > **Leyenda:** ✅ decisión del desarrollador · 💡 propuesta (falta confirmar) · ❓ pendiente

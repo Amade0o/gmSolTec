@@ -16,6 +16,7 @@ MODELO_EQUIPO_TIPO_CHOICES = [
 ]
 
 EQUIPO_ORDEN_ESTADO_CHOICES = [
+    ('sin_falla', 'Sin falla'),
     ('pendiente', 'Pendiente'),
     ('arreglado', 'Arreglado'),
     ('no_arreglable', 'No Arreglable')

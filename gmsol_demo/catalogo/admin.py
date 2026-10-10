@@ -27,23 +27,8 @@ class ProductoAdmin(admin.ModelAdmin):
     search_fields = ("nombre",)
     actions = None  # Deshabilita la acción de borrado masivo
 
-
-#Regla personalizada
-class TelefonoFormSet(BaseInlineFormSet):
-    def clean(self):
-        """Valida que cada cliente tenga al menos un teléfono cargado."""
-        super().clean()
-        cargados = [
-            f for f in self.forms
-            if getattr(f, "cleaned_data", None) and not f.cleaned_data.get("DELETE")
-        ]
-        if not cargados:
-            raise ValidationError("El cliente debe tener al menos un teléfono.")
-
-
 class TelefonoInline(admin.TabularInline):
     model = Telefono
-    formset = TelefonoFormSet
     extra = 1
 
 
@@ -74,3 +59,28 @@ class LineaReparacionAdmin(admin.ModelAdmin):
     list_display = ("reparacion", "equipo", "nota", "precio_orden")
     #Define que campos se pueden buscar usando el cuadro de busqueda
     list_filter = ("equipo", "reparacion")
+
+#ES OBLIGATORIO DESDE EL LADO DERECHO DE LA RELACION
+class EquipoRecibidoFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        equipos = [
+            f for f in self.forms
+            if getattr(f, "cleaned_data", None) and not f.cleaned_data.get("DELETE")
+        ]
+        if not equipos:
+            raise ValidationError("La orden debe tener al menos un equipo.")
+
+class EquipoRecibidoInline(admin.TabularInline):
+    model = EquipoRecibido
+    formset = EquipoRecibidoFormSet
+    extra = 1
+
+@admin.register(OrdenTrabajo)
+class OrdenTrabajoAdmin(admin.ModelAdmin):
+    list_display = ("id", "cliente", "fecha_recepcion", "estado")
+    search_fields = ("cliente__nombre",)
+    inlines = [EquipoRecibidoInline]
+
+
+

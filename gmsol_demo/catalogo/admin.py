@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
+from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, LineaProducto #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
 #Estas clases indican cómo se muestran y administran esos modelos.
@@ -56,11 +56,11 @@ class ReparacionAdmin(admin.ModelAdmin):
 @admin.register(LineaReparacion)
 class LineaReparacionAdmin(admin.ModelAdmin):
     #Define que columnas se muestran en el listado de objetos
-    list_display = ("reparacion", "equipo", "nota", "precio_orden")
+    list_display = ("reparacion", "equipo", "nota", "precio_en_orden")
     #Define que campos se pueden buscar usando el cuadro de busqueda
     list_filter = ("equipo", "reparacion")
 
-#ES OBLIGATORIO DESDE EL LADO DERECHO DE LA RELACION
+#ES OBLIGATORIO DESDE EL LADO DERECHO DE LA RELACION, es solo para verificar que haya un elemento
 class EquipoRecibidoFormSet(BaseInlineFormSet):
     def clean(self):
         super().clean()
@@ -76,11 +76,23 @@ class EquipoRecibidoInline(admin.TabularInline):
     formset = EquipoRecibidoFormSet
     extra = 1
 
+
+@admin.register(LineaProducto)
+class LineaProductoAdmin(admin.ModelAdmin):
+    #Define que columnas se muestran en el listado de objetos
+    list_display = ("producto", "cantidad_adquirida", "precio_en_orden")
+    #Define que campos se pueden buscar usando el cuadro de busqueda
+    list_filter = ("producto",)
+
+class ProductoAgregadoInline(admin.TabularInline):
+    model = LineaProducto
+    extra = 1        
+
+
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
     list_display = ("id", "cliente", "fecha_recepcion", "estado")
     search_fields = ("cliente__nombre",)
-    inlines = [EquipoRecibidoInline]
-
+    inlines = [EquipoRecibidoInline, ProductoAgregadoInline]
 
 

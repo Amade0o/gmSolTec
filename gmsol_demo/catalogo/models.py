@@ -1,6 +1,7 @@
 "Cada clase hereda de models.Model."
 "En models va cada clase que representa una tabla de la base de datos."
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
+from django.core.validators import MinValueValidator
 from django.db import models
 
 EQUIPO_RECIBIDO_ORDEN_CHOICES= [
@@ -157,10 +158,21 @@ class EquipoRecibido(models.Model):
         return f"Equipo #{self.id} | Orden #{self.orden.id}"
 
 class LineaReparacion(models.Model):    
-    precio_orden = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_en_orden = models.DecimalField(max_digits=10, decimal_places=2)
     nota = models.TextField(max_length=300, blank=True) #opcional
     equipo = models.ForeignKey(EquipoRecibido, on_delete=models.CASCADE, related_name="lineas_reparacion")
     reparacion = models.ForeignKey(Reparacion, on_delete=models.PROTECT, related_name="lineas")
 
     def __str__(self):
-        return f"Linea de Reparacion #{self.id}"
+        return f"{self.reparacion}"
+
+class LineaProducto(models.Model):
+    cantidad_adquirida = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)]
+    )
+    precio_en_orden = models.DecimalField(max_digits=10, decimal_places = 2)
+    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete= models.CASCADE, related_name = "lineas_producto")
+    producto = models.ForeignKey(Producto, on_delete = models.PROTECT, related_name = "ventas_lineas")
+
+    def __str__(self):
+        return f"{self.cantidad_adquirida}x {self.producto} — ${self.precio_en_orden}"

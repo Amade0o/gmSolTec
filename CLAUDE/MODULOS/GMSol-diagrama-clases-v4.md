@@ -160,7 +160,7 @@ classDiagram
 | **Pantalla de la orden** | El admin de Django no anida dos niveles. La pantalla será propia (plantillas de Django + HTMX). El caso habitual (1 equipo, 1 reparación) va en una sola pantalla |
 | **Categorías genéricas** | ✅ Toda reparación y todo producto tiene categoría obligatoria. Existe una categoría genérica ("Otras") para lo que no encaja, así las estadísticas no tienen casos sin categoría |
 | **Equipo sano o sin diagnóstico** | ✅ Todo equipo lleva al menos una línea. Si llega sano o sin diagnóstico se usa "Revisión / diagnóstico" y, si no tiene falla, queda `sin_falla` (cuenta como resuelto, no como arreglado) |
-| **Teléfono: regla suave** | ✅ Se pide siempre, pero se puede guardar un cliente sin teléfono confirmándolo, y el sistema lista los clientes sin teléfono para completarlos. En el admin se mantiene el bloqueo durante el desarrollo; la confirmación va en las pantallas propias |
+| **Teléfono: regla suave** | ✅ Se pide siempre, pero se puede guardar un cliente sin teléfono confirmándolo, y el sistema lista los clientes sin teléfono para completarlos. E
 | **LineaProducto** | ✅ Precio copiado del producto al agregarlo y editable (descuento). Se puede quitar antes de facturar. **El stock se descuenta al facturar** (factura + stock + caja en una transacción), no al agregar la línea. Cantidad mínima 1 y precios no negativos. Ambas líneas comparten `precio_en_orden` y `subtotal`, así la factura las trata igual |
 | **Orden sin equipos** | ✅ No existe. El modelo no lo puede exigir; se valida en la pantalla (como el teléfono) |
 | **Fecha de recepción** | ✅ Se completa sola al crear la orden y no se puede editar ni poner fechas pasadas |

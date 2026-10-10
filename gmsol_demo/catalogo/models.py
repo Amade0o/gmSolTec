@@ -129,18 +129,16 @@ class OrdenTrabajo(models.Model):
     def estado(self):
         # El estado de la orden depende del estado de los equipos asociados
         equipos = list(self.equipos.all())
-        if not equipos: 
+        if not equipos:
             return 'pendiente'
-
-
-        if all(equipo.estado == 'arreglado' for equipo in equipos):
-            return 'arreglado'
+    
+        if any(equipo.estado == 'pendiente' for equipo in equipos):
+            return 'pendiente'
         elif all(equipo.estado == 'no_arreglable' for equipo in equipos):
             return 'no_arreglable'
-        elif not any(equipo.estado == 'pendiente' for equipo in equipos):
-            return 'arreglado'
         else:
-            return 'pendiente'
+            # No hay pendientes. Hay al menos uno resuelto (arreglado o sin_falla)
+            return 'arreglado'
 
     def __str__(self):
         return f"Orden #{self.id}"

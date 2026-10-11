@@ -54,12 +54,13 @@ class CategoriaReparacionAdmin(admin.ModelAdmin):
 @admin.register(Reparacion)
 class ReparacionAdmin(admin.ModelAdmin):
     list_display = ("nombre", "categoria", "activo")
-    search_fields = ("nombre", "categoria")
+    search_fields = ("nombre", "categoria__nombre")
 
 @admin.register(LineaReparacion)
 class LineaReparacionAdmin(admin.ModelAdmin):
-    list_display = ("reparacion", "equipo", "nota", "precio_en_orden")
+    list_display = ("reparacion", "nota", "precio_en_orden", "orden", "subtotal")
     list_filter = ("equipo", "reparacion")
+    list_filter = ("equipo__nombre", "reparacion__nombre")
 
 #ES OBLIGATORIO DESDE EL LADO DERECHO DE LA RELACION, es solo para verificar que haya un elemento
 class EquipoRecibidoFormSet(BaseInlineFormSet):
@@ -80,8 +81,9 @@ class EquipoRecibidoInline(admin.TabularInline):
 
 @admin.register(LineaProducto)
 class LineaProductoAdmin(admin.ModelAdmin):
-    list_display = ("producto", "cantidad_adquirida", "precio_en_orden")
+    list_display = ("cantidad_adquirida", "precio_en_orden", "orden", "subtotal")
     list_filter = ("producto",)
+    search_fields = ("producto__nombre",)
 
 class LineaProductoInline(admin.TabularInline):
     model = LineaProducto
@@ -93,6 +95,6 @@ class LineaProductoInline(admin.TabularInline):
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
     list_display = ("id", "cliente", "fecha_recepcion", "estado")
-    search_fields = ("cliente__nombre",)
+    search_fields = ("=id", "cliente__nombre",)
     list_filter = ("fecha_recepcion",)
     inlines = [EquipoRecibidoInline, LineaProductoInline]

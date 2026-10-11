@@ -16,8 +16,8 @@ MODELO_EQUIPO_TIPO_CHOICES = [
 ]
 
 EQUIPO_ORDEN_ESTADO_CHOICES = [
-    ('sin_falla', 'Sin falla'),
     ('pendiente', 'Pendiente'),
+    ('sin_falla', 'Sin falla'),
     ('arreglado', 'Arreglado'),
     ('no_arreglable', 'No Arreglable')
 ]
@@ -82,7 +82,7 @@ class Cliente(models.Model):
 
 
 class Telefono(models.Model):
-    # Relación 1 cliente -> 1..n teléfonos
+    # Relación - cliente -> 0..n teléfonos
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="telefonos")
     numero = models.CharField(max_length=30)
     principal = models.BooleanField(default=False)
@@ -114,7 +114,7 @@ class Reparacion(models.Model):
     categoria = models.ForeignKey(
         CategoriaReparacion,
         on_delete=models.PROTECT,
-        related_name="reparacion_y_tipos",
+        related_name="reparaciones",
     )
 
     def __str__(self):
@@ -124,21 +124,22 @@ class OrdenTrabajo(models.Model):
     cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT, related_name="ordenes")
     fecha_recepcion = models.DateTimeField(auto_now_add=True)
 
-    
+    #Ademas de los estados del equipo tenemos "listo"
+    # El estado de la orden se deriva del estado de sus equipos.
     @property
     def estado(self):
-        # El estado de la orden depende del estado de los equipos asociados
         equipos = list(self.equipos.all())
+        
         if not equipos:
             return 'pendiente'
-    
+
         if any(equipo.estado == 'pendiente' for equipo in equipos):
             return 'pendiente'
-        elif all(equipo.estado == 'no_arreglable' for equipo in equipos):
+
+        if all(equipo.estado == 'no_arreglable' for equipo in equipos):
             return 'no_arreglable'
-        else:
-            # No hay pendientes. Hay al menos uno resuelto (arreglado o sin_falla)
-            return 'arreglado'
+
+        return 'lista'
 
     def __str__(self):
         return f"Orden #{self.id}"
@@ -164,7 +165,7 @@ class LineaReparacion(models.Model):
 
     @property
     def subtotal(self):
-            return self.precio_en_orden
+        return self.precio_en_orden
     
     def __str__(self):
         return f"{self.reparacion}"
@@ -179,6 +180,8 @@ class LineaProducto(models.Model):
     
     @property
     def subtotal(self):
+        if(self.cantidad_adquirida is None or self.precio_en_orden is None):
+            return 0
         return self.cantidad_adquirida * self.precio_en_orden
 
     def __str__(self):

@@ -139,7 +139,7 @@ class OrdenTrabajo(models.Model):
         if all(equipo.estado == 'no_arreglable' for equipo in equipos):
             return 'no_arreglable'
 
-        return 'lista'
+        return 'listo'
 
     def __str__(self):
         return f"Orden #{self.id}"

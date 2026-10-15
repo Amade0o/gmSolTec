@@ -45,6 +45,16 @@ Se puede poner que una factura no tiene cliente asignado pero igualmente necesit
 ### 1.10 ¿Las devoluciones aplican solo a reparaciones no arreglables o también a productos?
 ✅ **Aplican a ambos**, pero las devoluciones de productos **no son prioridad**.
 
+### 1.11 4. El problema del cable
+¿Que pasa si hago la orden, le guardo un cable aun cliente pero como no se lo dí entonces no se facturó entonces no se fue del stock. Quizá ya se lo dí cuando vino a dejar el telefono?
+
+La solución es separar dos números, y el segundo se calcula, como el margen:
+
+Disponible = Stock físico − Reservado en órdenes abiertas
+
+Se descuenta físicamente recién al facturar, como ya tenías decidido.
+Queda un caso borde para más adelante: equipo no arreglable pero el cable ya se entregó. Según el BPMN ese camino no factura, habría que cobrar el cable aparte.
+
 ---
 
 ## 2. Decisiones de estilo

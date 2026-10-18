@@ -1,0 +1,21 @@
+NOTAS RESPECTO A PAGOS, ¿COMO ES QUE EL NEGOCIO MANEJA LOS PAGOS?
+(Recordar que mi papa tiene un excel muy rudimentario, lo siguiente que haré es darte una explicacion de lo que él hace asi con el sw que tenemos mas algunos cambios podemos ayudarle) 
+Primero que todo, como nota personal me gustaria pensar en esto de llamar "factura" a esto que hace impactar los pagos en la base de datos, me dio mucha confusion en el dialogo con el cliente, el problema es que creo que el 100% de los md que ya creé les llamé "factura", por el momento me mantengo con esta notacion pero hay que cambiarla urgente...
+Tengo varias notas de la charla con mi papa/dueño del negocio y yo te las paso como vienen y vos ordenamelas...
+
+-> No damos comprobantes o facturas al cerrar la "Factura". Que pasa si alguien necesita que le de una factura legal (como para darle a su empresa para que le arregle el telefono)? Entonces ahí mi papa entra al ARCA y crea una facturacion a mano.
+
+-> Suponete que alguien viene y paga en efectivo... Recibo la plata, cuando cierra la venta el tipo trae el papelito con su parte de la orden que yo le di para que despues me la presente y actualizo el monto EN LA CAJA COMO EFECTIVO (ya hablamos de eso en breve). Que pasó acá? Mi papa recibió el primer pago (si hubo), LO RESERVO APARTE (FISICAMENTE HABLANDO), junto con el papelito de la orden a la cual se le anota ese pago parcial y cuando vino el cliente mi papá registró en el papel que tiene él que el cliente terminó de pagar y entonces recien ahí guarda esa plata en su billetera y lo registra en el excel en la caja... Hasta que el cliente no recibe su telefono arreglado no se considera cobrado POR SI SE CANCELA... (Esto para las reparaciones nomas, para los productos ya veremos lo de los pagos parciales), es plata aparte. En los pagos parciales de los productos, si un cliente paga la mitad en efectivo de un cargador y a la semana paga la otra mitad con tarjeta, entonces mi papá si puede usar ese dinero para sus gastos ya que no necesita asegurarse que "la reparacion falle".
+
+-> Pagos digitales: 
+Si recibe un pago digital, entonces lo agrega a la caja como efectivo (recordar que es un excel) y luego lo retira para simular que ese dinero no está en la caja, me explico? Es dinero "retirado"...
+En los pagos digitales (por ahora) no registramos si el dinero fue al mercadopago, naranjaX o banco. Lo importante es que ese dinero se "retiró". (Repito que esta no es la forma correcta, es solo para que entiendas)....
+
+-> Recargos:
+ Suponete que un producto sale "$100", el recargo del metodo de pago fué de 15% asique el cliente debe pagar $115. Mi papa SOLO REGISTRA (por ahora) que a él le llegó $100 que es lo que le deposita la tarjeta... La tarjeta por ahora le está dando la plata de una pero si el decide que la tarjeta le de el dinero mucho mas adelante él debería pagar mas. No se que hacer respecto a eso.
+ 
+-> Fiados:
+ Me queda pendiente modelar que pasa si un cliente hace un pago parcial DE UN PRODUCTO
+ 
+-> GoCuotas:
+ Mi papa hace un tramite con el cliente, a mi papa no le entra la plata, le demora 40 dias. Como registra eso? Cobra y le deben pagar el 11 del mes que viene, si mi papa hizo una venta EL AHORA no registra ninguna venta, sino que AGREGA COMO PENDIENTE DE COBRAR.

@@ -4,17 +4,20 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 
+#Tipos de equipos que se pueden recibir en una orden de trabajo
 EQUIPO_RECIBIDO_ORDEN_CHOICES= [
     ('celular', 'Celular'),
     ('notebook', 'Notebook'),
     ('pc','PC')
 ]
 
+# Tipos de equipo que registramos en la base de datos
 MODELO_EQUIPO_TIPO_CHOICES = [
     ('celular', 'Celular'),
     ('notebook', 'Notebook')
 ]
 
+# Estados del equipo dentro de la orden, estos tambien seran estados de la orden
 EQUIPO_ORDEN_ESTADO_CHOICES = [
     ('pendiente', 'Pendiente'),
     ('sin_falla', 'Sin falla'),
@@ -22,6 +25,13 @@ EQUIPO_ORDEN_ESTADO_CHOICES = [
     ('no_arreglable', 'No Arreglable')
 ]
 
+# Tipos de pago que puede tener una orden de trabajo
+CUENTA_CHOICES = [
+    ('efectivo', 'Efectivo'),
+    ('digital', 'Digital')
+]
+
+# Tipos de bloqueo que puede tener un equipo
 BLOQUEO_CHOICES = [
     ('pin', 'Pin'),
     ('patron', 'Patron'),
@@ -143,6 +153,13 @@ class OrdenTrabajo(models.Model):
 
     def __str__(self):
         return f"Orden #{self.id}"
+
+
+class MetodoPago(models.Model):
+    nombre = models.CharField(max_length=60) 
+    cuenta = models.CharField(max_length=20, choices=CUENTA_CHOICES)
+    recargo_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default = 0,validators=[MinValueValidator(0)])
+    activo = models.BooleanField(default=True)
 
 class EquipoRecibido(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")

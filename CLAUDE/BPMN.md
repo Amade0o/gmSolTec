@@ -22,7 +22,7 @@
 |---|---|
 | ⭕ Inicio de mensaje | El cliente inicia contacto. Hay **dos** inicios independientes, sin gateway que los una. |
 | ▭ con **[+]** | **Subproceso colapsado.** Intercambio "propongo → el cliente responde sí/no". No se dibujan los mensajes de ida y vuelta. |
-| ▭ con engranaje ⚙️ | Tarea automática del sistema (crear factura, actualizar BDD, actualizar orden). |
+| ▭ con engranaje ⚙️ | Tarea automática del sistema (crear venta, actualizar BDD, actualizar orden). |
 | ◇ **X** | **Gateway exclusivo.** Toda decisión sí/no y toda unión de ramas alternativas. |
 | ◇ **+** | **Gateway paralelo (AND).** Se usa **una sola vez** (ver §6.2). |
 | ▭ **Call Activity** | Proceso reutilizable llamado como unidad. Se usa para "Solicitar producto ya". |
@@ -34,7 +34,7 @@
 
 ## 3. Proceso A — Venta directa ("Solicita producto ya")
 
-No genera orden de trabajo ni ticket para el cliente. Solo factura.
+No genera orden de trabajo ni ticket para el cliente. Solo venta.
 
 | # | Paso | Tipo |
 |---|---|---|
@@ -45,7 +45,7 @@ No genera orden de trabajo ni ticket para el cliente. Solo factura.
 | A4 | **¿Acepta presupuesto?** | Gateway X |
 | A4-No | → **Fin** | Fin |
 | A5 | Acordar método de pago | Subproceso [+] |
-| A6 | Crear factura | Tarea ⚙️ |
+| A6 | Crear venta | Tarea ⚙️ |
 | A7 | Actualizar BDD, caja, stock y registro → **Fin** | Tarea ⚙️ + fin |
 
 ```mermaid
@@ -57,7 +57,7 @@ flowchart TD
   A3 --> G2{¿Acepta?}
   G2 -- No --> F2((Fin))
   G2 -- Sí --> A5[[Acordar método de pago]]
-  A5 --> A6[Crear factura]
+  A5 --> A6[Crear venta]
   A6 --> A7[Actualizar BDD, caja, stock y registro]
   A7 --> F3((Fin))
 ```
@@ -134,7 +134,7 @@ Accesorios típicos: cable/cargador, funda, templado, teclado (según dispositiv
 | B27-No | Va directo a la unión de B30 | — |
 | B27-Sí | Acordar método de pago [+] (solo el saldo) → Registrar pago y actualizar orden → unión | Subproceso + tarea |
 | B30 | **Unión X** | Gateway X |
-| B31 | Generar factura de la orden | Tarea ⚙️ |
+| B31 | Generar venta de la orden | Tarea ⚙️ |
 | B32 | Actualizar BDD, caja, stock y registro → **Fin** | Tarea ⚙️ + fin |
 
 ### 4.6 Vista general del proceso B
@@ -176,7 +176,7 @@ flowchart TD
   B26 --> G10{¿Adeuda?}
   G10 -- No --> J4{Unión}
   G10 -- Sí --> B28[[Acordar método de pago del saldo]] --> B29[Registrar pago y actualizar orden] --> J4
-  J4 --> B31[Generar factura de la orden]
+  J4 --> B31[Generar venta de la orden]
   B31 --> B32[Actualizar BDD, caja, stock y registro]
   B32 --> F5((Fin))
 ```
@@ -192,20 +192,20 @@ Proceso A (venta directa)  ◄── se dispara desde el inicio "Solicita produc
             (cuando al retirar el equipo el cliente NO quiere el producto en la orden)
 ```
 
-- El producto pedido al retirar **sin registrar en la orden** lleva **su propia factura** (Proceso A completo).
-- La orden de reparación **se cierra por la otra rama** sin esperar esa factura.
+- El producto pedido al retirar **sin registrar en la orden** lleva **su propia venta** (Proceso A completo).
+- La orden de reparación **se cierra por la otra rama** sin esperar esa venta.
 
 ---
 
 ## 6. Decisiones de diseño (cerradas)
 
 ### 6.1 Generales
-1. **Orden y factura son documentos distintos.** La orden se entrega al cerrar el ingreso; la factura es el registro de la transacción finalizada.
+1. **Orden y venta son documentos distintos.** La orden se entrega al cerrar el ingreso; la venta es el registro de la transacción finalizada.
 2. **Dos inicios de mensaje separados**, sin gateway. El cliente puede disparar cualquiera, en cualquier orden y cantidad de veces.
 3. **Subprocesos colapsados** para todo intercambio "propongo → cliente responde".
 4. **Gateways exclusivos (X)** para todo sí/no y toda unión de ramas alternativas.
 5. **Pago en dos momentos:** seña/total al dejar el equipo (B14) y saldo al retirar (B27-Sí). Son subprocesos separados porque ocurren en momentos y condiciones distintas.
-6. **Actualizar BDD** engloba precio, stock, **caja** y registro. Ocurre después de facturar.
+6. **Actualizar BDD** engloba precio, stock, **caja** y registro. Ocurre después de registrar la venta.
 
 ### 6.2 Split paralelo (AND) en el cierre
 - Cuando el cliente agrega un producto al retirar y **no** lo quiere en la orden, se abre un **AND (+)**:
@@ -220,7 +220,7 @@ Proceso A (venta directa)  ◄── se dispara desde el inicio "Solicita produc
 |---|---|
 | Falta de stock de **accesorio** | Solo notifica y sigue. **Nunca** cancela la reparación. |
 | Falta de stock de **repuesto** | Sí termina el proceso (B2-No). |
-| **No arreglable** | Notifica, devuelve dinero, fin. No pasa por accesorios/productos ni por facturación de reparación. |
+| **No arreglable** | Notifica, devuelve dinero, fin. No pasa por accesorios/productos ni por el registro de la reparación como venta. |
 | **Accesorios** | Solo los relacionados a la reparación. Un producto suelto siempre es una venta aparte (Proceso A). |
 | Aviso de arreglo terminado | Opcional (decide el empleado). |
 
@@ -252,8 +252,8 @@ Proceso A (venta directa)  ◄── se dispara desde el inicio "Solicita produc
 | 7 | **Pedido de repuestos al proveedor** | Solo existe la consulta de stock, falta el proceso. |
 | 8 | **Recargo por tarjeta / seña en dos métodos** | No se ve en el subproceso de pago. |
 | 9 | **Call Activity para "Acordar método de pago"** | Se repite en 3 puntos (A5, B14, B27). Convendría una definición única. |
-| 10 | **Fusionar "Acordar método de pago" + "Crear factura"** | Se recomendó mantenerlos separados (negociación vs. efecto interno). Falta confirmar. |
-| 11 | **Flecha duplicada** | Entre "Acordar método de pago" y "Crear factura" (una roja y una negra). Borrar una. |
-| 12 | **Nombres** | Unificar "Crear factura" vs. "Generar factura de la orden". |
+| 10 | **Fusionar "Acordar método de pago" + "Crear venta"** | Se recomendó mantenerlos separados (negociación vs. efecto interno). Falta confirmar. |
+| 11 | **Flecha duplicada** | Entre "Acordar método de pago" y "Crear venta" (una roja y una negra). Borrar una. |
+| 12 | **Nombres** | Unificar "Crear venta" vs. "Generar venta de la orden". |
 | 13 | **Casos** (`Casos`) | Hay un typo ("UN A ARREGLAR") y combinaciones faltantes. Un producto retirado al dejar el equipo con pago "al final" implicaría deuda/fiado, no modelado. |
 | 14 | **Seña = 0%** | B14 no lo contempla explícitamente. |

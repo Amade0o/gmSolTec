@@ -15,7 +15,7 @@
 ### 1.2 ¿En la venta directa se registra el cliente o puede ser anónimo?
 ✅ **Los clientes se guardan en base de datos con todo el registro posible.**
 ❓ **Preocupación:** dos clientes con el mismo nombre (ej.: dos "Juan Perez") que el dueño pueda confundir.
-Se puede poner que una factura no tiene cliente asignado pero igualmente necesito el registro de esa venta que vaya a "ningun" cliente. Una solucion a la preocupacion es que se utilicen IDs para los clientes pero el problema es que mi papá se guia de los clientes por su nombre y su cara asique sería un problema ya que no puede recordar todos los ids... Me parece poco urgente igualmente solucionar esto
+Se puede poner que una venta no tiene cliente asignado pero igualmente necesito el registro de esa venta que vaya a "ningun" cliente. Una solucion a la preocupacion es que se utilicen IDs para los clientes pero el problema es que mi papá se guia de los clientes por su nombre y su cara asique sería un problema ya que no puede recordar todos los ids... Me parece poco urgente igualmente solucionar esto
 
 ### 1.3 ¿La reparación es un catálogo con precio o texto libre con monto?
 ✅ **Catálogo de reparaciones, organizado de antemano**, para que las estadísticas sean posibles. Un texto libre haría imposible contar qué reparaciones se hicieron. Se pueden **agregar y quitar**.
@@ -29,15 +29,15 @@ Se puede poner que una factura no tiene cliente asignado pero igualmente necesit
 ✅ **Sí, los accesorios son productos.** Misma categoría, se manejan por stock. Solo se separaron en el BPMN para que el flujo se entienda mejor.
 💡 No hay clase "Accesorio" aparte: es un Producto.
 
-### 1.6 ¿El recargo por tarjeta se cobra y factura junto o aparte?
-✅ **Va anotado en la factura y modifica el total** (queda junto).
+### 1.6 ¿El recargo por tarjeta se cobra y registra junto o aparte?
+✅ **Va anotado en la venta y modifica el total** (queda junto).
 
-### 1.7 ¿Se factura una factura por orden, o puede facturarse solo un pago?
-✅ **Se registran ambas factuas. lo que se debe poder decidir si facturarse o no es lo del ARCA, no todas las facturas del programa irán al arca, recuerda eso**
+### 1.7 ¿Se genera una venta por orden, o puede registrarse solo un pago?
+✅ **Se registran ambas ventas. lo que se debe poder decidir si facturarse o no es lo del ARCA, no todas las ventas del programa irán al arca, recuerda eso**
 
-### 1.8 Si cambia el precio de un producto, ¿las facturas viejas conservan el precio?
-✅ **Sí, conservan el precio de ese momento** (evita que cambien facturas antiguas, sobre todo por la inflación).
-💡 La línea de factura guarda una copia del precio, no una referencia al precio actual del producto.
+### 1.8 Si cambia el precio de un producto, ¿las ventas viejas conservan el precio?
+✅ **Sí, conservan el precio de ese momento** (evita que cambien ventas antiguas, sobre todo por la inflación).
+💡 La línea de venta guarda una copia del precio, no una referencia al precio actual del producto.
 
 ### 1.9 ¿Se registran las compras a proveedores o solo los pagos?
 ✅ **Se registran ambas cosas.**
@@ -52,8 +52,8 @@ La solución es separar dos números, y el segundo se calcula, como el margen:
 
 Disponible = Stock físico − Reservado en órdenes abiertas
 
-Se descuenta físicamente recién al facturar, como ya tenías decidido.
-Queda un caso borde para más adelante: equipo no arreglable pero el cable ya se entregó. Según el BPMN ese camino no factura, habría que cobrar el cable aparte.
+Se descuenta físicamente recién al registrar la venta, como ya tenías decidido.
+Queda un caso borde para más adelante: equipo no arreglable pero el cable ya se entregó. Según el BPMN ese camino no genera venta, habría que cobrar el cable aparte.
 
 ---
 
@@ -76,7 +76,7 @@ Queda un caso borde para más adelante: equipo no arreglable pero el cable ya se
 |---|---|
 | 1 | Catálogo: Producto, Cliente, Proveedor, Marca/Modelo de dispositivo, catálogo de reparaciones |
 | 2 | Orden de trabajo y sus estados |
-| 3 | Ventas, pagos y facturación |
+| 3 | Ventas, pagos y registro de ventas |
 | 4 | Caja y movimientos (dinero y stock) |
 | 5 | Compras a proveedores |
 

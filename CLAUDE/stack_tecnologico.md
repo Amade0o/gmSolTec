@@ -33,7 +33,7 @@
 | Régimen fiscal | **Monotributista** (por lo general se emite **Factura C**) |
 | Datos existentes | Varias planillas Excel (precios, stock, compras, registros). Migrarlas es **deseable, no obligatorio** |
 | Firma del cliente | **En papel** |
-| Recargos por método de pago | Precargados y fijos; **al facturar siempre se pregunta** si se quiere cambiarlos |
+| Recargos por método de pago | Precargados y fijos; **al registrar la venta siempre se pregunta** si se quiere cambiarlos |
 | Estética de la interfaz | No es prioridad |
 | Presupuesto | **$0**: todo debe ser gratuito, sin pagar hosting |
 | Respaldo de datos | Quiere usar un **Google Drive gratuito de 15 GB** |
@@ -81,7 +81,7 @@ Monolito en 3 capas:
 Pantallas  →  Reglas del negocio (dominio)  →  Base de datos
 ```
 
-Las reglas (estados, recargos, facturar, mover caja y stock) viven en la capa del medio. Patrones previstos:
+Las reglas (estados, recargos, registrar ventas, mover caja y stock) viven en la capa del medio. Patrones previstos:
 
 | Patrón | Dónde se usa |
 |---|---|
@@ -95,16 +95,16 @@ Las reglas (estados, recargos, facturar, mover caja y stock) viven en la capa de
 
 - **No se usa un motor BPMN.** El BPMN es guía de diseño y se traduce a una máquina de estados.
 - El sistema **no modela la charla con el cliente** (presupuestar, negociar, aceptar). Solo **registra resultados**.
-- La **venta directa no tiene estados**: es una única transacción (factura + stock + caja).
+- La **venta directa no tiene estados**: es una única transacción (venta + stock + caja).
 - **"Solicitar producto ya"** al retirar = crear una venta directa aparte.
-- Cada estado define qué acciones permite (ej.: no se factura una orden "En reparación").
+- Cada estado define qué acciones permite (ej.: no se registra la venta de una orden "En reparación").
 
 ```mermaid
 flowchart LR
   R[Recibida] --> E[En reparación]
   E --> L[Lista]
   L --> T[Retirada]
-  T --> F[Facturada]
+  T --> F[Venta registrada]
   E --> NA[No arreglable]
   NA --> D[Dinero devuelto]
   R --> C[Cancelada]
@@ -124,10 +124,10 @@ flowchart LR
 | Historial | Tabla `orden_historial` (orden, estado, fecha). **Solo se agrega, nunca se edita** |
 | Dinero | Tabla `movimiento_caja` (efectivo o transferencia, entrada o salida). El saldo se calcula |
 | Stock | Tabla `movimiento_stock`, misma lógica |
-| Facturas | No se modifican. Un error se corrige con otro registro |
+| Ventas | No se modifican. Un error se corrige con otro registro |
 
 **Reglas:**
-- Al facturar, **factura + stock + caja se guardan en una sola transacción**: o todo o nada.
+- Al registrar la venta, **venta + stock + caja se guardan en una sola transacción**: o todo o nada.
 - El dinero se guarda como `DECIMAL`, **nunca** `FLOAT`.
 - **Migración de Excel:** script de importación para precios, stock y compras (opcional, se hace después de tener el modelo de datos).
 
@@ -153,8 +153,8 @@ Aunque corra en la PC del local, la orden guarda **PIN y patrones de bloqueo** d
 - Posible tema para el panel de admin si se quiere algo más moderno.
 
 **La pantalla se arma según el estado de la orden:**
-- Indicador de progreso arriba (Recibida → … → Facturada) con el paso actual resaltado.
-- Solo aparecen los **botones válidos** para ese estado (ej.: "Marcar lista", "Registrar retiro", "Facturar").
+- Indicador de progreso arriba (Recibida → … → Venta registrada) con el paso actual resaltado.
+- Solo aparecen los **botones válidos** para ese estado (ej.: "Marcar lista", "Registrar retiro", "Registrar venta").
 - La lista de órdenes se filtra por estado (ej.: "Listas para avisar").
 
 **Impresión de la orden:** PDF con dos partes.

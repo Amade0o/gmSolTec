@@ -1,6 +1,10 @@
+from django.contrib import admin
+
 "Cada clase hereda de models.Model."
 "En models va cada clase que representa una tabla de la base de datos."
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
+from decimal import Decimal
+
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -133,6 +137,8 @@ class Reparacion(models.Model):
 class OrdenTrabajo(models.Model):
     cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT, related_name="ordenes")
     fecha_recepcion = models.DateTimeField(auto_now_add=True)
+    #monto_retenido 
+
 
     #Ademas de los estados del equipo tenemos "listo"
     # El estado de la orden se deriva del estado de sus equipos.
@@ -151,15 +157,82 @@ class OrdenTrabajo(models.Model):
 
         return 'lista'  
 
+    @property
+    def total(self):
+        total = 0 
+
+        for equipo in self.equipos.all():
+            for linea in equipo.lineas_reparacion.all():
+                total += linea.subtotal
+
+        for linea in self.lineas_producto.all():
+            total += linea.subtotal
+            
+        return total
+
+    @property
+    def monto_pagado(self):
+        total = Decimal("0.00")
+
+        for pago in self.pagos.all():
+            total += pago.monto
+        return total
+
+    @property 
+    def monto_adeudado(self):
+        return self.total - self.monto_pagado
+
+    @property
+    @admin.display(boolean=True, description="¿Adeuda?")
+    def adeuda(self):
+        return self.monto_adeudado > 0
+
     def __str__(self):
         return f"Orden #{self.id}"
-
 
 class MetodoPago(models.Model):
     nombre = models.CharField(max_length=60) 
     cuenta = models.CharField(max_length=20, choices=CUENTA_CHOICES)
     recargo_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default = 0,validators=[MinValueValidator(0)])
     activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.nombre} | {self.cuenta} | {self.recargo_porcentaje}%"
+
+class Pago(models.Model):
+    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.PROTECT,related_name="pagos", null = True, blank = True) #null y blank son para que no sea obligatorio, ya que se puede crear un pago sin orden de trabajo
+    metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.PROTECT, related_name="pagos")
+    monto = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    recargo_porcentaje = models.DecimalField(max_digits= 5, decimal_places=2, blank=True, validators=[MinValueValidator(0)])
+    fecha = models.DateTimeField(auto_now_add=True)
+    #retenido (bool)
+
+    @property
+    def recargo_monto(self):
+        if self.monto is None or self.recargo_porcentaje is None:
+            return Decimal("0.00")
+        
+        return self.monto * (self.recargo_porcentaje / Decimal("100"))
+
+    @property
+    def total_cobrado(self):
+        if self.monto is None:
+            return Decimal("0.00")
+    
+        return self.monto + self.recargo_monto
+
+    def save(self, *args, **kwargs):
+        if self.recargo_porcentaje is None:      # vacío → copia el del método
+            self.recargo_porcentaje = self.metodo_pago.recargo_porcentaje
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        orden = f"Orden #{self.orden_trabajo_id}" if self.orden_trabajo_id else "Sin orden"
+        return f"Pago #{self.id} | {orden} | Monto: ${self.monto} | Total cobrado: ${self.total_cobrado}"
+
+     
+
+
 
 class EquipoRecibido(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")

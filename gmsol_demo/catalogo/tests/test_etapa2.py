@@ -33,7 +33,7 @@ from catalogo.models import (
 )
 
 EN_REPARACION = "pendiente"      # algún equipo pendiente (o la orden no tiene equipos)
-LISTA = "listo"                  # nada pendiente y al menos uno resuelto
+LISTA = "lista"                  # nada pendiente y al menos uno resuelto
 NO_ARREGLABLE = "no_arreglable"  # todos los equipos sin arreglo
 
 
@@ -334,8 +334,13 @@ class AdminOrdenTests(TestCase):
             "cliente": self.orden.cliente.id,
             "equipos-TOTAL_FORMS": "1", "equipos-INITIAL_FORMS": "0",
             "equipos-MIN_NUM_FORMS": "0", "equipos-MAX_NUM_FORMS": "1000",
-            "lineas_producto-TOTAL_FORMS": "0", "lineas_producto-INITIAL_FORMS": "0",
+            "lineas_producto-TOTAL_FORMS": "1",
+            "lineas_producto-INITIAL_FORMS": "0",
             "lineas_producto-MIN_NUM_FORMS": "0", "lineas_producto-MAX_NUM_FORMS": "1000",
+            "pagos-TOTAL_FORMS": "0",
+            "pagos-INITIAL_FORMS": "0",
+            "pagos-MIN_NUM_FORMS": "0",
+            "pagos-MAX_NUM_FORMS": "1000",
         }
         if con_equipo:
             datos.update({

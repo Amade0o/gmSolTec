@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, Marca, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, LineaProducto #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
+from .models import CategoriaProducto, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, LineaProducto #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
 #Estas clases indican cómo se muestran y administran esos modelos.
@@ -90,10 +90,23 @@ class LineaProductoInline(admin.TabularInline):
     autocomplete_fields = ("producto",)
     readonly_fields = ("subtotal",)
 
+class PagoInline(admin.TabularInline):
+    model = Pago
+    extra = 1
+    readonly_fields = ("recargo_monto", "total_cobrado")
 
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
-    list_display = ("id", "cliente", "fecha_recepcion", "estado")
+    list_display = ("id", "cliente", "fecha_recepcion", "estado", "adeuda")
     search_fields = ("=id", "cliente__nombre",)
     list_filter = ("fecha_recepcion",)
-    inlines = [EquipoRecibidoInline, LineaProductoInline]
+    inlines = [EquipoRecibidoInline, LineaProductoInline, PagoInline]
+
+@admin.register(MetodoPago)
+class MetodoPagoAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "cuenta", "recargo_porcentaje", "activo")
+    list_filter = ("cuenta", "activo")
+    search_fields = ("nombre", "cuenta")
+
+
+

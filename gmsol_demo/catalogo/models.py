@@ -5,6 +5,7 @@ from django.contrib import admin
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -137,13 +138,13 @@ class Reparacion(models.Model):
 class OrdenTrabajo(models.Model):
     cliente = models.ForeignKey("Cliente", on_delete=models.PROTECT, related_name="ordenes")
     fecha_recepcion = models.DateTimeField(auto_now_add=True)
-    #monto_retenido 
 
-
-    #Ademas de los estados del equipo tenemos "listo"
     # El estado de la orden se deriva del estado de sus equipos.
     @property
     def estado(self):
+        if self.cerrada:
+            return 'cerrada'
+        
         equipos = list(self.equipos.all())
         
         if not equipos:
@@ -183,6 +184,16 @@ class OrdenTrabajo(models.Model):
         return self.total - self.monto_pagado
 
     @property
+    def monto_retenido(self):
+        if self.cerrada:
+            return Decimal("0.00")
+        return self.monto_pagado
+
+    @property
+    def cerrada(self):
+        return hasattr(self, "venta")
+    
+    @property
     @admin.display(boolean=True, description="¿Adeuda?")
     def adeuda(self):
         return self.monto_adeudado > 0
@@ -202,10 +213,10 @@ class MetodoPago(models.Model):
 class Pago(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.PROTECT,related_name="pagos", null = True, blank = True) #null y blank son para que no sea obligatorio, ya que se puede crear un pago sin orden de trabajo
     metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.PROTECT, related_name="pagos")
+    venta = models.ForeignKey("Venta", on_delete=models.PROTECT, null=True, blank=True, related_name="pagos")
     monto = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
     recargo_porcentaje = models.DecimalField(max_digits= 5, decimal_places=2, blank=True, validators=[MinValueValidator(0)])
     fecha = models.DateTimeField(auto_now_add=True)
-    #retenido (bool)
 
     @property
     def recargo_monto(self):
@@ -213,7 +224,7 @@ class Pago(models.Model):
             return Decimal("0.00")
         
         return self.monto * (self.recargo_porcentaje / Decimal("100"))
-
+ 
     @property
     def total_cobrado(self):
         if self.monto is None:
@@ -221,14 +232,40 @@ class Pago(models.Model):
     
         return self.monto + self.recargo_monto
 
+    @property
+    def retenido(self):
+        if self.orden_trabajo_id is None:   # pago de venta directa
+            return False
+        return not self.orden_trabajo.cerrada
+
     def save(self, *args, **kwargs):
         if self.recargo_porcentaje is None:      # vacío → copia el del método
             self.recargo_porcentaje = self.metodo_pago.recargo_porcentaje
         super().save(*args, **kwargs)
 
     def __str__(self):
-        orden = f"Orden #{self.orden_trabajo_id}" if self.orden_trabajo_id else "Sin orden"
-        return f"Pago #{self.id} | {orden} | Monto: ${self.monto} | Total cobrado: ${self.total_cobrado}"
+        if self.orden_trabajo_id:
+            dueno = f"Orden #{self.orden_trabajo_id}"
+        elif self.venta_id:
+            dueno = f"Venta #{self.venta_id}"
+        else:
+            dueno = "Sin asignar"
+        return f"Pago #{self.id} | {dueno} | Monto: ${self.monto} | Total cobrado: ${self.total_cobrado}"
+
+    #Esto es para que el Pago no pueda ser de una venta y de una orden de trabajo a la vez
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(orden_trabajo__isnull=False, venta__isnull=True)
+                           | models.Q(orden_trabajo__isnull=True, venta__isnull=False)),
+                name="pago_orden_o_venta",
+            )
+        ]
+
+    def clean(self):
+       super().clean()
+       if self.orden_trabajo_id and self.venta_id:
+           raise ValidationError("El pago pertenece a una orden o a una venta, no a las dos.")
 
      
 
@@ -248,31 +285,47 @@ class EquipoRecibido(models.Model):
         return f"Equipo #{self.id} | Orden #{self.orden_trabajo.id}"
 
 class LineaReparacion(models.Model):    
-    precio_en_orden = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    precio_vendido = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     nota = models.TextField(max_length=300, blank=True) #opcional
     equipo = models.ForeignKey(EquipoRecibido, on_delete=models.CASCADE, related_name="lineas_reparacion")
     reparacion = models.ForeignKey(Reparacion, on_delete=models.PROTECT, related_name="lineas")
 
     @property
     def subtotal(self):
-        return self.precio_en_orden
+        return self.precio_vendido
     
     def __str__(self):
         return f"{self.reparacion}"
 
-class LineaProducto(models.Model):
-    cantidad_adquirida = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)]
-    )
-    precio_en_orden = models.DecimalField(max_digits=10, decimal_places = 2, validators=[MinValueValidator(0)])
-    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete= models.CASCADE, related_name = "lineas_producto")
-    producto = models.ForeignKey(Producto, on_delete = models.PROTECT, related_name = "lineas")
-    
-    @property
-    def subtotal(self):
-        if(self.cantidad_adquirida is None or self.precio_en_orden is None):
-            return 0
-        return self.cantidad_adquirida * self.precio_en_orden
+class Venta(models.Model):
+    fecha = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    cliente = models.ForeignKey(Cliente, on_delete= models.PROTECT, null = True, blank = True, related_name = "ventas_cliente")
+    orden_trabajo = models.OneToOneField(OrdenTrabajo, on_delete= models.PROTECT, null=True, blank=True, related_name = "venta")
 
     def __str__(self):
-        return f"{self.cantidad_adquirida}x {self.producto} — ${self.precio_en_orden}"
+        return f"Venta #{self.id} | Fecha: {self.fecha} | Total: ${self.total}"
+    
+class LineaProductoAbstracta(models.Model):
+    cantidad_adquirida = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    precio_vendido = models.DecimalField(max_digits=10, decimal_places = 2, validators=[MinValueValidator(0)])
+    producto = models.ForeignKey(Producto, on_delete = models.PROTECT, related_name="%(class)ss")
+
+    class Meta:
+        abstract = True
+
+    @property
+    def subtotal(self):
+        if(self.cantidad_adquirida is None or self.precio_vendido is None):
+            return 0
+        return self.cantidad_adquirida * self.precio_vendido
+
+    def __str__(self):
+        return f"{self.cantidad_adquirida}x {self.producto} — ${self.precio_vendido}"
+    
+class LineaProductoVenta(LineaProductoAbstracta):
+    venta = models.ForeignKey(Venta, on_delete=models.CASCADE, related_name="lineas_producto")
+
+class LineaProductoOrden(LineaProductoAbstracta):
+    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete= models.CASCADE, related_name = "lineas_producto")
+

@@ -2,11 +2,12 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.db import IntegrityError, transaction
 
 from catalogo.models import (
     CategoriaProducto, CategoriaReparacion, Cliente, EquipoRecibido,
-    LineaProducto, LineaReparacion, MetodoPago, OrdenTrabajo, Pago,
-    Producto, Reparacion,
+    LineaProductoOrden, LineaReparacion, MetodoPago, OrdenTrabajo, Pago,
+    Producto, Reparacion, Venta,
 )
 
 D = Decimal
@@ -35,11 +36,11 @@ class BaseConPagos(TestCase):
         equipo = EquipoRecibido.objects.create(
             orden_trabajo=orden, tipo="celular", problema="No carga", tipo_bloqueo="ninguno")
         LineaReparacion.objects.create(
-            equipo=equipo, reparacion=self.reparacion, precio_en_orden=precio_reparacion)
+            equipo=equipo, reparacion=self.reparacion, precio_vendido=precio_reparacion)
         if cantidad_producto:
-            LineaProducto.objects.create(
+            LineaProductoOrden.objects.create(
                 orden_trabajo=orden, producto=self.producto,
-                cantidad_adquirida=cantidad_producto, precio_en_orden=D("250"))
+                cantidad_adquirida=cantidad_producto, precio_vendido=D("250"))
         return orden
 
     def pagar(self, orden, monto, metodo=None):
@@ -125,13 +126,24 @@ class PagoValidacionesTests(BaseConPagos):
             pago.full_clean()
         self.assertIn("recargo_porcentaje", ctx.exception.message_dict)
 
-    def test_pago_sin_orden_es_valido(self):
-        # Base de la venta directa (Fase 2)
-        pago = Pago(metodo_pago=self.efectivo, monto=D("100"))
+    def test_pago_de_venta_directa_es_valido(self):
+        venta = Venta.objects.create(total=D("100"))
+        pago = Pago(metodo_pago=self.efectivo, monto=D("100"), venta=venta)
         pago.full_clean()
         pago.save()
         self.assertIsNone(pago.orden_trabajo)
-        self.assertIn("Sin orden", str(pago))
+        self.assertIn(f"Venta #{venta.id}", str(pago))
+
+    def test_pago_con_orden_y_venta_es_invalido(self):
+        venta = Venta.objects.create(total=D("100"))
+        pago = Pago(orden_trabajo=self.crear_orden(), venta=venta,
+                    metodo_pago=self.efectivo, monto=D("100"))
+        with self.assertRaises(ValidationError):
+            pago.full_clean()
+    
+    def test_pago_sin_dueno_no_se_puede_guardar(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Pago.objects.create(metodo_pago=self.efectivo, monto=D("100"))
 
 
 class OrdenMontosTests(BaseConPagos):
@@ -186,3 +198,58 @@ class OrdenAdeudaTests(BaseConPagos):
     def test_orden_sin_lineas_no_adeuda(self):
         orden = OrdenTrabajo.objects.create(cliente=self.cliente)
         self.assertFalse(orden.adeuda)
+
+class OrdenCerradaTests(BaseConPagos):
+    def cerrar(self, orden):
+        return Venta.objects.create(
+            orden_trabajo=orden, cliente=orden.cliente, total=orden.total)
+
+    def test_orden_nueva_no_esta_cerrada(self):
+        orden = self.crear_orden()
+        self.assertFalse(orden.cerrada)
+        self.assertEqual(orden.estado, "pendiente")
+
+    def test_estado_lista_antes_de_cerrar(self):
+        orden = self.crear_orden()
+        orden.equipos.update(estado="arreglado")
+        self.assertEqual(orden.estado, "lista")
+
+    def test_orden_con_venta_esta_cerrada(self):
+        orden = self.crear_orden()
+        self.cerrar(orden)
+        self.assertTrue(orden.cerrada)
+        self.assertEqual(orden.estado, "cerrada")
+
+
+class DineroRetenidoTests(BaseConPagos):
+    def cerrar(self, orden):
+        return Venta.objects.create(
+            orden_trabajo=orden, cliente=orden.cliente, total=orden.total)
+
+    def test_pago_de_orden_abierta_esta_retenido(self):
+        pago = self.pagar(self.crear_orden(), "400")
+        self.assertTrue(pago.retenido)
+
+    def test_pago_se_libera_al_cerrar_la_orden(self):
+        orden = self.crear_orden()
+        pago = self.pagar(orden, "1000")
+        self.cerrar(orden)
+        pago.refresh_from_db()
+        self.assertFalse(pago.retenido)
+
+    def test_pago_de_venta_directa_nunca_esta_retenido(self):
+        venta = Venta.objects.create(total=D("100"))
+        pago = Pago.objects.create(venta=venta, metodo_pago=self.efectivo, monto=D("100"))
+        self.assertFalse(pago.retenido)
+
+    def test_monto_retenido_mientras_esta_abierta(self):
+        orden = self.crear_orden()
+        self.pagar(orden, "400")
+        self.assertEqual(orden.monto_retenido, D("400"))
+
+    def test_monto_retenido_es_cero_al_cerrar(self):
+        orden = self.crear_orden()
+        self.pagar(orden, "1000")
+        self.cerrar(orden)
+        orden.refresh_from_db()
+        self.assertEqual(orden.monto_retenido, 0)

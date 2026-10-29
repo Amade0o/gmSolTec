@@ -1,9 +1,10 @@
 """Configuración del panel administrativo del catálogo."""
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, LineaProducto #Estos son los modelos que se van a registrar en el panel de administracion, creados por mi
+from .models import CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta
+from .servicios import cerrar_orden, ReglaDeNegocioError
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
 #Estas clases indican cómo se muestran y administran esos modelos.
@@ -58,7 +59,7 @@ class ReparacionAdmin(admin.ModelAdmin):
 
 @admin.register(LineaReparacion)
 class LineaReparacionAdmin(admin.ModelAdmin):
-    list_display = ("reparacion", "nota", "precio_en_orden", "equipo", "subtotal")
+    list_display = ("reparacion", "nota", "precio_vendido", "equipo", "subtotal")
     list_filter = ("equipo", "reparacion")
 
 #ES OBLIGATORIO DESDE EL LADO DERECHO DE LA RELACION, es solo para verificar que haya un elemento
@@ -78,14 +79,26 @@ class EquipoRecibidoInline(admin.TabularInline):
     extra = 1
 
 
-@admin.register(LineaProducto)
-class LineaProductoAdmin(admin.ModelAdmin):
-    list_display = ("cantidad_adquirida", "precio_en_orden", "orden_trabajo", "subtotal")
+@admin.register(LineaProductoOrden)
+class LineaProductoOrdenAdmin(admin.ModelAdmin):
+    list_display = ("cantidad_adquirida", "precio_vendido", "orden_trabajo", "subtotal")
     list_filter = ("producto",)
     search_fields = ("producto__nombre",)
 
-class LineaProductoInline(admin.TabularInline):
-    model = LineaProducto
+@admin.register(LineaProductoVenta)
+class LineaProductoVentaAdmin(admin.ModelAdmin):
+    list_display = ("cantidad_adquirida", "precio_vendido", "venta", "subtotal")
+    list_filter = ("producto",)
+    search_fields = ("producto__nombre",)
+
+class LineaProductoOrdenInline(admin.TabularInline):
+    model = LineaProductoOrden
+    extra = 1        
+    autocomplete_fields = ("producto",)
+    readonly_fields = ("subtotal",)
+
+class LineaProductoVentaInline(admin.TabularInline):
+    model = LineaProductoVenta
     extra = 1        
     autocomplete_fields = ("producto",)
     readonly_fields = ("subtotal",)
@@ -93,14 +106,39 @@ class LineaProductoInline(admin.TabularInline):
 class PagoInline(admin.TabularInline):
     model = Pago
     extra = 1
-    readonly_fields = ("recargo_monto", "total_cobrado")
+    readonly_fields = ("recargo_monto", "total_cobrado", "retenido")
+
+    def get_exclude(self, request, obj=None):
+        exclude = list(super().get_exclude(request, obj) or [])
+        # El FK del padre ya lo oculta el admin solo; ocultamos el otro due�o.
+        if self.parent_model is OrdenTrabajo:
+            exclude.append("venta")
+        elif self.parent_model is Venta:
+            exclude.append("orden_trabajo")
+        return exclude
 
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
-    list_display = ("id", "cliente", "fecha_recepcion", "estado", "adeuda")
+    list_display = ("id", "cliente", "fecha_recepcion", "estado", "total", "monto_adeudado", "adeuda")
+    readonly_fields = ("estado", "total", "monto_pagado", "monto_adeudado", "monto_retenido")
     search_fields = ("=id", "cliente__nombre",)
     list_filter = ("fecha_recepcion",)
-    inlines = [EquipoRecibidoInline, LineaProductoInline, PagoInline]
+    inlines = [EquipoRecibidoInline, LineaProductoOrdenInline, PagoInline]
+    actions = ["cerrar_ordenes"]
+
+    @admin.action(description="Cerrar orden (crear venta)")
+    def cerrar_ordenes(self, request, queryset):
+        for orden in queryset:
+            try:
+                cerrar_orden(orden)
+                self.message_user(request, f"Orden #{orden.id} cerrada.", level=messages.SUCCESS)
+            except ReglaDeNegocioError as e:
+                self.message_user(request, f"Orden #{orden.id}: {e}", level=messages.ERROR)
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.cerrada:
+            return False        # orden cerrada: solo lectura
+        return super().has_change_permission(request, obj)
 
 @admin.register(MetodoPago)
 class MetodoPagoAdmin(admin.ModelAdmin):
@@ -108,5 +146,18 @@ class MetodoPagoAdmin(admin.ModelAdmin):
     list_filter = ("cuenta", "activo")
     search_fields = ("nombre", "cuenta")
 
+@admin.register(Pago)
+class PagoAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "orden_trabajo", "venta", "metodo_pago", "monto",
+        "recargo_porcentaje", "total_cobrado", "fecha",
+    )
+    list_filter = ("metodo_pago", "fecha")
+    search_fields = ("=id",)
 
+@admin.register(Venta)
+class VentaAdmin(admin.ModelAdmin):
+    list_display = ("id", "fecha", "total")
+    list_filter = ("fecha",)
+    inlines = [LineaProductoVentaInline, PagoInline]
 

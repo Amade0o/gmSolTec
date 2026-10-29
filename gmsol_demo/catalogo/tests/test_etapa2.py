@@ -22,7 +22,7 @@ from catalogo.models import (
     CategoriaReparacion,
     Cliente,
     EquipoRecibido,
-    LineaProducto,
+    LineaProductoOrden,
     LineaReparacion,
     Marca,
     ModeloEquipo,
@@ -101,16 +101,16 @@ class OrdenTests(TestCase):
         orden = crear_orden()
         equipo = crear_equipo(orden)
         LineaReparacion.objects.create(
-            equipo=equipo, reparacion=crear_reparacion(), precio_en_orden=Decimal("45000.00")
+            equipo=equipo, reparacion=crear_reparacion(), precio_vendido=Decimal("45000.00")
         )
-        LineaProducto.objects.create(
+        LineaProductoOrden.objects.create(
             orden_trabajo=orden, producto=crear_producto(),
-            cantidad_adquirida=1, precio_en_orden=Decimal("1500.00"),
+            cantidad_adquirida=1, precio_vendido=Decimal("1500.00"),
         )
         orden.delete()
         self.assertEqual(EquipoRecibido.objects.count(), 0)
         self.assertEqual(LineaReparacion.objects.count(), 0)
-        self.assertEqual(LineaProducto.objects.count(), 0)
+        self.assertEqual(LineaProductoOrden.objects.count(), 0)
 
 
 class EquipoRecibidoTests(TestCase):
@@ -227,7 +227,7 @@ class LineaReparacionTests(TestCase):
 
     def crear_linea(self, precio="45000.00"):
         return LineaReparacion.objects.create(
-            equipo=self.equipo, reparacion=self.reparacion, precio_en_orden=Decimal(precio)
+            equipo=self.equipo, reparacion=self.reparacion, precio_vendido=Decimal(precio)
         )
 
     def test_el_subtotal_es_el_precio(self):
@@ -235,14 +235,14 @@ class LineaReparacionTests(TestCase):
 
     def test_un_precio_negativo_no_es_valido(self):
         linea = self.crear_linea()
-        linea.precio_en_orden = Decimal("-1.00")
+        linea.precio_vendido = Decimal("-1.00")
         with self.assertRaises(ValidationError):
             linea.full_clean()
 
     def test_un_precio_cero_es_valido(self):
         """Sirve para 'Revisión / diagnóstico' sin cargo."""
         linea = self.crear_linea()
-        linea.precio_en_orden = Decimal("0.00")
+        linea.precio_vendido = Decimal("0.00")
         linea.full_clean()
 
     def test_la_nota_es_opcional(self):
@@ -259,17 +259,17 @@ class LineaReparacionTests(TestCase):
             self.reparacion.delete()
 
 
-class LineaProductoTests(TestCase):
+class LineaProductoOrdenTests(TestCase):
     def setUp(self):
         self.orden = crear_orden()
         self.producto = crear_producto("1500.00")
 
     def crear_linea(self, cantidad=3, precio="1500.00", producto=None):
-        return LineaProducto.objects.create(
+        return LineaProductoOrden.objects.create(
             orden_trabajo=self.orden,
             producto=producto or self.producto,
             cantidad_adquirida=cantidad,
-            precio_en_orden=Decimal(precio),
+            precio_vendido=Decimal(precio),
         )
 
     def test_subtotal_es_cantidad_por_precio(self):
@@ -277,7 +277,7 @@ class LineaProductoTests(TestCase):
 
     def test_subtotal_de_una_linea_vacia_no_rompe(self):
         """Regresión: la fila vacía del admin rompía la pantalla de alta."""
-        self.assertIn(LineaProducto().subtotal, (None, 0))
+        self.assertIn(LineaProductoOrden().subtotal, (None, 0))
 
     def test_la_cantidad_cero_no_es_valida(self):
         linea = self.crear_linea()
@@ -292,7 +292,7 @@ class LineaProductoTests(TestCase):
 
     def test_un_precio_negativo_no_es_valido(self):
         linea = self.crear_linea()
-        linea.precio_en_orden = Decimal("-5.00")
+        linea.precio_vendido = Decimal("-5.00")
         with self.assertRaises(ValidationError):
             linea.full_clean()
 
@@ -301,7 +301,7 @@ class LineaProductoTests(TestCase):
         self.producto.precio_venta = Decimal("2000.00")
         self.producto.save()
         linea.refresh_from_db()
-        self.assertEqual(linea.precio_en_orden, Decimal("1500.00"))
+        self.assertEqual(linea.precio_vendido, Decimal("1500.00"))
 
     def test_no_se_puede_borrar_un_producto_usado(self):
         self.crear_linea()
@@ -358,9 +358,9 @@ class AdminOrdenTests(TestCase):
 
     def test_la_edicion_de_una_orden_con_lineas_carga(self):
         crear_equipo(self.orden)
-        LineaProducto.objects.create(
+        LineaProductoOrden.objects.create(
             orden_trabajo=self.orden, producto=crear_producto(),
-            cantidad_adquirida=2, precio_en_orden=Decimal("1500.00"),
+            cantidad_adquirida=2, precio_vendido=Decimal("1500.00"),
         )
         url = reverse("admin:catalogo_ordentrabajo_change", args=[self.orden.id])
         self.assertEqual(self.client.get(url).status_code, 200)
@@ -381,7 +381,7 @@ class AdminOrdenTests(TestCase):
         self.assertEqual(EquipoRecibido.objects.filter(tipo="pc").count(), 1)
 
     def test_listados_y_busquedas_responden(self):
-        for modelo in ("ordentrabajo", "lineareparacion", "lineaproducto"):
+        for modelo in ("ordentrabajo", "lineareparacion", "lineaproductoorden"):
             with self.subTest(modelo=modelo):
                 url = reverse(f"admin:catalogo_{modelo}_changelist")
                 self.assertEqual(self.client.get(url).status_code, 200)

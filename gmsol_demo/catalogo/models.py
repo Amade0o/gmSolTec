@@ -46,7 +46,7 @@ BLOQUEO_CHOICES = [
 
 
 class CategoriaProducto(models.Model):
-    nombre = models.CharField(max_length=60)
+    nombre = models.CharField(max_length=60, unique=True)
     activa = models.BooleanField(default=True)  # no se borra: se desactiva
 
     def __str__(self):
@@ -54,7 +54,7 @@ class CategoriaProducto(models.Model):
 
 
 class Marca(models.Model):
-    nombre = models.CharField(max_length=60)
+    nombre = models.CharField(max_length=60, unique=True)
     activa = models.BooleanField(default=True)
 
     def __str__(self):
@@ -62,17 +62,20 @@ class Marca(models.Model):
 
 
 class Producto(models.Model):
-    nombre = models.CharField(max_length=120)
+    nombre = models.CharField(max_length=120, unique=True)
     # Relación 0..n productos -> 1 categoría (obligatoria)
+    # limit_choices_to: en los desplegables solo aparecen las activas
     categoria = models.ForeignKey(
-        CategoriaProducto, on_delete=models.PROTECT, related_name="productos"
+        CategoriaProducto, on_delete=models.PROTECT, related_name="productos",
+        limit_choices_to={"activa": True}
     )
     # Relación 0..n productos -> 0..1 marca (opcional)
     marca = models.ForeignKey(
-        Marca, on_delete=models.PROTECT, null=True, blank=True, related_name="productos"
+        Marca, on_delete=models.PROTECT, null=True, blank=True, related_name="productos",
+        limit_choices_to={"activa": True}
     )
-    precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_compra = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    precio_venta = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     activo = models.BooleanField(default=True)
 
     @property
@@ -107,19 +110,23 @@ class Telefono(models.Model):
 
 class ModeloEquipo(models.Model): 
     nombre = models.CharField(max_length=60)
-    marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="modelos") 
+    marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="modelos",
+                              limit_choices_to={"activa": True})
     tipo = models.CharField(max_length=20, choices= MODELO_EQUIPO_TIPO_CHOICES)
     activo = models.BooleanField(default=True)
-    
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["marca", "nombre"], name="modelo_unico_por_marca")
+        ]
 
     def __str__(self):
         return f"{self.nombre} | {self.marca} | {self.tipo}"
 
 class CategoriaReparacion(models.Model):  
-    nombre = models.CharField(max_length=60)
+    nombre = models.CharField(max_length=60, unique=True)
     activo = models.BooleanField(default=True)
 
-    
     def __str__(self):
         return self.nombre
 
@@ -130,7 +137,13 @@ class Reparacion(models.Model):
         CategoriaReparacion,
         on_delete=models.PROTECT,
         related_name="reparaciones",
+        limit_choices_to={"activo": True},
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["categoria", "nombre"], name="reparacion_unica_por_categoria")
+        ]
 
     def __str__(self):
         return self.nombre
@@ -160,7 +173,7 @@ class OrdenTrabajo(models.Model):
 
     @property
     def total(self):
-        total = 0 
+        total = Decimal("0.00")
 
         for equipo in self.equipos.all():
             for linea in equipo.lineas_reparacion.all():
@@ -202,7 +215,7 @@ class OrdenTrabajo(models.Model):
         return f"Orden #{self.id}"
 
 class MetodoPago(models.Model):
-    nombre = models.CharField(max_length=60) 
+    nombre = models.CharField(max_length=60, unique=True)
     cuenta = models.CharField(max_length=20, choices=CUENTA_CHOICES)
     recargo_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default = 0,validators=[MinValueValidator(0)])
     activo = models.BooleanField(default=True)
@@ -211,12 +224,22 @@ class MetodoPago(models.Model):
         return f"{self.nombre} | {self.cuenta} | {self.recargo_porcentaje}%"
 
 class Pago(models.Model):
-    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.PROTECT,related_name="pagos", null = True, blank = True) #null y blank son para que no sea obligatorio, ya que se puede crear un pago sin orden de trabajo
+    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.PROTECT,related_name="pagos", null = True, blank = True) #null y blank son para que no sea obligatorio, ya que un pago puede ser de una venta directa
     metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.PROTECT, related_name="pagos")
     venta = models.ForeignKey("Venta", on_delete=models.PROTECT, null=True, blank=True, related_name="pagos")
     monto = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
     recargo_porcentaje = models.DecimalField(max_digits= 5, decimal_places=2, blank=True, validators=[MinValueValidator(0)])
     fecha = models.DateTimeField(auto_now_add=True)
+
+    #Esto es para que el Pago no pueda ser de una venta y de una orden de trabajo a la vez
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(orden_trabajo__isnull=False, venta__isnull=True)
+                           | models.Q(orden_trabajo__isnull=True, venta__isnull=False)),
+                name="pago_orden_o_venta",
+            )
+        ]
 
     @property
     def recargo_monto(self):
@@ -238,6 +261,19 @@ class Pago(models.Model):
             return False
         return not self.orden_trabajo.cerrada
 
+    def clean(self):
+        super().clean()
+        if self.orden_trabajo_id and self.venta_id:
+            raise ValidationError("El pago pertenece a una orden o a una venta, no a las dos.")
+        # El pago no puede superar lo que falta pagar.
+        # Si la orden todavía no tiene precio (total 0), se permite la seña.
+        if self.orden_trabajo_id and self.monto is not None:
+            orden = self.orden_trabajo
+            if orden.total > 0:
+                otros_pagos = sum(p.monto for p in orden.pagos.exclude(pk=self.pk))
+                if self.monto > orden.total - otros_pagos:
+                    raise ValidationError("El pago supera lo que falta pagar de la orden.")
+
     def save(self, *args, **kwargs):
         if self.recargo_porcentaje is None:      # vacío → copia el del método
             self.recargo_porcentaje = self.metodo_pago.recargo_porcentaje
@@ -252,24 +288,6 @@ class Pago(models.Model):
             dueno = "Sin asignar"
         return f"Pago #{self.id} | {dueno} | Monto: ${self.monto} | Total cobrado: ${self.total_cobrado}"
 
-    #Esto es para que el Pago no pueda ser de una venta y de una orden de trabajo a la vez
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                condition=(models.Q(orden_trabajo__isnull=False, venta__isnull=True)
-                           | models.Q(orden_trabajo__isnull=True, venta__isnull=False)),
-                name="pago_orden_o_venta",
-            )
-        ]
-
-    def clean(self):
-       super().clean()
-       if self.orden_trabajo_id and self.venta_id:
-           raise ValidationError("El pago pertenece a una orden o a una venta, no a las dos.")
-
-     
-
-
 
 class EquipoRecibido(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
@@ -280,6 +298,11 @@ class EquipoRecibido(models.Model):
     clave_bloqueo = models.CharField(max_length=100, blank=True)
     accesorios_dejados = models.TextField(max_length=300, blank = True)
     estado = models.CharField(max_length=20, default= 'pendiente', choices=EQUIPO_ORDEN_ESTADO_CHOICES)
+
+    def clean(self):
+        super().clean()
+        if self.tipo_bloqueo == "ninguno" and self.clave_bloqueo:
+            raise ValidationError({"clave_bloqueo": "Si no tiene bloqueo, la clave debe quedar vacía."})
 
     def __str__(self):
         return f"Equipo #{self.id} | Orden #{self.orden_trabajo.id}"
@@ -308,7 +331,8 @@ class Venta(models.Model):
     
 class LineaProductoAbstracta(models.Model):
     cantidad_adquirida = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    precio_vendido = models.DecimalField(max_digits=10, decimal_places = 2, validators=[MinValueValidator(0)])
+    # blank=True: si se deja vacío, se copia el precio de venta del producto al guardar
+    precio_vendido = models.DecimalField(max_digits=10, decimal_places = 2, blank=True, validators=[MinValueValidator(0)])
     producto = models.ForeignKey(Producto, on_delete = models.PROTECT, related_name="%(class)ss")
 
     class Meta:
@@ -320,6 +344,11 @@ class LineaProductoAbstracta(models.Model):
             return 0
         return self.cantidad_adquirida * self.precio_vendido
 
+    def save(self, *args, **kwargs):
+        if self.precio_vendido is None:
+            self.precio_vendido = self.producto.precio_venta
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.cantidad_adquirida}x {self.producto} — ${self.precio_vendido}"
     
@@ -328,4 +357,3 @@ class LineaProductoVenta(LineaProductoAbstracta):
 
 class LineaProductoOrden(LineaProductoAbstracta):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete= models.CASCADE, related_name = "lineas_producto")
-

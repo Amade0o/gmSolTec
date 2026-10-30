@@ -381,7 +381,8 @@ class AdminOrdenTests(TestCase):
         self.assertEqual(EquipoRecibido.objects.filter(tipo="pc").count(), 1)
 
     def test_listados_y_busquedas_responden(self):
-        for modelo in ("ordentrabajo", "lineareparacion", "lineaproductoorden"):
+        # Las líneas se gestionan como inlines, no como pantallas independientes.
+        for modelo in ("ordentrabajo",):
             with self.subTest(modelo=modelo):
                 url = reverse(f"admin:catalogo_{modelo}_changelist")
                 self.assertEqual(self.client.get(url).status_code, 200)

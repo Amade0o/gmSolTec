@@ -15,7 +15,8 @@ def cerrar_orden(orden):
         raise ReglaDeNegocioError("Una orden no arreglable no genera venta: se devuelve el dinero.")
     if orden.estado != "lista":
         raise ReglaDeNegocioError("Todavía hay equipos pendientes.")
-    if orden.adeuda:
-        raise ReglaDeNegocioError("La orden tiene saldo pendiente.")
+    # El saldo tiene que ser exactamente 0: ni deuda ni pago de más
+    if orden.monto_adeudado != 0:
+        raise ReglaDeNegocioError("El saldo de la orden debe ser 0 (hay deuda o se pagó de más).")
     return Venta.objects.create(
         orden_trabajo=orden, cliente=orden.cliente, total=orden.total)

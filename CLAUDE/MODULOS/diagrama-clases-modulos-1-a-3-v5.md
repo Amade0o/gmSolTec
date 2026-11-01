@@ -206,6 +206,12 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 | **Categorías genéricas** | Toda reparación y todo producto tiene categoría obligatoria; existe "Otras" |
 | **Equipo sano o sin diagnóstico** | Todo equipo lleva al menos una línea ("Revisión / diagnóstico"); si no tiene falla queda `sin_falla` |
 | **Teléfono: regla suave** | Se pide siempre, se puede guardar sin él confirmándolo; el sistema lista los clientes sin teléfono |
+| **Un solo teléfono principal** | ✅ Se valida en la tabla de teléfonos del admin (`TelefonoFormSet`) |
+| **Nombres únicos** | ✅ Único: `MetodoPago`, `CategoriaProducto`, `CategoriaReparacion`, `Marca`, `Producto`. Único por pareja: `Reparacion` (categoría + nombre), `ModeloEquipo` (marca + nombre). No único: `Cliente`, `Telefono` |
+| **Solo activos en altas** | ✅ Los desplegables de categoría y marca (`limit_choices_to`) muestran solo las activas. ❓ Faltan método de pago, producto y reparación |
+| **Bloqueo del equipo** | ✅ Si el tipo es `ninguno`, la clave debe quedar vacía |
+| **Precio de la línea de producto** | ✅ Si se deja vacío, se copia de `Producto.precio_venta` al guardar |
+| **Producto repetido** | ✅ No puede repetirse el mismo producto en las líneas de una orden o de una venta (se valida en el admin) |
 | **Nombres** | Español. PascalCase para clases, snake_case para atributos |
 
 ### 4.2 Estados de la orden (calculados, nunca guardados)
@@ -227,7 +233,7 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 | **Montos de la orden** | `monto_pagado` suma `Pago.monto` (sin recargo). `monto_adeudado = total − monto_pagado`. `adeuda = monto_adeudado > 0` |
 | **Pago y productos** | Un pago no se relaciona con productos: es dinero contra el total. Un cargador pagado mitad efectivo y mitad tarjeta son dos pagos sobre la misma venta |
 | **Un pago, un dueño** | Un `Pago` pertenece a una orden **o** a una venta. 💡 `Pago.clean()` rechaza que tenga las dos; una restricción en la base rechaza las dos y ninguna (en el admin, al crear una orden nueva la FK a la orden todavía no existe cuando corre `clean()`, por eso "ninguna" no se valida ahí) |
-| **Pago ≤ adeudado** | Se valida en el formulario (etapa 7) |
+| **Pago ≤ adeudado** | ✅ `Pago.clean()` lo valida. Si la orden todavía no tiene precio (total 0) se permite la seña. Los pagos creados por código no pasan por `clean()`; el cierre exige saldo 0 |
 | **ARCA** | `facturar_arca` en cada pago, etapa 8 |
 
 ### 4.4 Venta (módulo 3)
@@ -251,43 +257,43 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 
 | Tema | Resultado |
 |---|---|
-| Paso 1 y 2 de la Fase 2 | `LineaProductoAbstracta` con `LineaProductoOrden` y `LineaProductoVenta`; `Venta`; `Pago.venta`. Migrado |
-| Paso 3 | Un pago pertenece a una orden **o** a una venta: `Pago.clean()` (no ambas) más restricción en la base (ni ambas ni ninguna) |
-| Paso 4 | `OrdenTrabajo.cerrada`, estado `cerrada`, `monto_retenido` y `Pago.retenido`. Con tests |
-| Nombre del precio | `precio_vendido` unificado en `LineaReparacion` y en las líneas de producto |
-| `Venta.orden_trabajo` | `related_name="venta"` (uno a uno). `Venta.cliente` queda con `ventas_cliente` |
+| Fase 2, pasos 1 a 4 | Líneas con base abstracta, `Venta`, `Pago.venta`, un pago un dueño, `cerrada`, estado `cerrada`, dinero retenido. Con tests |
+| Paso 5 | `servicios.cerrar_orden` (exige saldo 0) y acción "Cerrar orden" en el admin |
+| Correcciones tras probar el admin | Nombres únicos; un solo teléfono principal; solo activos en categorías y marcas; `ninguno` sin clave; precio copiado del producto; producto no repetido; pago ≤ adeudado; sin precios negativos en `Producto` |
+| Admin | Líneas sueltas eliminadas; inlines nuevos (modelos en marca, reparaciones en categoría, reparaciones en equipo); pagos en solo lectura; ventas de orden no editables ni borrables; equipos de orden cerrada en solo lectura |
+| `related_name` | `Venta.orden_trabajo` → `venta`. `Venta.cliente` queda con `ventas_cliente` |
 
 ### 5.2 En curso 🔄
 
 | # | Tema |
 |---|---|
-| 1 | Paso 5: `servicios.cerrar_orden` (valida y crea la Venta), acción en el admin y tests. Código propuesto, falta implementar |
-| 2 | Pruebas manuales en el admin con `checklist-pruebas-admin.md`; el feedback decide los puntos de 5.3 |
-| 3 | Paso 5b (después de las pruebas): venta directa, con `LineaProductoVenta` y `Pago` en una sola transacción |
+| 1 | Seguir con los bloques 1 a 11 del `checklist-pruebas-admin.md` sobre el admin corregido (sin ficticios: sin falla, no arreglable, casos de `Casos`) |
+| 2 | Paso 5b (después de las pruebas): venta directa con `LineaProductoVenta` y `Pago` en una sola transacción |
 
-### 5.3 Nuevos, surgidos al probar el admin
+### 5.3 Pendientes surgidos al probar el admin
 
 | # | Tema | Detalle | Se resuelve en |
 |---|---|---|---|
-| 4 | **PIN y patrón visuales** | Hoy `clave_bloqueo` es texto. El patrón necesita una grilla de 9 puntos que se toca y guarda `1-5-9-6`. 💡 Mientras tanto, validar el formato según `tipo_bloqueo` (pin: dígitos; patrón: dígitos 1 a 9 sin repetir; ninguno: vacío) | Widget en la etapa 7; validación, antes |
-| 5 | **Precio en la línea de producto** | El diseño dice que se copia de `Producto.precio_venta` y se puede cambiar, pero hoy hay que escribirlo. 💡 Copiarlo al guardar si viene vacío (como el recargo del `Pago`). El subtotal en vivo necesita JavaScript | Copia: ahora. Subtotal en vivo: etapa 7 |
-| 6 | **Orden en una sola pantalla** | El admin no anida dos niveles (orden → equipo → línea), así que al crear la orden no se puede cargar el precio de la reparación y los pagos quedan sin total. Las líneas de reparación van por su propia pantalla | Pantalla propia, etapa 7 (con alta de reparación "al vuelo") |
-| 7 | **Seña antes de saber el precio** | ❓ Con total 0 y una seña, `monto_adeudado` queda negativo y la validación "pago ≤ adeudado" la rechazaría. 💡 Validar solo cuando el total sea mayor que 0 (la línea "Revisión / diagnóstico" cubre el caso de precio desconocido) | Etapa 7, junto con la validación |
-| 8 | **Líneas sueltas en el admin** | ❓ `LineaReparacion` suelta hace falta por ahora (punto 6). `LineaProductoOrden` y `LineaProductoVenta` ya se cargan en su inline: sacarlas o dejarlas de solo lectura. Hoy permiten editar líneas de una orden cerrada | Admin: ahora. Blindaje en el modelo: etapa 6 |
-| 9 | **Nombres únicos** | ❓ Único: `MetodoPago.nombre`, `CategoriaProducto.nombre`, `CategoriaReparacion.nombre`, `Marca.nombre`, `Proveedor.nombre`. Único por pareja: `Reparacion` (categoría y nombre), `ModeloEquipo` (marca y nombre), `Producto` (nombre, o nombre y marca). **No** único: `Cliente.nombre`, `Telefono.numero` | Ahora (restricciones en la base) |
-| 10 | **Reparación vs categoría de reparación** | No es un error: la categoría es el tipo ("Cambio de módulo") y la reparación es la variante ("Módulo OLED", "Módulo original"). Una categoría sin variantes obliga hoy a crear una reparación con el mismo nombre. 💡 `ReparacionInline` en el admin de la categoría; en la pantalla propia, crear categoría y variante en un solo paso; precargar las comunes en la etapa 11 | Admin: ahora. Resto: etapas 7 y 11 |
-| 11 | **Huecos por verificar con el checklist** | Sin validador de mínimo en `Producto.precio_compra` y `precio_venta`; marcas y categorías inactivas siguen apareciendo en altas nuevas; dos teléfonos principales; una Venta creada a mano en el admin se saltea el cierre; borrar una Venta reabre la orden | Según el feedback |
+| 3 | **PIN y patrón visuales** | Hoy es texto. Falta la grilla de 9 puntos (`1-5-9-6`) y validar el formato de PIN y patrón | Etapa 7 |
+| 4 | **Total y subtotal en vivo** | El admin calcula al guardar, no mientras se escribe | Etapa 7 (JavaScript) |
+| 5 | **Orden en una sola pantalla** | El admin no anida orden → equipo → línea. Se carga la orden y se abre el equipo (enlace en la fila) para cargar las reparaciones | Etapa 7, con alta de reparación "al vuelo" |
+| 6 | **Línea "Revisión / diagnóstico"** | Hoy un equipo puede no tener líneas. En la pantalla propia se agrega sola (editable) | Etapa 7 |
+| 7 | **Reparación gratis** | ❓ Una reparación que no se cobra va con precio 0. Para una orden mixta (un equipo no arreglable) ver Fase 5 | Fase 5 |
+| 8 | **Activos en transacciones** | ❓ Método de pago, producto y reparación inactivos siguen apareciendo al cargar una línea o un pago (filtrarlos rompería editar órdenes viejas) | Etapa 7 |
+| 9 | **Pagos con varias filas** | `Pago.clean()` valida cada pago contra la base: dos pagos nuevos en la misma pantalla que juntos superan el saldo pasan. El cierre exige saldo 0, así que no se cierran | Etapa 6 |
+| 10 | **Orden cerrada** | Se bloquea en el admin, no en el modelo: desde código o shell se podría editar | Etapa 6 |
+| 11 | **Estados del equipo** | Se puede pasar de `arreglado` a `pendiente` mientras la orden esté abierta (reclamo o corrección). Falta el historial de estados | Etapa 6 |
+| 12 | **Reparación vs categoría** | No es un error: la categoría es el tipo y la reparación es la variante. Falta precargar las comunes | Etapa 11 |
 
 ### 5.4 Pendientes de fases y etapas futuras (sin cambios)
 
 | # | Tema |
 |---|---|
-| 12 | Fase 3: `monto_pagado` y `monto_adeudado` en `Venta` (fiados) y cliente obligatorio si queda saldo |
-| 13 | Fase 4: pagos ⏳ con fecha de acreditación (GoCuotas, tarjeta diferida) |
-| 14 | Fase 5: devoluciones. ❓ Orden mixta (un equipo no arreglable): sus líneas no deberían cobrarse. ❓ Estado final de una orden no arreglable |
-| 15 | ❓ Transiciones: ¿volver de `arreglado` a `pendiente`? Estado "esperando repuesto". Historial de estados (tabla que solo se agrega) |
+| 13 | Fase 3: `monto_pagado` y `monto_adeudado` en `Venta` (fiados) y cliente obligatorio si queda saldo |
+| 14 | Fase 4: pagos ⏳ con fecha de acreditación (GoCuotas, tarjeta diferida) |
+| 15 | Fase 5: devoluciones. ❓ Orden mixta (un equipo no arreglable): sus líneas no deberían cobrarse. ❓ Estado final de una orden no arreglable |
 | 16 | ❓ Costo del repuesto en cada línea de reparación (ganancia) |
-| 17 | ❓ `Producto.codigo`, `Cliente.codigo`, datos de `Proveedor`, margen por categoría, teléfono (etiqueta y un solo principal) |
+| 17 | ❓ `Producto.codigo`, `Cliente.codigo`, datos de `Proveedor`, margen por categoría, teléfono (etiqueta) |
 | 18 | ❓ Blindar en la base las reglas de cantidad y precio |
 | 19 | Módulos 4 y 5: caja y movimientos, compras y proveedores |
 

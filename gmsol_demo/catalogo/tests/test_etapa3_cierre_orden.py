@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from catalogo.models import Venta
 from catalogo.servicios import ReglaDeNegocioError, cerrar_orden
-from catalogo.tests.test_pagos import BaseConPagos
+from catalogo.tests.test_etapa3_pagos import BaseConPagos
 
 D = Decimal
 

@@ -3,7 +3,7 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta
+from .models import CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta, Devolucion
 from .servicios import cerrar_orden, ReglaDeNegocioError
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
@@ -101,6 +101,9 @@ class PagoInline(admin.TabularInline):
             exclude.append("orden_trabajo")
         return exclude
 
+class DevolucionInline(admin.TabularInline):
+    model = Devolucion
+    extra = 0
 
 # ---------- Pantallas del catálogo ----------
 
@@ -161,16 +164,16 @@ class MetodoPagoAdmin(admin.ModelAdmin):
 
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
-    list_display = ("id", "cliente", "fecha_recepcion", "estado", "total", "monto_adeudado", "adeuda")
+    list_display = ("id", "cliente", "fecha_recepcion", "estado", "total", "monto_adeudado", "adeuda", "monto_a_devolver")
     search_fields = ("=id", "cliente__nombre",)
     list_filter = ("fecha_recepcion",)
-    inlines = [EquipoRecibidoInline, LineaProductoOrdenInline, PagoInline]
+    inlines = [EquipoRecibidoInline, LineaProductoOrdenInline, PagoInline, DevolucionInline]
     actions = ["cerrar_ordenes"]
 
     def get_readonly_fields(self, request, obj=None):
         if obj is None:     # al crear una orden todavía no hay números que mostrar
             return ()
-        return ("estado", "total", "monto_pagado", "monto_adeudado", "monto_retenido")
+        return ("estado", "total", "monto_pagado", "monto_adeudado", "monto_retenido", "monto_devuelto", "monto_a_devolver")
 
     @admin.action(description="Cerrar orden (crear venta)")
     def cerrar_ordenes(self, request, queryset):
@@ -200,6 +203,14 @@ class EquipoRecibidoAdmin(admin.ModelAdmin):
             return False        # equipo de una orden cerrada: solo lectura
         return super().has_change_permission(request, obj)
 
+@admin.register(Devolucion)
+class DevolucionAdmin(admin.ModelAdmin):
+    list_display = ("id", "orden_trabajo", "monto", "metodo_pago", "fecha_registro", "fecha_devolucion")
+    list_filter = (("fecha_devolucion", admin.EmptyFieldListFilter),)    # para ver las que faltan devolver
+
+    def has_add_permission(self, request):
+        return False        # se cargan desde la orden
+    
 @admin.register(Pago)
 class PagoAdmin(admin.ModelAdmin):
     list_display = (

@@ -11,8 +11,10 @@ class ReglaDeNegocioError(Exception):
 def cerrar_orden(orden):
     if orden.cerrada:
         raise ReglaDeNegocioError("La orden ya está cerrada.")
+    if orden.estado == "finalizada":
+        raise ReglaDeNegocioError("La orden ya terminó sin venta (no arreglable).")
     if orden.estado == "no_arreglable":
-        raise ReglaDeNegocioError("Una orden no arreglable no genera venta: se devuelve el dinero.")
+        raise ReglaDeNegocioError("Una orden no arreglable no genera venta: hay que devolver el dinero.")
     if orden.estado != "lista":
         raise ReglaDeNegocioError("Todavía hay equipos pendientes.")
     # El saldo tiene que ser exactamente 0: ni deuda ni pago de más

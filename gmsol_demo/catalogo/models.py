@@ -167,6 +167,9 @@ class OrdenTrabajo(models.Model):
             return 'pendiente'
 
         if all(equipo.estado == 'no_arreglable' for equipo in equipos):
+            # Si no queda dinero retenido (nunca hubo seña o ya se devolvió), terminó sin venta
+            if self.monto_retenido == 0:
+                return 'finalizada'
             return 'no_arreglable'
 
         return 'lista'  
@@ -176,6 +179,8 @@ class OrdenTrabajo(models.Model):
         total = Decimal("0.00")
 
         for equipo in self.equipos.all():
+            if equipo.estado == "no_arreglable":
+                continue        # lo que no se arregla no se cobra
             for linea in equipo.lineas_reparacion.all():
                 total += linea.subtotal
 
@@ -185,12 +190,23 @@ class OrdenTrabajo(models.Model):
         return total
 
     @property
+    def monto_devuelto(self):
+        # Dinero que ya se le devolvió al cliente
+        return sum((d.monto for d in self.devoluciones.all() if d.devuelta), Decimal("0.00"))
+
+    @property
+    def monto_a_devolver(self):
+        # Dinero que hay que devolver y todavía está reservado
+        return sum((d.monto for d in self.devoluciones.all() if not d.devuelta), Decimal("0.00"))
+
+    @property
     def monto_pagado(self):
+        # Lo que pagó el cliente menos lo que ya se le devolvió
         total = Decimal("0.00")
 
         for pago in self.pagos.all():
             total += pago.monto
-        return total
+        return total - self.monto_devuelto
 
     @property 
     def monto_adeudado(self):
@@ -270,7 +286,7 @@ class Pago(models.Model):
         if self.orden_trabajo_id and self.monto is not None:
             orden = self.orden_trabajo
             if orden.total > 0:
-                otros_pagos = sum(p.monto for p in orden.pagos.exclude(pk=self.pk))
+                otros_pagos = sum(p.monto for p in orden.pagos.exclude(pk=self.pk)) - orden.monto_devuelto
                 if self.monto > orden.total - otros_pagos:
                     raise ValidationError("El pago supera lo que falta pagar de la orden.")
 
@@ -288,7 +304,41 @@ class Pago(models.Model):
             dueno = "Sin asignar"
         return f"Pago #{self.id} | {dueno} | Monto: ${self.monto} | Total cobrado: ${self.total_cobrado}"
 
+class Devolucion(models.Model):
+    orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.PROTECT, related_name="devoluciones")
+    monto = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    # Se completa cuando se devuelve el dinero
+    metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.PROTECT, null=True, blank=True, related_name="devoluciones")
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    # Vacía = hay que devolver el dinero (está reservado). Con fecha = ya se devolvió
+    fecha_devolucion = models.DateTimeField(null=True, blank=True)
+    nota = models.TextField(max_length=300, blank=True)
 
+    class Meta:
+        verbose_name_plural = "devoluciones"
+
+    @property
+    def devuelta(self):
+        return self.fecha_devolucion is not None
+
+    def clean(self):
+        super().clean()
+        if self.fecha_devolucion and not self.metodo_pago_id:
+            raise ValidationError({"metodo_pago": "Indicá con qué método se devolvió el dinero."})
+        if self.orden_trabajo_id and self.monto is not None:
+            orden = self.orden_trabajo
+            if orden.cerrada:
+                raise ValidationError("La orden ya se cerró con una venta.")
+            # Entre todas las devoluciones (pendientes y hechas) no pueden superar lo pagado
+            pagado = sum(p.monto for p in orden.pagos.all())
+            otras = sum(d.monto for d in orden.devoluciones.exclude(pk=self.pk))
+            if self.monto > pagado - otras:
+                raise ValidationError("La devolución supera lo que pagó el cliente.")
+
+    def __str__(self):
+        estado = "devuelta" if self.devuelta else "falta devolver"
+        return f"Devolución #{self.id} | Orden #{self.orden_trabajo_id} | ${self.monto} | {estado}"
+    
 class EquipoRecibido(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
     tipo = models.CharField(max_length=20, choices=EQUIPO_RECIBIDO_ORDEN_CHOICES)

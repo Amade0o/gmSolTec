@@ -248,6 +248,8 @@ class AdminTests(Base):
             "pagos-TOTAL_FORMS": str(len(pagos)), "pagos-INITIAL_FORMS": "0",
             "pagos-MIN_NUM_FORMS": "0", "pagos-MAX_NUM_FORMS": "1000",
             "_save": "Guardar",
+            "devoluciones-TOTAL_FORMS": "0", "devoluciones-INITIAL_FORMS": "0",
+            "devoluciones-MIN_NUM_FORMS": "0", "devoluciones-MAX_NUM_FORMS": "1000",
         }
         for i, (prod, cant, precio) in enumerate(productos):
             d[f"lineas_producto-{i}-producto"] = prod

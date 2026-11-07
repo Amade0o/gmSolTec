@@ -35,7 +35,7 @@ from catalogo.models import (
 EN_REPARACION = "pendiente"      # algún equipo pendiente (o la orden no tiene equipos)
 LISTA = "lista"                  # nada pendiente y al menos uno resuelto
 NO_ARREGLABLE = "no_arreglable"  # todos los equipos sin arreglo
-
+FINALIZADA = "finalizada"        # todos los equipos sin arreglo y no hay seña que devolver
 
 def crear_orden(nombre_cliente="Juan"):
     cliente = Cliente.objects.create(nombre=nombre_cliente)
@@ -199,8 +199,8 @@ class EstadoOrdenTests(TestCase):
         (["arreglado", "arreglado"], LISTA),
         (["arreglado", "no_arreglable"], LISTA),
         (["no_arreglable", "sin_falla"], LISTA),
-        (["no_arreglable"], NO_ARREGLABLE),
-        (["no_arreglable", "no_arreglable"], NO_ARREGLABLE),
+        (["no_arreglable"], FINALIZADA),  # sin seña no queda dinero por devolver
+        (["no_arreglable", "no_arreglable"], FINALIZADA),  # sin seña no queda dinero por devolver
     ]
 
     def test_estado_de_la_orden_segun_sus_equipos(self):
@@ -341,6 +341,8 @@ class AdminOrdenTests(TestCase):
             "pagos-INITIAL_FORMS": "0",
             "pagos-MIN_NUM_FORMS": "0",
             "pagos-MAX_NUM_FORMS": "1000",
+            "devoluciones-TOTAL_FORMS": "0", "devoluciones-INITIAL_FORMS": "0",
+            "devoluciones-MIN_NUM_FORMS": "0", "devoluciones-MAX_NUM_FORMS": "1000",
         }
         if con_equipo:
             datos.update({

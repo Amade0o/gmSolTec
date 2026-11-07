@@ -1,0 +1,34 @@
+Me tomó un rato pero hice todas las pruebas y estoy casi seguro de que hice todo bien, te voy a adjuntar varias notas con cosas a considerar y errores graves tambien que deberás arreglar vos:
+- Es un poco raro poner "no arreglable" apenas creo la orden, "sin falla" tambien porque dovaia no fue revisado el dispositivo. Analiza si tiene sentido que sea siempre pendiente. Si es asi cambialo y ponele "pendiente de revisar o algo asi"
+- El menu es muy poco intuitivo a la hora de agregar reparaciones desde el admin, ya hablamos de esto, no hay drama que se quede asi siempre y cuando se solucione desde la interfaz grafica del usuario. Dejalo asi por ahora pero mas adelante con el javascript este calculo del monto para habilitar los pagos y etc se debe "calcular al vuelo" y no tener que darle a guardar y continuar. Dejalo asi como está.
+- En el T5 R6 el monto es -10000, quizá debería dejarse mas claro al usuario del programa que ese numero negativo es un monto a devolver.
+- En T5 R5a hay que separer bien el registro de "hay que devolver" de "devolver", incluso en el admin se debe hacer esto porque es confuso hasta para mí.
+- Me gustaría que luego de "guardar" me mande al menu de ordenes de trabajo, e incluso siempre quiero que sea visible el numero de la orden a la que estamos editando, dandole reparacion, etc. LA orden siempre debe ser visiable al editar, en la interfaz grafica se mostrará incluso informacion de la orden de la forma mas estetica posible. Para mi será muy importante como se verá el producto final, nada de graficos web pedorros, genericos. Quiero que sea minimalista y no parezca IA (recuerda eso).
+- Me gustaría que en las devoluciones ademas de poder devolver un monto, pueda tener la posibilidad de devolver la reparacion completa y se cargue automaticamente el monto
+- En T6 en el paso 6 quise hacer R6a y como se habia actualizado el total, no me dejó registrar la devolucion porque el pago anterior superoó lo que falta pagar de la orden (quedó desactualizado), el pago estaba bien. ESTO ES GRAVE porque no pude continuar con el reto del test
+- El tipo de bloquero debe ser "ninguno" por default
+- Primero quiero poner la reparacion o el producto y luego el precio, esto es referido a todo, tanto el admin como el producto final deberá tener en consideracion el orden en el que se cargan los productos
+- En el T7 no puedo apretar "guardar" luego de R5a porque está el error del pago que no deja actualizar, solo aparece una orden con el monto viejo.
+- En T8 R1 es raro cargar con arreglado de una, analizá si tiene sentido, Es posible que ocurra, obvio pero no lo termino de entender
+- No pude hacer T10: amadeo   modulo-3 U:2  ~/1_Apps/gmSolTec/gmSolTec/gmsol_demo  python3 manage.py shell
+Traceback (most recent call last):
+  File "/home/amadeo/1_Apps/gmSolTec/gmSolTec/gmsol_demo/manage.py", line 12, in main
+    from django.core.management import execute_from_command_line
+ModuleNotFoundError: No module named 'django'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/amadeo/1_Apps/gmSolTec/gmSolTec/gmsol_demo/manage.py", line 23, in <module>
+    main()
+  File "/home/amadeo/1_Apps/gmSolTec/gmSolTec/gmsol_demo/manage.py", line 14, in main
+    raise ImportError(
+ImportError: Couldn't import Django. Are you sure it's installed and available on your PYTHONPATH environment variable? Did you forget to activate a virtual environment?
+
+
+
+- Todo lo demas está bien
+- Testéa los cambios desde el /admin vos mismo en tu entorno o ambiente
+
+
+Nota importante: Hay muchos errores que se dan por la confusion de hacer uso del admin/ ya que el programa se está haciendo grande y el admin no es tan intuituvo. Asumo que con un entorno grafico esto se podrá solucionar. Espero poder realizarlo en la demo que se aproxima...

@@ -3,7 +3,9 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
-from .models import CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta, Devolucion
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from .models import Devolucion, CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta
 from .servicios import cerrar_orden, ReglaDeNegocioError
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
@@ -71,11 +73,13 @@ class EquipoRecibidoInline(admin.TabularInline):
 
 class LineaReparacionInline(admin.TabularInline):
     model = LineaReparacion
+    fields = ("reparacion", "precio_vendido", "nota")      # primero qué se hace, después el precio
     extra = 1
 
 class LineaProductoOrdenInline(admin.TabularInline):
     model = LineaProductoOrden
     formset = SinProductoRepetidoFormSet
+    fields = ("producto", "cantidad_adquirida", "precio_vendido", "subtotal")
     extra = 1
     autocomplete_fields = ("producto",)
     readonly_fields = ("subtotal",)
@@ -83,6 +87,7 @@ class LineaProductoOrdenInline(admin.TabularInline):
 class LineaProductoVentaInline(admin.TabularInline):
     model = LineaProductoVenta
     formset = SinProductoRepetidoFormSet
+    fields = ("producto", "cantidad_adquirida", "precio_vendido", "subtotal")
     extra = 1
     autocomplete_fields = ("producto",)
     readonly_fields = ("subtotal",)
@@ -102,8 +107,31 @@ class PagoInline(admin.TabularInline):
         return exclude
 
 class DevolucionInline(admin.TabularInline):
+    """Dentro de la orden solo se REGISTRA que hay que devolver dinero.
+    Marcar que ya se devolvió se hace en el menú Devoluciones."""
     model = Devolucion
+    fields = ("linea_reparacion", "monto", "nota", "estado")
+    readonly_fields = ("estado",)
     extra = 0
+
+    @admin.display(description="Estado")
+    def estado(self, obj):
+        if obj is None or obj.pk is None:
+            return "-"
+        return "Ya devuelta" if obj.devuelta else "Falta devolver"
+
+    def get_formset(self, request, obj=None, **kwargs):
+        request._orden_actual = obj         # para mostrar solo las reparaciones de esta orden
+        return super().get_formset(request, obj, **kwargs)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        campo = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "linea_reparacion":
+            orden = getattr(request, "_orden_actual", None)
+            campo.queryset = LineaReparacion.objects.filter(equipo__orden_trabajo=orden) if orden else LineaReparacion.objects.none()
+            campo.label_from_instance = lambda l: f"Equipo #{l.equipo_id} · {l.reparacion} · ${l.precio_vendido}"
+        return campo
+
 
 # ---------- Pantallas del catálogo ----------
 
@@ -164,7 +192,7 @@ class MetodoPagoAdmin(admin.ModelAdmin):
 
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
-    list_display = ("id", "cliente", "fecha_recepcion", "estado", "total", "monto_adeudado", "adeuda", "monto_a_devolver")
+    list_display = ("id", "cliente", "fecha_recepcion", "estado", "total", "saldo", "adeuda", "monto_a_devolver")
     search_fields = ("=id", "cliente__nombre",)
     list_filter = ("fecha_recepcion",)
     inlines = [EquipoRecibidoInline, LineaProductoOrdenInline, PagoInline, DevolucionInline]
@@ -173,7 +201,23 @@ class OrdenTrabajoAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         if obj is None:     # al crear una orden todavía no hay números que mostrar
             return ()
-        return ("estado", "total", "monto_pagado", "monto_adeudado", "monto_retenido", "monto_devuelto", "monto_a_devolver")
+        return ("estado", "total", "monto_pagado", "saldo", "monto_retenido", "monto_devuelto", "monto_a_devolver")
+
+    @admin.display(description="Saldo")
+    def saldo(self, orden):
+        pendiente = orden.monto_adeudado
+        if pendiente > 0:
+            return f"Debe ${pendiente}"
+        if pendiente < 0:
+            return f"A favor del cliente: ${-pendiente} (se debe devolver)"
+        return "Saldado"
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        orden = self.get_object(request, object_id)
+        extra_context = extra_context or {}
+        if orden is not None:
+            extra_context["title"] = f"Orden #{orden.id} · {orden.cliente} · {orden.estado}"
+        return super().change_view(request, object_id, form_url, extra_context)
 
     @admin.action(description="Cerrar orden (crear venta)")
     def cerrar_ordenes(self, request, queryset):
@@ -198,19 +242,62 @@ class EquipoRecibidoAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False            # los equipos se agregan desde la orden
 
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        equipo = self.get_object(request, object_id)
+        extra_context = extra_context or {}
+        if equipo is not None:
+            orden = equipo.orden_trabajo
+            extra_context["title"] = f"Orden #{orden.id} · {orden.cliente} · Equipo #{equipo.id}"
+        return super().change_view(request, object_id, form_url, extra_context)
+
+    def response_change(self, request, obj):
+        respuesta = super().response_change(request, obj)
+        if "_save" in request.POST:     # "Guardar" vuelve al menú de órdenes
+            return HttpResponseRedirect(reverse("admin:catalogo_ordentrabajo_changelist"))
+        return respuesta
+
     def has_change_permission(self, request, obj=None):
         if obj is not None and obj.orden_trabajo.cerrada:
             return False        # equipo de una orden cerrada: solo lectura
         return super().has_change_permission(request, obj)
 
+class EstadoDevolucionFilter(admin.SimpleListFilter):
+    title = "estado"
+    parameter_name = "estado"
+
+    def lookups(self, request, model_admin):
+        return [("pendiente", "Falta devolver"), ("devuelta", "Ya devuelta")]
+
+    def queryset(self, request, queryset):
+        if self.value() == "pendiente":
+            return queryset.filter(fecha_devolucion__isnull=True)
+        if self.value() == "devuelta":
+            return queryset.filter(fecha_devolucion__isnull=False)
+        return queryset
+
 @admin.register(Devolucion)
 class DevolucionAdmin(admin.ModelAdmin):
-    list_display = ("id", "orden_trabajo", "monto", "metodo_pago", "fecha_registro", "fecha_devolucion")
-    list_filter = (("fecha_devolucion", admin.EmptyFieldListFilter),)    # para ver las que faltan devolver
+    """Acá se marca que el dinero ya se devolvió: elegí el método y guardá."""
+    list_display = ("id", "orden_trabajo", "monto", "estado", "metodo_pago", "fecha_devolucion")
+    list_filter = (EstadoDevolucionFilter,)
+    fields = ("orden_trabajo", "linea_reparacion", "monto", "nota", "metodo_pago", "fecha_devolucion")
+    readonly_fields = ("orden_trabajo", "linea_reparacion", "monto", "fecha_devolucion")
+
+    @admin.display(description="Estado")
+    def estado(self, obj):
+        return "Ya devuelta" if obj.devuelta else "Falta devolver"
 
     def has_add_permission(self, request):
-        return False        # se cargan desde la orden
-    
+        return False        # se registran desde la orden
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        devolucion = self.get_object(request, object_id)
+        extra_context = extra_context or {}
+        if devolucion is not None:
+            orden = devolucion.orden_trabajo
+            extra_context["title"] = f"Devolución · Orden #{orden.id} · {orden.cliente} · ${devolucion.monto}"
+        return super().change_view(request, object_id, form_url, extra_context)
+
 @admin.register(Pago)
 class PagoAdmin(admin.ModelAdmin):
     list_display = (

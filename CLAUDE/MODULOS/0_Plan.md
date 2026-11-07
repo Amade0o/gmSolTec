@@ -39,6 +39,27 @@ Charla y decisiones → .md de diseño → código (lo escribe el desarrollador,
 
 ---
 
+## Camino a la beta
+
+**Beta** = versión que el dueño puede usar **en paralelo a su Excel**.
+
+| Etapa | ¿En la beta? | Motivo |
+|---|---|---|
+| 3. Pagos y ventas | ✅ Fases 1, 2 y 5 | Fases 3 y 4 (fiados, GoCuotas) quedan para después: se siguen anotando en el Excel |
+| 4. Caja y movimientos | ✅ | Es lo que reemplaza al Excel |
+| 6. Reglas de negocio | 🟡 Lo mínimo | Lo que ya está en `servicios.py` alcanza; el refactor con patrones puede esperar |
+| 7. Pantallas propias | ✅ | La parte más grande: orden en una pantalla, PIN visual, totales en vivo |
+| 10. Impresión de la orden | ✅ | El papel de dos partes es parte de su rutina |
+| 11. Datos iniciales y migración | ✅ | Su catálogo real y sus precios |
+| 12. Instalación y backups | ✅ | Sin backups no se usan datos reales |
+| 5. Compras, 8. ARCA, 9. Estadísticas | ⏭️ Después | Sigue facturando a mano en ARCA; el stock inicial entra con la migración |
+
+```
+Cerrar Fase 2 → Fase 5 → Etapa 4 → Etapa 7 → Etapas 10, 11 y 12 → 🎉 Beta → Etapa 13
+```
+
+---
+
 ## Etapa 3 — Fases
 
 **Idea central:** cada pago tiene dos datos independientes. *Por dónde entró* (efectivo / digital) y *estado del dinero* (🔒 retenido · ⏳ pendiente de acreditar · ✅ disponible).
@@ -48,9 +69,9 @@ Charla y decisiones → .md de diseño → código (lo escribe el desarrollador,
 | 0 | Vocabulario y decisiones | "Factura" → **Venta** | ✅ |
 | 1 | `MetodoPago` + `Pago` ligado a la orden. Propiedades de la orden: `total`, `monto_pagado`, `monto_adeudado`, `adeuda` | Seña, saldo, métodos distintos, recargo | ✅ |
 | 2 | **Venta**: cierre de orden (`cerrar_orden`) y venta directa (`vender_directo`). `Pago.retenido` y `monto_retenido` | Retiro: 🔒 → ✅, venta sin orden | 🔄 pasos 1 a 5 hechos; `vender_directo` en curso; pruebas manuales en el admin |
-| 3 | Saldo pendiente de productos | Fiados | ⬜ |
-| 4 | Pagos ⏳ con fecha de acreditación | GoCuotas, tarjeta diferida | ⬜ |
-| 5 | Devoluciones | Equipo no arreglable, "Devolver dinero" del BPMN | ⬜ |
+| 3 | Saldo pendiente de productos | Fiados | ⏭️ después de la beta |
+| 4 | Pagos ⏳ con fecha de acreditación | GoCuotas, tarjeta diferida | ⏭️ después de la beta |
+| 5 | Devoluciones | Equipo no arreglable, "Devolver dinero" del BPMN, orden mixta, estado final sin venta | 🔄 siguiente (entra en la beta) |
 
 **Decisiones tomadas:**
 - El estado del dinero (retenido, etc.) **se calcula**, no se guarda.

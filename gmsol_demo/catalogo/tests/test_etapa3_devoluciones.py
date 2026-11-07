@@ -166,7 +166,7 @@ class DevolucionesAdminTests(Base):
         r = self.client.get(f"/admin/catalogo/ordentrabajo/{orden.pk}/change/")
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Devoluciones")
-        r = self.client.get("/admin/catalogo/devolucion/?fecha_devolucion__isempty=1")
+        r = self.client.get("/admin/catalogo/devolucion/?estado=pendiente")
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, f"/devolucion/{pendiente.pk}/change/")
         self.assertNotContains(r, f"/devolucion/{hecha.pk}/change/")

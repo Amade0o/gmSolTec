@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 #Tipos de equipos que se pueden recibir en una orden de trabajo
 EQUIPO_RECIBIDO_ORDEN_CHOICES= [
@@ -24,7 +25,7 @@ MODELO_EQUIPO_TIPO_CHOICES = [
 
 # Estados del equipo dentro de la orden, estos tambien seran estados de la orden
 EQUIPO_ORDEN_ESTADO_CHOICES = [
-    ('pendiente', 'Pendiente'),
+    ('pendiente', 'En revisión / reparación'),
     ('sin_falla', 'Sin falla'),
     ('arreglado', 'Arreglado'),
     ('no_arreglable', 'No Arreglable')
@@ -284,11 +285,15 @@ class Pago(models.Model):
         # El pago no puede superar lo que falta pagar.
         # Si la orden todavía no tiene precio (total 0), se permite la seña.
         if self.orden_trabajo_id and self.monto is not None:
-            orden = self.orden_trabajo
-            if orden.total > 0:
-                otros_pagos = sum(p.monto for p in orden.pagos.exclude(pk=self.pk)) - orden.monto_devuelto
-                if self.monto > orden.total - otros_pagos:
-                    raise ValidationError("El pago supera lo que falta pagar de la orden.")
+            # Un pago ya guardado que no cambió no se vuelve a controlar: el total de la
+            # orden pudo bajar después (ej.: un equipo no arreglable) y el pago sigue siendo válido.
+            anterior = Pago.objects.filter(pk=self.pk).values_list("monto", flat=True).first() if self.pk else None
+            if anterior != self.monto:
+                orden = self.orden_trabajo
+                if orden.total > 0:
+                    otros_pagos = sum(p.monto for p in orden.pagos.exclude(pk=self.pk)) - orden.monto_devuelto
+                    if self.monto > orden.total - otros_pagos:
+                        raise ValidationError("El pago supera lo que falta pagar de la orden.")
 
     def save(self, *args, **kwargs):
         if self.recargo_porcentaje is None:      # vacío → copia el del método
@@ -304,15 +309,19 @@ class Pago(models.Model):
             dueno = "Sin asignar"
         return f"Pago #{self.id} | {dueno} | Monto: ${self.monto} | Total cobrado: ${self.total_cobrado}"
 
+
 class Devolucion(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.PROTECT, related_name="devoluciones")
-    monto = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
-    # Se completa cuando se devuelve el dinero
-    metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.PROTECT, null=True, blank=True, related_name="devoluciones")
+    # Opcional: devolver una reparación completa (el monto se completa solo)
+    linea_reparacion = models.ForeignKey("LineaReparacion", on_delete=models.PROTECT, null=True, blank=True, related_name="devoluciones")
+    # Si hay una reparación elegida y se deja vacío, se completa con su precio
+    monto = models.DecimalField(max_digits=10, decimal_places=2, blank=True, validators=[MinValueValidator(Decimal("0.01"))])
+    nota = models.TextField(max_length=300, blank=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
+    # Se completan cuando se devuelve el dinero (la fecha se pone sola al elegir el método)
+    metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.PROTECT, null=True, blank=True, related_name="devoluciones")
     # Vacía = hay que devolver el dinero (está reservado). Con fecha = ya se devolvió
     fecha_devolucion = models.DateTimeField(null=True, blank=True)
-    nota = models.TextField(max_length=300, blank=True)
 
     class Meta:
         verbose_name_plural = "devoluciones"
@@ -323,9 +332,21 @@ class Devolucion(models.Model):
 
     def clean(self):
         super().clean()
+        if self.linea_reparacion_id:
+            linea = self.linea_reparacion
+            if self.orden_trabajo_id and linea.equipo.orden_trabajo_id != self.orden_trabajo_id:
+                raise ValidationError({"linea_reparacion": "Esa reparación no es de esta orden."})
+            if linea.equipo.estado != "no_arreglable":
+                raise ValidationError({"linea_reparacion": "Solo se puede devolver la reparación de un equipo no arreglable."})
+            if self.monto is None:
+                self.monto = linea.precio_vendido
+        if self.monto is None:
+            raise ValidationError("Indicá el monto o elegí la reparación a devolver.")
+        if self.monto <= 0:
+            raise ValidationError({"monto": "El monto a devolver debe ser mayor a 0."})
         if self.fecha_devolucion and not self.metodo_pago_id:
             raise ValidationError({"metodo_pago": "Indicá con qué método se devolvió el dinero."})
-        if self.orden_trabajo_id and self.monto is not None:
+        if self.orden_trabajo_id:
             orden = self.orden_trabajo
             if orden.cerrada:
                 raise ValidationError("La orden ya se cerró con una venta.")
@@ -335,22 +356,33 @@ class Devolucion(models.Model):
             if self.monto > pagado - otras:
                 raise ValidationError("La devolución supera lo que pagó el cliente.")
 
+    def save(self, *args, **kwargs):
+        if self.monto is None and self.linea_reparacion_id:
+            self.monto = self.linea_reparacion.precio_vendido
+        if self.metodo_pago_id and not self.fecha_devolucion:
+            self.fecha_devolucion = timezone.now()      # elegir el método = ya se devolvió
+        super().save(*args, **kwargs)
+
     def __str__(self):
         estado = "devuelta" if self.devuelta else "falta devolver"
         return f"Devolución #{self.id} | Orden #{self.orden_trabajo_id} | ${self.monto} | {estado}"
-    
+
+
 class EquipoRecibido(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
     tipo = models.CharField(max_length=20, choices=EQUIPO_RECIBIDO_ORDEN_CHOICES)
     modelo = models.ForeignKey(ModeloEquipo, on_delete=models.PROTECT, related_name="equipos", blank = True, null = True)
     problema = models.TextField(max_length=500) 
-    tipo_bloqueo = models.CharField(max_length=20, choices=BLOQUEO_CHOICES)
+    tipo_bloqueo = models.CharField(max_length=20, choices=BLOQUEO_CHOICES, default='ninguno')
     clave_bloqueo = models.CharField(max_length=100, blank=True)
     accesorios_dejados = models.TextField(max_length=300, blank = True)
     estado = models.CharField(max_length=20, default= 'pendiente', choices=EQUIPO_ORDEN_ESTADO_CHOICES)
 
     def clean(self):
         super().clean()
+        # El resultado (arreglado, sin falla, no arreglable) se carga después de revisar el equipo
+        if self.pk is None and self.estado != "pendiente":
+            raise ValidationError({"estado": "Un equipo nuevo siempre empieza en revisión: el resultado se carga después."})
         if self.tipo_bloqueo == "ninguno" and self.clave_bloqueo:
             raise ValidationError({"clave_bloqueo": "Si no tiene bloqueo, la clave debe quedar vacía."})
 

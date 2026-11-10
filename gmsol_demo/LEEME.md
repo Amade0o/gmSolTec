@@ -1,28 +1,124 @@
 # Demo mínima de Django (GMSol)
 
-Sirve solo para ver cómo se siente la tecnología. Es descartable: no es el diseño final.
-Usa SQLite para no instalar nada; en el proyecto real será MySQL (se cambia en `config/settings.py`).
+Esta carpeta contiene la demo funcional de gmSolTec. Es un proyecto Django
+con SQLite para desarrollo local. El README principal del repositorio está en
+[`../README.md`](../README.md); este archivo concentra los comandos que se
+ejecutan dentro de `gmsol_demo/`.
 
-## Cómo correrla (necesitás Python 3.10 o más)
+## Instalación
 
+Requiere Python 3.12 o superior. Desde la raíz del repositorio:
+
+```bash
+cd gmsol_demo
+python3 -m venv .venv
+source .venv/bin/activate       # Linux/macOS
+python -m pip install --upgrade pip
+python -m pip install Django==6.1.1
 ```
-pip install django
+
+En Windows PowerShell:
+
+```powershell
+cd gmsol_demo
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install Django==6.1.1
+```
+
+Si ya existe el entorno virtual, solamente hay que activarlo:
+
+```bash
+cd gmsol_demo
+source .venv/bin/activate
+```
+
+## Preparar y ejecutar la demo
+
+Todos los comandos siguientes se ejecutan desde `gmsol_demo/`:
+
+```bash
+python manage.py check
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Abrí http://127.0.0.1:8000/admin e ingresá con el usuario que creaste.
+Abrir <http://127.0.0.1:8000/admin/> e ingresar con el usuario creado.
+Detener el servidor con `Ctrl+C`.
 
-## Qué probar
+Cuando se cambien modelos, crear y aplicar migraciones con:
 
-1. Creá una **categoría** ("Cables") y una **marca** ("Samsung").
-2. Creá un **producto**: la marca es opcional, la categoría no. Mirá la columna **margen**: se calcula, no se guarda.
-3. Creá un **cliente**, el telefono es muy importante
-4. Agregá dos teléfonos al mismo cliente.
-5. Intentá borrar una categoría que tiene productos: está protegida.
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Otros comandos útiles:
+
+```bash
+python manage.py showmigrations
+python manage.py shell
+```
+
+## Cargar datos de prueba
+
+El comando propio carga datos iniciales de catálogo, reparaciones, métodos de
+pago y clientes:
+
+```bash
+python manage.py cargar_datos_prueba
+```
+
+Es seguro ejecutarlo más de una vez: no duplica los registros que administra.
+
+## Ejecutar tests
+
+Suite completa:
+
+```bash
+python manage.py test
+```
+
+Por archivo:
+
+```bash
+python manage.py test catalogo.tests.test_etapa1
+python manage.py test catalogo.tests.test_etapa2
+python manage.py test catalogo.tests.test_etapa3_correcciones
+python manage.py test catalogo.tests.test_etapa3_cierre_orden
+python manage.py test catalogo.tests.test_etapa3_pagos
+python manage.py test catalogo.tests.test_etapa3_devoluciones
+python manage.py test catalogo.tests.test_etapa3_venta_directa
+python manage.py test catalogo.tests.test_etapa3_reporte_manual
+```
+
+Ejemplo de un único test:
+
+```bash
+python manage.py test catalogo.tests.test_etapa1.ProductoTests.test_margen_se_calcula_con_los_dos_precios
+```
+
+Los tests usan una base de datos temporal y no deberían alterar
+`db.sqlite3`.
+
+## Qué probar manualmente
+
+1. Crear una **categoría** (`Cables`) y una **marca** (`Samsung`).
+2. Crear un **producto**: la marca es opcional y la categoría obligatoria.
+   La columna **margen** se calcula, no se guarda.
+3. Crear un **cliente** y agregarle dos teléfonos.
+4. Intentar borrar una categoría que tiene productos: la relación está
+   protegida.
+5. Ejecutar `cargar_datos_prueba` y revisar los registros desde el admin.
 
 ## Dónde mirar el código
 
-- `catalogo/models.py`: las clases y sus relaciones (son las del diagrama del módulo 1).
-- `catalogo/admin.py`: las pantallas que Django arma solo.
+- [`catalogo/models.py`](./catalogo/models.py): clases y relaciones.
+- [`catalogo/admin.py`](./catalogo/admin.py): pantallas del admin.
+- [`catalogo/servicios.py`](./catalogo/servicios.py): reglas de negocio.
+- [`catalogo/management/commands/cargar_datos_prueba.py`](./catalogo/management/commands/cargar_datos_prueba.py):
+  datos iniciales.
+- [`catalogo/tests/`](./catalogo/tests/): tests automatizados.
+- [`config/settings.py`](./config/settings.py): configuración y base SQLite.

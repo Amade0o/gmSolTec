@@ -3,7 +3,7 @@ from django.contrib import admin
 "Cada clase hereda de models.Model."
 "En models va cada clase que representa una tabla de la base de datos."
 "Django convierte cada clase en una tabla y cada atributo en una columna. Ejemplo:"
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -263,7 +263,8 @@ class Pago(models.Model):
         if self.monto is None or self.recargo_porcentaje is None:
             return Decimal("0.00")
         
-        return self.monto * (self.recargo_porcentaje / Decimal("100"))
+        # Se redondea a centavos (los montos reales no tienen fracciones de centavo)
+        return (self.monto * self.recargo_porcentaje / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
  
     @property
     def total_cobrado(self):

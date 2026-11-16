@@ -17,6 +17,9 @@ def cerrar_orden(orden):
         raise ReglaDeNegocioError("Una orden no arreglable no genera venta: hay que devolver el dinero.")
     if orden.estado != "lista":
         raise ReglaDeNegocioError("Todavía hay equipos pendientes.")
+    # Si hay una devolución registrada sin hacer, después de cerrar ya no se podría marcar devuelta
+    if orden.monto_a_devolver > 0:
+        raise ReglaDeNegocioError("Hay dinero para devolver: marcá la devolución como hecha antes de cerrar.")
     # El saldo tiene que ser exactamente 0: ni deuda ni pago de más
     if orden.monto_adeudado != 0:
         raise ReglaDeNegocioError("El saldo de la orden debe ser 0 (hay deuda o se pagó de más).")

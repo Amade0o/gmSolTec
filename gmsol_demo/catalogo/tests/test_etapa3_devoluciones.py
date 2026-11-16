@@ -137,6 +137,29 @@ class DevolucionesTests(Base):
             cerrar_orden(sin_sena)
         self.assertIn("terminó sin venta", str(ctx.exception))
 
+    def test_no_cierra_con_una_devolucion_sin_hacer(self):
+        """Regresión: con saldo 0 y una devolución pendiente, la orden se cerraba
+        y la devolución ya no se podía marcar como hecha."""
+        orden = self.crear_orden(D("1000"))
+        orden.equipos.update(estado="arreglado")
+        self.pagar(orden, "1000")
+        dev = self.deber(orden, "300")
+        self.assertEqual(orden.monto_adeudado, 0)
+        with self.assertRaises(ReglaDeNegocioError) as ctx:
+            cerrar_orden(orden)
+        self.assertIn("devolver", str(ctx.exception))
+        dev.delete()                                    # estaba cargada por error
+        cerrar_orden(orden)
+        self.assertEqual(orden.estado, "cerrada")
+
+    def test_una_devolucion_hecha_no_se_modifica(self):
+        orden = self.orden_no_arreglable("400")
+        dev = self.deber(orden, "400")
+        self.devolver(dev)
+        dev.monto = D("100")
+        with self.assertRaises(ValidationError):
+            dev.full_clean()
+
     def test_se_puede_volver_a_pagar_despues_de_devolver(self):
         orden = self.crear_orden(D("1000"))
         self.pagar(orden, "1000")
@@ -172,3 +195,24 @@ class DevolucionesAdminTests(Base):
         self.assertNotContains(r, f"/devolucion/{hecha.pk}/change/")
         self.assertEqual(self.client.get("/admin/catalogo/devolucion/add/").status_code, 403)
         self.assertEqual(self.client.get(f"/admin/catalogo/devolucion/{pendiente.pk}/change/").status_code, 200)
+
+    def test_solo_se_borra_una_devolucion_pendiente(self):
+        orden = self.crear_orden()
+        orden.equipos.update(estado="no_arreglable")
+        self.pagar(orden, "400")
+        pendiente = Devolucion.objects.create(orden_trabajo=orden, monto=D("200"))
+        hecha = Devolucion.objects.create(
+            orden_trabajo=orden, monto=D("100"), metodo_pago=self.efectivo, fecha_devolucion=timezone.now())
+        self.assertEqual(self.client.get(f"/admin/catalogo/devolucion/{hecha.pk}/delete/").status_code, 403)
+        self.assertEqual(self.client.get(f"/admin/catalogo/devolucion/{pendiente.pk}/delete/").status_code, 200)
+
+    def test_la_venta_de_una_orden_es_solo_lectura(self):
+        orden = self.crear_orden()
+        orden.equipos.update(estado="arreglado")
+        self.pagar(orden, "1000")
+        venta = cerrar_orden(orden)
+        url = f"/admin/catalogo/venta/{venta.pk}/change/"
+        self.assertEqual(self.client.get(url).status_code, 200)            # se puede mirar
+        self.assertEqual(self.client.post(url, {"total": "1"}).status_code, 403)
+        venta.refresh_from_db()
+        self.assertEqual(venta.total, D("1000"))

@@ -333,6 +333,12 @@ class Devolucion(models.Model):
 
     def clean(self):
         super().clean()
+        # Una devolución ya hecha no se modifica: el dinero ya salió
+        if self.pk:
+            anterior = Devolucion.objects.filter(pk=self.pk).first()
+            if anterior and anterior.devuelta and (
+                    anterior.monto != self.monto or anterior.linea_reparacion_id != self.linea_reparacion_id):
+                raise ValidationError("Esta devolución ya se hizo: no se puede modificar.")
         if self.linea_reparacion_id:
             linea = self.linea_reparacion
             if self.orden_trabajo_id and linea.equipo.orden_trabajo_id != self.orden_trabajo_id:

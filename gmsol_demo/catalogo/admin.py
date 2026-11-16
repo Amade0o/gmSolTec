@@ -113,6 +113,7 @@ class DevolucionInline(admin.TabularInline):
     fields = ("linea_reparacion", "monto", "nota", "estado")
     readonly_fields = ("estado",)
     extra = 0
+    can_delete = False      # una devolución mal cargada se borra desde el menú Devoluciones
 
     @admin.display(description="Estado")
     def estado(self, obj):
@@ -282,6 +283,7 @@ class DevolucionAdmin(admin.ModelAdmin):
     list_filter = (EstadoDevolucionFilter,)
     fields = ("orden_trabajo", "linea_reparacion", "monto", "nota", "metodo_pago", "fecha_devolucion")
     readonly_fields = ("orden_trabajo", "linea_reparacion", "monto", "fecha_devolucion")
+    actions = None          # sin borrado masivo
 
     @admin.display(description="Estado")
     def estado(self, obj):
@@ -289,6 +291,11 @@ class DevolucionAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False        # se registran desde la orden
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and (obj.devuelta or obj.orden_trabajo.cerrada):
+            return False        # solo se borra una devolución pendiente (cargada por error)
+        return super().has_delete_permission(request, obj)
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         devolucion = self.get_object(request, object_id)
@@ -324,6 +331,11 @@ class VentaAdmin(admin.ModelAdmin):
     readonly_fields = ("orden_trabajo",)    # las ventas de una orden se crean con "Cerrar orden"
     inlines = [LineaProductoVentaInline, PagoInline]
     actions = None                          # sin borrado masivo
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.orden_trabajo_id:
+            return False        # la venta de una orden no se modifica: solo lectura
+        return super().has_change_permission(request, obj)
 
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.orden_trabajo_id:

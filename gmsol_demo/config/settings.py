@@ -18,6 +18,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Ubica la carpeta principal del proyecto, DIRECTORIO_BASE / 'subdirectorio'.

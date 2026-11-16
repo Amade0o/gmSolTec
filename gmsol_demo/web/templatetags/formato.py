@@ -1,3 +1,4 @@
+"""Filtros de plantilla: pesos argentinos, saldo en palabras, estados y pista de progreso."""
 from django import template
 
 register = template.Library()

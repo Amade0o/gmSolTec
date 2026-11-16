@@ -1,0 +1,11 @@
+{% load formato %}
+{% if margen %}
+<dl class="cuentas">
+<div><dt>Ganancia por unidad</dt><dd>{{ margen.ganancia|pesos }}</dd></div>
+<div><dt>Margen</dt><dd>{% if margen.porcentaje is None %}—{% else %}{{ margen.porcentaje|floatformat:"-1" }} %{% endif %}</dd></div>
+</dl>
+{% if margen.ganancia < 0 %}<div class="saldo-caja debe">Se vende por debajo del costo</div>{% endif %}
+{% if margen.porcentaje is None %}<small class="ayuda">Sin precio de compra no se calcula el margen.</small>{% endif %}
+{% else %}
+<p class="ayuda">Cargá los dos precios para ver el margen.</p>
+{% endif %}

@@ -55,7 +55,7 @@ td{padding:12px}
 td.num b{font-family:var(--mono);font-weight:500;font-size:13.5px;color:var(--muted)}
 td.cli{font-weight:600}
 th.der,td.der{text-align:right}
-td.afavor{color:#8A2A1C;font-weight:600}
+td.afavor,td.perdida{color:#8A2A1C;font-weight:600}
 
 /* ---------- Pista de progreso ----------
    Recibida · Revisión · Lista · Entregada, dibujada como las pistas del logo.

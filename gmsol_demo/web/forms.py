@@ -9,7 +9,7 @@ from decimal import Decimal
 from django import forms
 
 from catalogo.models import (
-    Cliente, EquipoRecibido, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
+    CategoriaProducto, Cliente, EquipoRecibido, Marca, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
     ModeloEquipo, Pago, Producto, Reparacion,
 )
 
@@ -240,3 +240,39 @@ class ClienteNuevoForm(ClienteForm):
 class TelefonoForm(forms.Form):
     numero = forms.CharField(max_length=30, label="Teléfono")
     principal = forms.BooleanField(required=False, label="Principal")
+
+
+
+# ---------- Productos ----------
+
+class ProductoForm(forms.ModelForm):
+    class Meta:
+        model = Producto
+        fields = ["nombre", "categoria", "marca", "precio_compra", "precio_venta"]
+        labels = {"categoria": "Categoría", "precio_compra": "Precio de compra", "precio_venta": "Precio de venta"}
+        help_texts = {"precio_venta": "Cambiarlo no toca las ventas ya hechas: cada venta guarda su precio."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo las activas, pero si el producto ya tiene una desactivada, se sigue mostrando
+        actual = self.instance
+        categorias = CategoriaProducto.objects.filter(activa=True)
+        marcas = Marca.objects.filter(activa=True)
+        if actual.pk:
+            categorias = categorias | CategoriaProducto.objects.filter(pk=actual.categoria_id)
+            marcas = marcas | Marca.objects.filter(pk=actual.marca_id)
+        self.fields["categoria"].queryset = categorias.order_by("nombre")
+        self.fields["categoria"].empty_label = "Elegí la categoría…"
+        self.fields["categoria"].limit_choices_to = None
+        self.fields["marca"].queryset = marcas.order_by("nombre")
+        self.fields["marca"].empty_label = "Sin marca"
+        self.fields["marca"].limit_choices_to = None
+
+    def _get_validation_exclusions(self):
+        # El modelo solo acepta categorías y marcas activas. Si no se cambiaron, no se vuelven
+        # a controlar: así se puede editar el precio de un producto cuya categoría se desactivó.
+        excluir = super()._get_validation_exclusions()
+        for campo in ("categoria", "marca"):
+            if campo not in self.changed_data:
+                excluir.add(campo)
+        return excluir

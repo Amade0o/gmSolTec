@@ -1,7 +1,7 @@
 # GMSol — Etapa 7: interfaz propia (diseño técnico v1)
 
 > **Uso:** documento corto para cargar como contexto. Complementa a `guia-de-diseno-gmsol.md` (cómo se ve) y a `GMSol-stack-y-arquitectura.md` (stack).
-> **Estado:** pasos **7.0 a 7.6 hechos** (16/11/2026): login, Inicio, lista de órdenes, nueva orden, detalle, entregar, venta rápida, devoluciones, ventas y clientes, con el diseño **v2** ("H2 + pista de progreso", ver `guia-de-diseno-gmsol.md`). Falta: pantallas de productos, caja y stock (etapa 4) y del catálogo.
+> **Estado:** pasos **7.0 a 7.7 hechos** (16/11/2026): login, Inicio, lista de órdenes, nueva orden, detalle, entregar, venta rápida, devoluciones, ventas, clientes y productos, con el diseño **v2** ("H2 + pista de progreso", ver `guia-de-diseno-gmsol.md`). Falta: pantallas de caja y stock (etapa 4) y del catálogo.
 > **Leyenda:** ✅ decidido · 💡 propuesta (falta confirmar)
 
 ---
@@ -72,6 +72,8 @@ gmsol_demo/
 | `/ventas/<n>/` | Detalle de la venta. Si cerró una orden, muestra sus equipos, productos y pagos | |
 | `/clientes/` | Clientes: búsqueda por nombre, teléfono o email; cantidad de órdenes y la última | |
 | `/clientes/nuevo/` | Alta de cliente ("Guardar y crear orden" abre Nueva orden con el cliente elegido) | `crear_cliente` |
+| `/productos/` | Productos: activos / desactivados / todos, por categoría, búsqueda por nombre o marca; margen calculado | `Producto.margen` |
+| `/productos/nuevo/`, `/productos/<n>/` | Alta y edición, margen en vivo (HTMX), activar/desactivar, últimas ventas | |
 | `/clientes/<n>/` | Ficha: datos editables, teléfonos (principal), órdenes, compras directas y saldo en órdenes abiertas | `agregar_telefono`, `marcar_telefono_principal`, `quitar_telefono` |
 | `/entregar/` | Entregar un equipo: buscar la orden, cobrar el saldo, cerrar | `cerrar_orden` |
 | `/login/`, `/logout/` | Acceso | Login de Django |
@@ -104,6 +106,7 @@ gmsol_demo/
 | **7.4** ✅ | Venta rápida |
 | **7.5** ✅ | Entregar + pantalla de Devoluciones |
 | **7.6** ✅ | Ventas (lista y detalle) y Clientes (lista, alta y ficha) |
+| **7.7** ✅ | Productos (lista, alta, edición, margen en vivo) |
 | Después | Pantallas de caja y stock (junto con la etapa 4), y las del catálogo si hace falta |
 
 Cada paso lleva tests con el cliente de pruebas de Django (la pantalla carga, pide login, y las acciones hacen lo que dicen).
@@ -127,6 +130,7 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 | 5 | La tarjeta "Devoluciones por hacer" cuenta solo devoluciones **registradas**; una orden con saldo a favor sin devolución registrada no suma. Decidir si debe contar también esas |
 | 6 | Columna "días en el taller" con aviso de 30 días (se probó en la propuesta K). Falta definir si los 30 días cuentan desde que se deja el equipo o desde que se avisa que está listo |
 | 8 | Corregir un pago mal cargado: hoy solo desde el admin |
-| 9 | "Productos" y "Catálogo" del menú siguen yendo al admin |
+| 9 | "Catálogo" del menú sigue yendo al admin (categorías, marcas, modelos, reparaciones, métodos de pago) |
+| 11 | Productos: un producto con categoría o marca desactivada se puede seguir editando sin cambiarlas (el formulario no las vuelve a controlar); elegir una desactivada no se permite |
 | 10 | Ventas: no hay forma de anular una venta mal hecha (hoy solo desde el admin) |
 | 7 | Texto del saldo: la guía dice "A favor del cliente: $X (se debe devolver)"; la pantalla muestra "A favor: $ X (devolver)". Unificar |

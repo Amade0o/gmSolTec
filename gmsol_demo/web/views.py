@@ -3,6 +3,9 @@
 Las vistas no tienen reglas de negocio: leen los formularios, llaman a
 catalogo/servicios.py y muestran el resultado. Después de guardar algo se
 redirige (así F5 no lo guarda dos veces).
+
+Secciones: Inicio · Órdenes (lista, nueva, detalle, entregar) · Venta rápida ·
+Devoluciones · Ventas · Clientes · Productos.
 """
 from datetime import timedelta
 
@@ -20,14 +23,15 @@ from django.views.decorators.http import require_POST
 from catalogo import servicios
 from catalogo.models import (
     EQUIPO_ORDEN_ESTADO_CHOICES, Cliente, Devolucion, EquipoRecibido, LineaProductoOrden,
-    LineaReparacion, OrdenTrabajo, Pago, Reparacion, Telefono, Venta,
+    CategoriaProducto, LineaReparacion, OrdenTrabajo, Pago, Producto, Reparacion,
+    Telefono, Venta,
 )
 from catalogo.servicios import ReglaDeNegocioError
 
 from .forms import (
     ClienteForm, ClienteNuevoForm, ClienteOrdenForm, DevolucionForm, ElegirCliente, EntregaForm, EquipoForm, LineaProductoForm,
     LineaReparacionForm, MetodoForm, PagoForm, PagosVentaFormSet, ProductosFormSet,
-    ProductosVentaFormSet, ReparacionesFormSet, TelefonoForm, clientes,
+    ProductoForm, ProductosVentaFormSet, ReparacionesFormSet, TelefonoForm, clientes,
 )
 
 # Lo que hace falta para calcular estado, total y saldo sin una consulta por orden
@@ -603,3 +607,96 @@ def cliente_detalle(request, numero):
         "a_favor": sum((-o.monto_adeudado for o in abiertas if o.monto_adeudado < 0), 0),
         **f,
     })
+
+
+# ---------- Productos ----------
+
+ESTADOS_PRODUCTO = [("activos", "Activos"), ("inactivos", "Desactivados"), ("todos", "Todos")]
+
+
+@login_required
+def productos(request):
+    estado = request.GET.get("estado", "activos")
+    categoria = request.GET.get("categoria", "")
+    q = request.GET.get("q", "").strip()
+
+    consulta = Producto.objects.select_related("categoria", "marca").order_by("nombre")
+    if estado == "activos":
+        consulta = consulta.filter(activo=True)
+    elif estado == "inactivos":
+        consulta = consulta.filter(activo=False)
+    if categoria.isdigit():
+        consulta = consulta.filter(categoria_id=int(categoria))
+    if q:
+        consulta = consulta.filter(Q(nombre__icontains=q) | Q(marca__nombre__icontains=q))
+
+    pagina = Paginator(consulta, 50).get_page(request.GET.get("pagina"))
+    return render(request, "web/productos/lista.html", {
+        "pagina": pagina, "estados": ESTADOS_PRODUCTO, "estado": estado, "q": q,
+        "categoria": int(categoria) if categoria.isdigit() else None,
+        "categorias": CategoriaProducto.objects.order_by("-activa", "nombre"),
+    })
+
+
+def _ultimos_movimientos(producto, cuantos=10):
+    """Las últimas veces que se vendió, en ventas directas y en órdenes, de la más nueva a la más vieja."""
+    directas = [(l.venta.fecha, l, l.venta, None) for l in
+                producto.lineaproductoventas.select_related("venta").order_by("-venta__fecha")[:cuantos]]
+    en_ordenes = [(l.orden_trabajo.fecha_recepcion, l, None, l.orden_trabajo) for l in
+                  producto.lineaproductoordens.select_related("orden_trabajo").order_by("-orden_trabajo__fecha_recepcion")[:cuantos]]
+    return sorted(directas + en_ordenes, key=lambda m: m[0], reverse=True)[:cuantos]
+
+
+def _pantalla_producto(request, producto):
+    form = ProductoForm(request.POST if request.method == "POST" else None, instance=producto)
+    if request.method == "POST":
+        if request.POST.get("accion") in ("activar", "desactivar") and producto.pk:
+            producto.activo = request.POST["accion"] == "activar"
+            producto.save(update_fields=["activo"])
+            messages.success(request, f"{producto.nombre}: {'activado' if producto.activo else 'desactivado'}.")
+            return redirect("web:producto_detalle", numero=producto.pk)
+        if form.is_valid():
+            nuevo = producto.pk is None
+            producto = form.save()
+            messages.success(request, f"Producto {producto.nombre} {'creado' if nuevo else 'guardado'}.")
+            if nuevo and request.POST.get("despues") == "otro":
+                return redirect("web:producto_nuevo")
+            return redirect("web:producto_detalle", numero=producto.pk)
+        producto = Producto.objects.get(pk=producto.pk) if producto.pk else producto   # el título no cambia con errores
+    return render(request, "web/productos/form.html", {
+        "producto": producto, "form": form,
+        "movimientos": _ultimos_movimientos(producto) if producto.pk else [],
+        "margen": _margen(form, producto),
+    })
+
+
+@login_required
+def producto_nuevo(request):
+    return _pantalla_producto(request, Producto())
+
+
+@login_required
+def producto_detalle(request, numero):
+    return _pantalla_producto(request, get_object_or_404(Producto, pk=numero))
+
+
+def _margen(form, producto):
+    """Margen y ganancia por unidad con los precios del formulario (o los guardados).
+    El margen se calcula con la misma cuenta del modelo (Producto.margen)."""
+    calculo = Producto(precio_compra=producto.precio_compra, precio_venta=producto.precio_venta)
+    if form.is_bound:
+        for campo in ("precio_compra", "precio_venta"):
+            try:
+                setattr(calculo, campo, form.fields[campo].clean(form.data.get(campo)))
+            except ValidationError:
+                setattr(calculo, campo, None)
+    if calculo.precio_compra is None or calculo.precio_venta is None:
+        return None
+    return {"porcentaje": calculo.margen, "ganancia": calculo.precio_venta - calculo.precio_compra}
+
+
+@login_required
+@require_POST
+def producto_margen(request):
+    """Margen en vivo (HTMX) mientras se escriben los precios."""
+    return render(request, "web/parciales/margen.html", {"margen": _margen(ProductoForm(request.POST), Producto())})

@@ -1,3 +1,4 @@
+"""Direcciones de la interfaz propia: cada pantalla y la vista que la atiende."""
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
@@ -33,4 +34,10 @@ urlpatterns = [
     path("clientes/", views.lista_clientes, name="clientes"),
     path("clientes/nuevo/", views.cliente_nuevo, name="cliente_nuevo"),
     path("clientes/<int:numero>/", views.cliente_detalle, name="cliente_detalle"),
+
+    # Productos (el stock llega con la etapa 4)
+    path("productos/", views.productos, name="productos"),
+    path("productos/nuevo/", views.producto_nuevo, name="producto_nuevo"),
+    path("productos/margen/", views.producto_margen, name="producto_margen"),
+    path("productos/<int:numero>/", views.producto_detalle, name="producto_detalle"),
 ]

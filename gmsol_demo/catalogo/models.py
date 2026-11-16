@@ -28,7 +28,7 @@ EQUIPO_ORDEN_ESTADO_CHOICES = [
     ('pendiente', 'En revisión / reparación'),
     ('sin_falla', 'Sin falla'),
     ('arreglado', 'Arreglado'),
-    ('no_arreglable', 'No Arreglable')
+    ('no_arreglable', 'No arreglable')
 ]
 
 # Tipos de pago que puede tener una orden de trabajo
@@ -39,9 +39,9 @@ CUENTA_CHOICES = [
 
 # Tipos de bloqueo que puede tener un equipo
 BLOQUEO_CHOICES = [
-    ('pin', 'Pin'),
-    ('patron', 'Patron'),
-    ('contrasena', 'Contrasena'),
+    ('pin', 'PIN'),
+    ('patron', 'Patrón'),
+    ('contrasena', 'Contraseña'),
     ('ninguno', 'Ninguno')
 ]
 

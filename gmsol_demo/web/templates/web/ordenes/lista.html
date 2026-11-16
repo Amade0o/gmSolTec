@@ -1,0 +1,45 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Órdenes de trabajo{% endblock %}
+{% block contenido %}
+<div class="head">
+<h1>Órdenes de trabajo</h1>
+<a class="btn" href="{% url 'web:orden_nueva' %}">Nueva orden</a>
+</div>
+
+<form class="filtros" method="get" role="search">
+<nav class="segmento" aria-label="Filtrar por estado">
+{% for clave, nombre in filtros %}<a href="?estado={{ clave }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if clave == filtro %}on{% endif %}">{{ nombre }}</a>{% endfor %}
+</nav>
+<input type="hidden" name="estado" value="{{ filtro }}">
+<input class="entrada" name="q" value="{{ q }}" placeholder="Cliente o teléfono" aria-label="Buscar por cliente o teléfono">
+</form>
+
+<section class="panel">
+{% if pagina.object_list %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>N°</th><th>Recibida</th><th>Cliente</th><th>Equipo</th><th>Estado</th><th class="der">Saldo</th></tr></thead>
+<tbody>
+{% for o in pagina %}
+<tr>
+<td class="num"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td>
+<td class="sec">{{ o.fecha_recepcion|date:"j M" }}</td>
+<td class="cli"><a class="fila-link" href="{% url 'web:orden_detalle' o.id %}">{{ o.cliente }}</a></td>
+<td>{{ o|equipos_texto }}</td>
+<td>{% include "web/parciales/pista.html" %}</td>
+<td class="der{% if o.monto_adeudado < 0 and not o.cerrada %} afavor{% endif %}">{% if o.cerrada %}<a class="sec" href="{% url 'web:venta_detalle' o.venta.id %}">Venta #{{ o.venta.id }}</a>{% else %}{{ o|saldo }}{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% if pagina.has_other_pages %}
+<nav class="paginas" aria-label="Páginas">
+{% if pagina.has_previous %}<a class="btn" href="?estado={{ filtro }}&amp;q={{ q|urlencode }}&amp;pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+<span class="sec">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+{% if pagina.has_next %}<a class="btn" href="?estado={{ filtro }}&amp;q={{ q|urlencode }}&amp;pagina={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<p class="vacio">No hay órdenes{% if q %} que coincidan con “{{ q }}”{% endif %}.</p>
+{% endif %}
+</section>
+{% endblock %}

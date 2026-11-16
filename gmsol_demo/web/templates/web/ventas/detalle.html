@@ -1,0 +1,79 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Venta #{{ venta.id }}{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'web:ventas' %}">Ventas</a> / #{{ venta.id }}</div>
+<div class="head">
+<div>
+<h1>Venta #{{ venta.id }} <span class="sub">{% if venta.cliente %}<a href="{% url 'web:cliente_detalle' venta.cliente_id %}">{{ venta.cliente }}</a>{% else %}Sin cliente{% endif %}</span></h1>
+<p class="sec">{{ venta.fecha|date:"j \d\e F \d\e Y, H:i" }} · {% if orden %}Entrega de la <a href="{% url 'web:orden_detalle' orden.id %}">orden #{{ orden.id }}</a>{% else %}Venta directa{% endif %}</p>
+</div>
+</div>
+
+<div class="cols">
+<div class="pasos">
+
+{% if orden %}
+{# ---------- Lo que se cobró de la orden ---------- #}
+{% for equipo in orden.equipos.all %}
+<section class="panel">
+<h2>Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
+<p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
+<table>
+<thead><tr><th>Reparación</th><th class="der">Precio</th></tr></thead>
+<tbody>
+{% for linea in equipo.lineas_reparacion.all %}
+<tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}"><td>{{ linea.reparacion }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+{% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobró: el equipo no tuvo arreglo.</small>{% endif %}
+</section>
+{% endfor %}
+{% endif %}
+
+{% with lineas=orden.lineas_producto.all|default:venta.lineas_producto.all %}
+{% if lineas %}
+<section class="panel">
+<h2>Productos</h2>
+<table>
+<thead><tr><th>Producto</th><th class="der">Cant.</th><th class="der">Precio</th><th class="der">Subtotal</th></tr></thead>
+<tbody>
+{% for linea in lineas %}
+<tr><td>{{ linea.producto }}</td><td class="der">{{ linea.cantidad_adquirida }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+</section>
+{% endif %}
+{% endwith %}
+
+<section class="panel">
+<h2>Pagos</h2>
+{% if pagos %}
+<table>
+<thead><tr><th>Fecha</th><th>Método</th><th class="der">Monto</th><th class="der">Recargo</th><th class="der">Cobrado</th></tr></thead>
+<tbody>
+{% for pago in pagos %}
+<tr><td class="sec">{{ pago.fecha|date:"j M, H:i" }}</td><td>{{ pago.metodo_pago.nombre }}</td><td class="der">{{ pago.monto|pesos }}</td>
+<td class="der sec">{% if pago.recargo_porcentaje %}{{ pago.recargo_porcentaje|floatformat:"-2" }}% · {{ pago.recargo_monto|pesos }}{% else %}—{% endif %}</td>
+<td class="der">{{ pago.total_cobrado|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+{% if orden %}<small class="ayuda">Incluye la seña y los pagos hechos mientras la orden estaba abierta.</small>{% endif %}
+{% else %}<p class="vacio">Sin pagos.</p>{% endif %}
+</section>
+</div>
+
+<aside class="lateral">
+<section class="panel resumen">
+<h2>Resumen</h2>
+<dl class="cuentas">
+<div><dt>Total</dt><dd>{{ venta.total|pesos }}</dd></div>
+{% if total_cobrado != venta.total %}<div class="sec"><dt>Cobrado con recargos</dt><dd>{{ total_cobrado|pesos }}</dd></div>{% endif %}
+{% if orden.monto_devuelto %}<div class="sec"><dt>Devuelto al cliente</dt><dd>{{ orden.monto_devuelto|pesos }}</dd></div>{% endif %}
+</dl>
+<div class="saldo-caja ok">Pagada</div>
+{% if orden %}<a class="btn ancho" href="{% url 'web:orden_detalle' orden.id %}">Ver la orden #{{ orden.id }}</a>{% endif %}
+</section>
+</aside>
+</div>
+{% endblock %}

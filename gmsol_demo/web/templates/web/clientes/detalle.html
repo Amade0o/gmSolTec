@@ -1,0 +1,111 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}{{ cliente.nombre }}{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'web:clientes' %}">Clientes</a> / {{ cliente.nombre }}</div>
+<div class="head">
+<h1>{{ cliente.nombre }}</h1>
+<a class="btn pri" href="{% url 'web:orden_nueva' %}?cliente={{ cliente.id }}">Nueva orden</a>
+</div>
+
+<div class="cols">
+<div class="pasos">
+
+{# ---------- Datos ---------- #}
+<section class="panel">
+<h2>Datos</h2>
+<dl class="datos">
+<div><dt>Email</dt><dd>{{ cliente.email|default:"—" }}</dd></div>
+<div><dt>Dirección</dt><dd>{{ cliente.direccion|default:"—" }}</dd></div>
+{% if cliente.notas %}<div><dt>Notas</dt><dd>{{ cliente.notas|linebreaksbr }}</dd></div>{% endif %}
+</dl>
+<details{% if datos_form.errors %} open{% endif %}>
+<summary class="enlace">Editar datos</summary>
+<form method="post" novalidate>{% csrf_token %}
+<input type="hidden" name="accion" value="datos">
+{% include "web/parciales/errores_form.html" with form=datos_form %}
+<div class="fila-campos">
+{% include "web/parciales/campo.html" with campo=datos_form.nombre clase="ancho" %}
+{% include "web/parciales/campo.html" with campo=datos_form.email %}
+</div>
+{% include "web/parciales/campo.html" with campo=datos_form.direccion %}
+{% include "web/parciales/campo.html" with campo=datos_form.notas %}
+<button class="btn">Guardar datos</button>
+</form>
+</details>
+</section>
+
+{# ---------- Teléfonos ---------- #}
+<section class="panel">
+<h2>Teléfonos</h2>
+{% if telefonos %}
+<table>
+<tbody>
+{% for t in telefonos %}
+<tr>
+<td>{{ t.numero }}{% if t.principal %} <span class="estado ok">Principal</span>{% endif %}</td>
+<td class="der"><form method="post" class="en-linea" style="justify-content:flex-end">{% csrf_token %}<input type="hidden" name="telefono" value="{{ t.id }}">
+{% if not t.principal %}<button class="enlace" name="accion" value="principal">Hacer principal</button>{% endif %}
+<button class="enlace" name="accion" value="quitar_telefono">Quitar</button></form></td>
+</tr>
+{% endfor %}
+</tbody></table>
+{% else %}<p class="vacio">Sin teléfonos.</p>{% endif %}
+<form method="post" class="fila-campos agregar" novalidate>{% csrf_token %}
+<input type="hidden" name="accion" value="telefono">
+{% include "web/parciales/campo.html" with campo=telefono_form.numero clase="ancho" %}
+<label class="en-linea">{{ telefono_form.principal }} Principal</label>
+<button class="btn">Agregar teléfono</button>
+</form>
+</section>
+
+{# ---------- Órdenes ---------- #}
+<section class="panel">
+<h2>Órdenes de trabajo</h2>
+{% if ordenes %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>N°</th><th>Recibida</th><th>Equipo</th><th>Estado</th><th class="der">Saldo</th></tr></thead>
+<tbody>
+{% for o in ordenes %}
+<tr>
+<td class="num"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td>
+<td class="sec">{{ o.fecha_recepcion|date:"j M Y" }}</td>
+<td>{{ o|equipos_texto }}</td>
+<td>{% include "web/parciales/pista.html" %}</td>
+<td class="der{% if o.monto_adeudado < 0 and not o.cerrada %} afavor{% endif %}">{% if o.cerrada %}<a class="sec" href="{% url 'web:venta_detalle' o.venta.id %}">Venta #{{ o.venta.id }}</a>{% else %}{{ o|saldo }}{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}<p class="vacio">Todavía no dejó equipos.</p>{% endif %}
+</section>
+
+{# ---------- Compras directas ---------- #}
+{% if compras %}
+<section class="panel">
+<h2>Compras en el mostrador</h2>
+<table>
+<thead><tr><th>N°</th><th>Fecha</th><th>Detalle</th><th class="der">Total</th></tr></thead>
+<tbody>
+{% for v in compras %}
+<tr><td class="num"><a href="{% url 'web:venta_detalle' v.id %}"><b>#{{ v.id }}</b></a></td><td class="sec">{{ v.fecha|date:"j M Y" }}</td><td>{{ v|venta_texto }}</td><td class="der">{{ v.total|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+</section>
+{% endif %}
+</div>
+
+<aside class="lateral">
+<section class="panel resumen">
+<h2>Resumen</h2>
+<dl class="cuentas">
+<div><dt>Órdenes</dt><dd>{{ ordenes|length }}</dd></div>
+<div><dt>En curso</dt><dd>{{ en_curso }}</dd></div>
+{% if compras %}<div><dt>Compras directas</dt><dd>{{ compras|length }}</dd></div>{% endif %}
+</dl>
+{% if debe %}<div class="saldo-caja debe">Debe {{ debe|pesos }}<small>En órdenes abiertas</small></div>{% endif %}
+{% if a_favor %}<div class="saldo-caja afavor">A favor: {{ a_favor|pesos }} (devolver)<small>En órdenes abiertas</small></div>{% endif %}
+{% if not debe and not a_favor %}<div class="saldo-caja ok">Sin saldos pendientes</div>{% endif %}
+</section>
+</aside>
+</div>
+{% endblock %}

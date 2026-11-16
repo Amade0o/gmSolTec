@@ -16,7 +16,12 @@ def pesos(valor):
 
 @register.filter
 def saldo(orden):
-    pendiente = orden.monto_adeudado
+    return saldo_monto(orden.monto_adeudado)
+
+
+@register.filter
+def saldo_monto(pendiente):
+    """El saldo en palabras: los números negativos nunca se muestran solos."""
     if pendiente > 0:
         return f"Debe {pesos(pendiente)}"
     if pendiente < 0:
@@ -75,3 +80,39 @@ def equipos_texto(orden):
     if not nombres:
         return "-"
     return nombres[0] if len(nombres) == 1 else f"{nombres[0]} + {len(nombres) - 1} más"
+
+
+# Estado de cada equipo: (texto, clase de color)
+ESTADOS_EQUIPO = {
+    "pendiente": ("En revisión / reparación", "wip"),
+    "arreglado": ("Arreglado", "ok"),
+    "sin_falla": ("Sin falla", "ok"),
+    "no_arreglable": ("No arreglable", "bad"),
+}
+
+
+@register.filter
+def estado_equipo_clase(equipo):
+    return ESTADOS_EQUIPO[equipo.estado][1]
+
+
+@register.filter
+def telefono_principal(cliente):
+    """El teléfono principal (o el primero, si ninguno está marcado). Usa los teléfonos ya traídos."""
+    telefonos = list(cliente.telefonos.all())
+    for t in telefonos:
+        if t.principal:
+            return t.numero
+    return telefonos[0].numero if telefonos else ""
+
+
+@register.filter
+def venta_texto(venta):
+    """Qué se vendió, en pocas palabras."""
+    if venta.orden_trabajo_id:
+        return f"Orden #{venta.orden_trabajo_id} · {equipos_texto(venta.orden_trabajo)}"
+    lineas = list(venta.lineas_producto.all())
+    if not lineas:
+        return "-"
+    primera = f"{lineas[0].cantidad_adquirida}× {lineas[0].producto}"
+    return primera if len(lineas) == 1 else f"{primera} + {len(lineas) - 1} más"

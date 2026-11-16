@@ -1,0 +1,41 @@
+{% extends "web/base.html" %}
+{% block titulo %}Venta rápida{% endblock %}
+{% block contenido %}
+<div class="head"><h1>Venta rápida <span class="sub">Productos sin orden de trabajo</span></h1></div>
+
+<form method="post" class="cols" novalidate
+      hx-post="{% url 'web:venta_rapida_resumen' %}" hx-trigger="load, input delay:300ms, change"
+      hx-target="#resumen" hx-swap="innerHTML">
+{% csrf_token %}
+<div class="pasos">
+<section class="panel">
+<h2><span class="paso">1</span>Productos</h2>
+{% include "web/parciales/tabla_formset.html" with formset=productos %}
+</section>
+
+<section class="panel">
+<h2><span class="paso">2</span>Pago</h2>
+{% include "web/parciales/tabla_formset.html" with formset=pagos %}
+</section>
+
+<section class="panel">
+<h2><span class="paso">3</span>Cliente <span class="sub">opcional</span></h2>
+<div class="campo ancho">
+<label for="id_cliente">Cliente</label>
+<select name="cliente" id="id_cliente">
+<option value="">Sin cliente</option>
+{% for c in clientes %}<option value="{{ c.id }}"{% if cliente_elegido and c.id == cliente_elegido.id %} selected{% endif %}>{{ c.nombre }}{% for t in c.telefonos.all|slice:":1" %} · {{ t.numero }}{% endfor %}</option>{% endfor %}
+</select>
+</div>
+</section>
+</div>
+
+<aside class="lateral">
+<section class="panel resumen">
+<h2>Resumen</h2>
+<div id="resumen"></div>
+<button class="btn pri ancho" type="submit">Registrar venta</button>
+</section>
+</aside>
+</form>
+{% endblock %}

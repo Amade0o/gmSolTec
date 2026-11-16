@@ -17,10 +17,10 @@
 <tbody>
 {% for o in ordenes %}
 <tr>
-<td class="num"><b>#{{ o.id }}</b></td>
-<td class="cli">{{ o.cliente }}</td>
+<td class="num"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td>
+<td class="cli"><a class="fila-link" href="{% url 'web:orden_detalle' o.id %}">{{ o.cliente }}</a></td>
 <td>{{ o|equipos_texto }}</td>
-<td><span class="pista {{ o|estado_clase }}" title="Recibida · Revisión · Lista · Entregada"><span class="p" aria-hidden="true">{% for paso in o|pista %}{% if not forloop.first %}<span class="s {{ paso }}"></span>{% endif %}<span class="n {{ paso }}"></span>{% endfor %}</span><span class="t">{{ o|estado_texto }}</span></span></td>
+<td>{% include "web/parciales/pista.html" %}</td>
 <td class="der{% if o.monto_adeudado < 0 %} afavor{% endif %}">{{ o|saldo }}</td>
 </tr>
 {% endfor %}

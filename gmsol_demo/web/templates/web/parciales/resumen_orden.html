@@ -1,0 +1,9 @@
+{% load formato %}
+<dl class="cuentas">
+<div><dt>Total</dt><dd>{{ total|pesos }}</dd></div>
+{% if pago %}
+<div><dt>Seña ({{ pago.metodo_pago.nombre }})</dt><dd>{{ pago.monto|pesos }}</dd></div>
+{% if pago.recargo_monto %}<div class="sec"><dt>Con recargo, paga</dt><dd>{{ pago.total_cobrado|pesos }}</dd></div>{% endif %}
+{% endif %}
+</dl>
+<div class="saldo-caja {% if saldo > 0 %}debe{% elif saldo < 0 %}afavor{% else %}ok{% endif %}">{{ saldo|saldo_monto }}</div>

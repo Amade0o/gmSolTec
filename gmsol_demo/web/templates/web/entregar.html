@@ -1,0 +1,32 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Entregar equipo{% endblock %}
+{% block contenido %}
+<div class="head"><h1>Entregar equipo</h1></div>
+<form class="filtros" method="get" role="search">
+<input class="entrada" name="q" value="{{ q }}" placeholder="N° de orden, cliente o teléfono" aria-label="Buscar la orden" autofocus>
+<button class="btn">Buscar</button>
+{% if q %}<a class="enlace" href="{% url 'web:entregar' %}">Ver las listas</a>{% endif %}
+</form>
+<section class="panel">
+<h2>{% if q %}Órdenes que coinciden{% else %}Listas para entregar{% endif %}</h2>
+{% if ordenes %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>N°</th><th>Cliente</th><th>Equipo</th><th>Estado</th><th class="der">Saldo</th><th></th></tr></thead>
+<tbody>
+{% for o in ordenes %}
+<tr>
+<td class="num"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td>
+<td class="cli">{{ o.cliente }}</td>
+<td>{{ o|equipos_texto }}</td>
+<td>{% include "web/parciales/pista.html" %}</td>
+<td class="der{% if o.monto_adeudado < 0 %} afavor{% endif %}">{{ o|saldo }}</td>
+<td class="der">{% if o.estado == "lista" %}<a class="btn" href="{% url 'web:orden_entregar' o.id %}">Entregar</a>{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="vacio">{% if q %}No hay órdenes abiertas que coincidan con “{{ q }}”.{% else %}No hay órdenes listas para entregar.{% endif %}</p>
+{% endif %}
+</section>
+{% endblock %}

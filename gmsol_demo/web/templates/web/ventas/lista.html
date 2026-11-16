@@ -1,0 +1,49 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Ventas{% endblock %}
+{% block contenido %}
+<div class="head">
+<h1>Ventas</h1>
+<a class="btn" href="{% url 'web:venta_rapida' %}">Venta rápida</a>
+</div>
+
+<form class="filtros" method="get" role="search">
+<nav class="segmento" aria-label="Período">
+{% for clave, nombre in periodos %}<a href="?periodo={{ clave }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if clave == periodo %}on{% endif %}">{{ nombre }}</a>{% endfor %}
+</nav>
+<input type="hidden" name="periodo" value="{{ periodo }}">
+<input class="entrada" name="q" value="{{ q }}" placeholder="N° de venta, cliente o teléfono" aria-label="Buscar venta por número, cliente o teléfono">
+</form>
+
+<div class="tiles">
+<div class="tile"><b>{{ cantidad }}</b><span>{% if cantidad == 1 %}Venta{% else %}Ventas{% endif %}</span></div>
+<div class="tile"><b>{{ total|pesos }}</b><span>Total vendido</span></div>
+</div>
+
+<section class="panel">
+{% if pagina.object_list %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Detalle</th><th class="der">Total</th></tr></thead>
+<tbody>
+{% for v in pagina %}
+<tr>
+<td class="num"><a href="{% url 'web:venta_detalle' v.id %}"><b>#{{ v.id }}</b></a></td>
+<td class="sec">{{ v.fecha|date:"j M, H:i" }}</td>
+<td class="cli">{% if v.cliente %}<a class="fila-link" href="{% url 'web:cliente_detalle' v.cliente_id %}">{{ v.cliente }}</a>{% else %}<span class="sec">Sin cliente</span>{% endif %}</td>
+<td>{{ v|venta_texto }}</td>
+<td class="der"><b>{{ v.total|pesos }}</b></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% if pagina.has_other_pages %}
+<nav class="paginas" aria-label="Páginas">
+{% if pagina.has_previous %}<a class="btn" href="?periodo={{ periodo }}&amp;q={{ q|urlencode }}&amp;pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+<span class="sec">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+{% if pagina.has_next %}<a class="btn" href="?periodo={{ periodo }}&amp;q={{ q|urlencode }}&amp;pagina={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<p class="vacio">No hay ventas{% if q %} que coincidan con “{{ q }}”{% endif %} en este período.</p>
+{% endif %}
+</section>
+{% endblock %}

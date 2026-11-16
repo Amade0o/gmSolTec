@@ -1,0 +1,182 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Orden #{{ orden.id }}{% endblock %}
+{% block contenido %}
+<div class="migas"><a href="{% url 'web:ordenes' %}">Órdenes</a> / #{{ orden.id }}</div>
+<div class="head">
+<div>
+<h1>Orden #{{ orden.id }} <span class="sub"><a href="{% url 'web:cliente_detalle' orden.cliente_id %}">{{ orden.cliente }}</a>{% for t in orden.cliente.telefonos.all %} · {{ t.numero }}{% endfor %}</span></h1>
+<p class="sec">Recibida el {{ orden.fecha_recepcion|date:"j \d\e F, H:i" }}</p>
+</div>
+{% include "web/parciales/pista.html" with o=orden %}
+</div>
+
+<div class="cols">
+<div class="pasos">
+
+{# ---------- Equipos ---------- #}
+{% for equipo in orden.equipos.all %}
+<section class="panel">
+<h2>Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
+<dl class="datos">
+<div><dt>Problema</dt><dd>{{ equipo.problema|linebreaksbr }}</dd></div>
+<div><dt>Bloqueo</dt><dd>{{ equipo.get_tipo_bloqueo_display }}{% if equipo.clave_bloqueo %} · <b class="clave">{{ equipo.clave_bloqueo }}</b>{% endif %}</dd></div>
+{% if equipo.accesorios_dejados %}<div><dt>Dejó</dt><dd>{{ equipo.accesorios_dejados }}</dd></div>{% endif %}
+</dl>
+
+{% if orden.cerrada %}
+<p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
+{% else %}
+<form method="post" class="segmento estados" aria-label="Estado del equipo">{% csrf_token %}
+<input type="hidden" name="accion" value="estado"><input type="hidden" name="equipo" value="{{ equipo.id }}">
+{% for valor, nombre in estados_equipo %}<button name="estado" value="{{ valor }}" class="{% if equipo.estado == valor %}on{% endif %}"{% if equipo.estado == valor %} aria-pressed="true"{% endif %}>{{ nombre }}</button>{% endfor %}
+</form>
+{% endif %}
+
+<table>
+<thead><tr><th>Reparación</th><th class="der">Precio</th><th></th></tr></thead>
+<tbody>
+{% for linea in equipo.lineas_reparacion.all %}
+<tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}">
+<td>{{ linea.reparacion }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td>
+<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_reparacion"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace">Quitar</button></form>{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody></table>
+{% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobra: el equipo no tiene arreglo.</small>{% endif %}
+
+{% if not orden.cerrada %}
+{% if equipo.id == reparacion_equipo %}{% include "web/parciales/agregar_reparacion.html" with form=reparacion_form %}{% else %}{% include "web/parciales/agregar_reparacion.html" with form=reparacion_vacio %}{% endif %}
+{% endif %}
+</section>
+{% endfor %}
+
+{% if not orden.cerrada %}
+<details class="panel"{% if equipo_form.errors or equipo_rep_form.errors %} open{% endif %}>
+<summary><h2>Agregar otro equipo</h2></summary>
+<form method="post">{% csrf_token %}
+<input type="hidden" name="accion" value="equipo">
+{% include "web/parciales/errores_form.html" with form=equipo_form %}
+<div class="fila-campos">
+{% include "web/parciales/campo.html" with campo=equipo_form.tipo %}
+{% include "web/parciales/campo.html" with campo=equipo_form.modelo clase="ancho" %}
+</div>
+{% include "web/parciales/campo.html" with campo=equipo_form.problema %}
+<div class="fila-campos">
+{% include "web/parciales/campo.html" with campo=equipo_form.tipo_bloqueo %}
+{% include "web/parciales/campo.html" with campo=equipo_form.clave_bloqueo %}
+</div>
+{% include "web/parciales/campo.html" with campo=equipo_form.accesorios_dejados %}
+<div class="fila-campos">
+{% include "web/parciales/campo.html" with campo=equipo_rep_form.reparacion clase="ancho" %}
+{% include "web/parciales/campo.html" with campo=equipo_rep_form.precio_vendido %}
+</div>
+<button class="btn">Agregar equipo</button>
+</form>
+</details>
+{% endif %}
+
+{# ---------- Productos ---------- #}
+<section class="panel">
+<h2>Productos</h2>
+{% if orden.lineas_producto.all %}
+<table>
+<thead><tr><th>Producto</th><th class="der">Cant.</th><th class="der">Precio</th><th class="der">Subtotal</th><th></th></tr></thead>
+<tbody>
+{% for linea in orden.lineas_producto.all %}
+<tr><td>{{ linea.producto }}</td><td class="der">{{ linea.cantidad_adquirida }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td><td class="der">{{ linea.subtotal|pesos }}</td>
+<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_producto"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace">Quitar</button></form>{% endif %}</td></tr>
+{% endfor %}
+</tbody></table>
+{% else %}<p class="vacio">Sin productos.</p>{% endif %}
+{% if not orden.cerrada %}
+<form method="post" class="fila-campos agregar">{% csrf_token %}
+<input type="hidden" name="accion" value="producto">
+{% include "web/parciales/campo.html" with campo=producto_form.producto clase="ancho" %}
+{% include "web/parciales/campo.html" with campo=producto_form.cantidad_adquirida %}
+{% include "web/parciales/campo.html" with campo=producto_form.precio_vendido %}
+<button class="btn">Agregar producto</button>
+</form>
+{% endif %}
+</section>
+
+{# ---------- Pagos ---------- #}
+<section class="panel">
+<h2>Pagos</h2>
+{% if orden.pagos.all %}
+<table>
+<thead><tr><th>Fecha</th><th>Método</th><th class="der">Monto</th><th class="der">Recargo</th><th class="der">Cobrado</th></tr></thead>
+<tbody>
+{% for pago in orden.pagos.all %}
+<tr><td class="sec">{{ pago.fecha|date:"j M, H:i" }}</td><td>{{ pago.metodo_pago.nombre }}</td><td class="der">{{ pago.monto|pesos }}</td>
+<td class="der sec">{% if pago.recargo_porcentaje %}{{ pago.recargo_porcentaje|floatformat:"-2" }}% · {{ pago.recargo_monto|pesos }}{% else %}—{% endif %}</td>
+<td class="der">{{ pago.total_cobrado|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+{% else %}<p class="vacio">Sin pagos.</p>{% endif %}
+{% if not orden.cerrada %}
+<form method="post" class="fila-campos agregar">{% csrf_token %}
+<input type="hidden" name="accion" value="pago">
+{% include "web/parciales/errores_form.html" with form=pago_form %}
+{% include "web/parciales/campo.html" with campo=pago_form.metodo_pago %}
+{% include "web/parciales/campo.html" with campo=pago_form.monto %}
+{% include "web/parciales/campo.html" with campo=pago_form.recargo_porcentaje %}
+<button class="btn">Registrar pago</button>
+</form>
+{% endif %}
+</section>
+
+{# ---------- Devoluciones: acá solo se REGISTRA; se hacen en Devoluciones ---------- #}
+{% if orden.devoluciones.all or orden.monto_pagado > 0 and not orden.cerrada %}
+<section class="panel">
+<h2>Devoluciones</h2>
+{% if orden.devoluciones.all %}
+<table>
+<thead><tr><th>Registrada</th><th>Detalle</th><th class="der">Monto</th><th>Estado</th></tr></thead>
+<tbody>
+{% for d in orden.devoluciones.all %}
+<tr><td class="sec">{{ d.fecha_registro|date:"j M" }}</td><td>{% if d.linea_reparacion %}{{ d.linea_reparacion.reparacion }}{% endif %}{% if d.nota %} <span class="sec">{{ d.nota }}</span>{% endif %}</td>
+<td class="der">{{ d.monto|pesos }}</td>
+<td>{% if d.devuelta %}<span class="estado ok">Devuelta · {{ d.metodo_pago.nombre }}</span>{% else %}<span class="estado bad">Falta devolver</span>{% endif %}</td></tr>
+{% endfor %}
+</tbody></table>
+{% if orden.monto_a_devolver %}<p class="ayuda">Para marcarla como hecha, andá a <a href="{% url 'web:devoluciones' %}">Devoluciones</a>.</p>{% endif %}
+{% endif %}
+{% if not orden.cerrada %}
+<form method="post" class="fila-campos agregar">{% csrf_token %}
+<input type="hidden" name="accion" value="devolucion">
+{% include "web/parciales/errores_form.html" with form=devolucion_form %}
+{% include "web/parciales/campo.html" with campo=devolucion_form.linea_reparacion clase="ancho" %}
+{% include "web/parciales/campo.html" with campo=devolucion_form.monto %}
+{% include "web/parciales/campo.html" with campo=devolucion_form.nota %}
+<button class="btn">Registrar que hay que devolver</button>
+</form>
+{% endif %}
+</section>
+{% endif %}
+</div>
+
+{# ---------- Resumen ---------- #}
+<aside class="lateral">
+<section class="panel resumen">
+<h2>Resumen</h2>
+<dl class="cuentas">
+<div><dt>Total</dt><dd>{{ orden.total|pesos }}</dd></div>
+<div><dt>Pagado</dt><dd>{{ orden.monto_pagado|pesos }}</dd></div>
+{% if orden.monto_devuelto %}<div class="sec"><dt>Ya devuelto</dt><dd>{{ orden.monto_devuelto|pesos }}</dd></div>{% endif %}
+{% if orden.monto_a_devolver %}<div class="sec"><dt>Falta devolver</dt><dd>{{ orden.monto_a_devolver|pesos }}</dd></div>{% endif %}
+{% if orden.monto_retenido %}<div class="sec"><dt>Reservado hasta el retiro</dt><dd>{{ orden.monto_retenido|pesos }}</dd></div>{% endif %}
+</dl>
+{% if orden.cerrada %}
+<div class="saldo-caja ok">Entregada<small><a href="{% url 'web:venta_detalle' orden.venta.id %}">Venta #{{ orden.venta.id }}</a> · {{ orden.venta.fecha|date:"j M, H:i" }}</small></div>
+{% else %}
+<div class="saldo-caja {% if orden.monto_adeudado > 0 %}debe{% elif orden.monto_adeudado < 0 %}afavor{% else %}ok{% endif %}">{{ orden|saldo }}</div>
+{% if orden.estado == "lista" %}<a class="btn pri ancho" href="{% url 'web:orden_entregar' orden.id %}">Entregar equipo</a>{% endif %}
+{% if orden.estado == "pendiente" %}<p class="ayuda">Para entregar, marcá el resultado de cada equipo.</p>{% endif %}
+{% if orden.estado == "no_arreglable" %}<p class="ayuda">No tiene arreglo: registrá la devolución de la seña.</p>{% endif %}
+{% if orden.estado == "finalizada" %}<p class="ayuda">Terminó sin venta: no tuvo arreglo y no queda dinero del cliente.</p>{% endif %}
+{% endif %}
+</section>
+</aside>
+</div>
+{% endblock %}

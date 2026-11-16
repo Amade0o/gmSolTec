@@ -1,0 +1,54 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Devoluciones{% endblock %}
+{% block contenido %}
+<div class="head"><h1>Devoluciones <span class="sub">Acá se marca que el dinero ya se devolvió</span></h1></div>
+
+<section class="panel">
+<h2>Por devolver</h2>
+{% if filas %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>Orden</th><th>Cliente</th><th>Detalle</th><th class="der">Monto</th><th>Devuelto con</th></tr></thead>
+<tbody>
+{% for d, form in filas %}
+<tr>
+<td class="num"><a href="{% url 'web:orden_detalle' d.orden_trabajo_id %}"><b>#{{ d.orden_trabajo_id }}</b></a></td>
+<td class="cli">{{ d.orden_trabajo.cliente }}</td>
+<td>{% if d.linea_reparacion %}{{ d.linea_reparacion.reparacion }}{% endif %}{% if d.nota %} <span class="sec">{{ d.nota }}</span>{% endif %}<br><span class="sec">Registrada el {{ d.fecha_registro|date:"j M" }}</span></td>
+<td class="der"><b>{{ d.monto|pesos }}</b></td>
+<td><form method="post" class="en-linea">{% csrf_token %}<input type="hidden" name="devolucion" value="{{ d.id }}">{{ form.metodo_pago }}<button class="btn">Marcar devuelta</button></form></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="vacio">No hay dinero para devolver.</p>
+{% endif %}
+</section>
+
+{% if sin_registrar %}
+<section class="panel">
+<h2>Con saldo a favor, sin devolución registrada</h2>
+<p class="ayuda">Estas órdenes tienen plata del cliente de más. Registrá la devolución desde la orden.</p>
+<table>
+<thead><tr><th>Orden</th><th>Cliente</th><th class="der">A favor</th></tr></thead>
+<tbody>
+{% for o, monto in sin_registrar %}
+<tr><td class="num"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td><td class="cli">{{ o.cliente }}</td><td class="der afavor">{{ monto|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+</section>
+{% endif %}
+
+{% if hechas %}
+<section class="panel">
+<h2>Últimas devueltas</h2>
+<table>
+<thead><tr><th>Orden</th><th>Cliente</th><th>Fecha</th><th>Método</th><th class="der">Monto</th></tr></thead>
+<tbody>
+{% for d in hechas %}
+<tr><td class="num"><a href="{% url 'web:orden_detalle' d.orden_trabajo_id %}"><b>#{{ d.orden_trabajo_id }}</b></a></td><td>{{ d.orden_trabajo.cliente }}</td><td class="sec">{{ d.fecha_devolucion|date:"j M, H:i" }}</td><td>{{ d.metodo_pago.nombre }}</td><td class="der">{{ d.monto|pesos }}</td></tr>
+{% endfor %}
+</tbody></table>
+</section>
+{% endif %}
+{% endblock %}

@@ -84,3 +84,132 @@ td.afavor{color:#8A2A1C;font-weight:600}
   .tile span{font-size:12.5px;align-items:flex-start}
   .tile span::before{margin-top:3px}
 }
+
+/* =====================================================================
+   Pantallas de la etapa 7: formularios, detalle, resumen, avisos
+   ===================================================================== */
+
+/* ---------- Textos de apoyo ---------- */
+.sec{color:var(--muted)}
+.sub{font-size:15px;font-weight:500;color:var(--muted);margin-left:8px;letter-spacing:0}
+h2 .sub{font-size:13.5px}
+.migas{font-size:13.5px;color:var(--muted);margin-bottom:-14px}
+.migas a,.enlace,.ayuda a,td a.fila-link{color:var(--focus)}
+td a.fila-link{color:var(--ink);text-decoration:none}td a.fila-link:hover{text-decoration:underline}
+td.num a{text-decoration:none}
+.ayuda{display:block;font-size:13px;color:var(--muted);margin:0}
+.vacio{padding:6px 2px}
+.head .sec{margin:4px 0 0}
+
+/* ---------- Avisos (mensajes después de guardar) ---------- */
+.avisos{display:flex;flex-direction:column;gap:8px}
+.aviso{border-radius:9px;padding:10px 14px;font-weight:600;font-size:14.5px;border:1px solid}
+.aviso.success{background:#DFF0DF;color:#1E5B2B;border-color:#BBD9BE}
+.aviso.error{background:#F8DAD5;color:#8A2A1C;border-color:#EDBDB4}
+.aviso.info{background:var(--surface);color:var(--ink);border-color:var(--line)}
+
+/* ---------- Disposición de las pantallas de edición ---------- */
+.cols{grid-template-columns:minmax(0,1fr) 300px;align-items:start}
+.pasos{display:flex;flex-direction:column;gap:18px;min-width:0}
+.lateral{position:sticky;top:16px}
+.resumen{gap:12px}
+h2 .paso{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--side);color:var(--navtxt);font-size:13px;margin-right:10px;vertical-align:1px}
+details.panel summary{cursor:pointer;list-style:none}
+details.panel summary::-webkit-details-marker{display:none}
+details.panel summary h2{display:inline}
+details.panel summary h2::before{content:"+ ";color:var(--focus)}
+details[open].panel summary h2::before{content:"− "}
+details.panel form{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+
+/* ---------- Campos ---------- */
+.campo{display:flex;flex-direction:column;gap:5px;min-width:0}
+.campo label,.campo .etiqueta{font-size:13.5px;font-weight:600;color:var(--muted)}
+.campo[hidden]{display:none}
+input[type=text],input[type=number],input[type=search],input:not([type]),select,textarea,.entrada{
+  font:inherit;font-size:15px;color:var(--ink);background:#fff;border:1px solid #CDBFA8;border-radius:9px;
+  padding:0 11px;height:40px;width:100%;min-width:0}
+textarea{height:auto;padding:9px 11px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+input[readonly]{background:var(--hover)}
+.con-error input,.con-error select,.con-error textarea{border-color:#C4503C}
+small.error{color:#8A2A1C;font-size:13px;font-weight:600}
+.fila-campos{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.fila-campos>.campo{flex:1 1 150px}
+.fila-campos>.campo.ancho{flex:3 1 260px}
+.fila-campos>.btn{flex:none}
+.fila-campos .o{align-self:center;color:var(--muted);font-size:13.5px;padding-top:20px}
+.campo.clave{flex:0 1 220px}
+.agregar{padding-top:12px;border-top:1px dashed var(--line)}
+
+/* Botones chicos y enlaces que son botones */
+button.btn{cursor:pointer}
+.btn.ancho{width:100%;justify-content:center}
+.btn.chico{height:32px;font-size:13.5px;padding:0 12px}
+button.enlace{background:none;border:0;padding:0;font:inherit;font-size:13.5px;cursor:pointer;text-decoration:underline}
+form.en-linea{display:flex;gap:8px;align-items:center}
+form.en-linea select{width:auto;min-width:140px}
+
+/* ---------- Control segmentado (tipo de bloqueo, estado del equipo, filtros) ---------- */
+.segmento{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--hover);border:1px solid var(--line);border-radius:10px}
+.segmento a,.segmento button,.segmento label{border:0;background:none;font:500 14px var(--font);color:var(--ink);padding:7px 12px;border-radius:7px;text-decoration:none;cursor:pointer;white-space:nowrap}
+.segmento a:hover,.segmento button:hover,.segmento label:hover{background:rgba(58,48,43,.07)}
+.segmento .on,.segmento input:checked+label{background:var(--side);color:var(--navtxt)}
+.segmento.opciones input{position:absolute;opacity:0;width:1px;height:1px}
+.segmento.opciones input:focus-visible+label{outline:3px solid var(--focus);outline-offset:1px}
+.segmento.estados{align-self:flex-start}
+
+/* ---------- Patrón de bloqueo: 9 puntos, línea cobre ---------- */
+.patron{display:flex;align-items:flex-end;gap:14px}
+.patron[hidden]{display:none}
+.grilla{position:relative;width:150px;height:150px;background:#fff;border:1px solid #CDBFA8;border-radius:12px;display:grid;grid-template-columns:repeat(3,1fr);place-items:center}
+.grilla .trazo{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.grilla polyline{fill:none;stroke:var(--focus);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.grilla button{position:relative;width:22px;height:22px;border-radius:50%;border:2px solid #A89880;background:#fff;cursor:pointer;padding:0}
+.grilla button.on{background:var(--focus);border-color:var(--focus)}
+
+/* ---------- Tablas dentro de formularios (formsets) ---------- */
+.tabla-form table td{padding:6px 8px 6px 0;border-bottom:0;vertical-align:top}
+.tabla-form table th{padding:4px 8px 6px 0;border-bottom:0}
+.tabla-form tbody tr:hover{background:none}
+.tabla-form td:first-child{width:55%}
+
+/* ---------- Detalle de la orden ---------- */
+dl.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 20px;margin:0}
+dl.datos dt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+dl.datos dd{margin:2px 0 0}
+b.clave{font-family:var(--mono);font-weight:500;background:var(--hover);padding:1px 6px;border-radius:5px}
+tr.tachado td{color:var(--muted);text-decoration:line-through}
+tr.tachado td:last-child{text-decoration:none}
+.estado{display:inline-flex;align-items:center;gap:8px;font-weight:500;font-size:14px}
+.estado::before{content:"";width:10px;height:11px;clip-path:var(--hex);background:currentColor}
+.estado.wip{color:#6B4A00}.estado.ok{color:#1E5B2B}.estado.bad{color:#8A2A1C}
+
+/* ---------- Resumen: cuentas y saldo en palabras ---------- */
+dl.cuentas{margin:0;display:flex;flex-direction:column;gap:8px}
+dl.cuentas div{display:flex;justify-content:space-between;gap:10px}
+dl.cuentas dt{color:var(--muted)}
+dl.cuentas dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+dl.cuentas .sec dd{font-weight:500}
+.saldo-caja{border-radius:10px;padding:12px 14px;font-weight:700;font-size:17px;border:1px solid}
+.saldo-caja small{display:block;font-weight:500;font-size:12.5px;margin-top:2px}
+.saldo-caja.debe{background:#FCEBC8;color:#6B4A00;border-color:#EBD4A0}
+.saldo-caja.ok{background:#DFF0DF;color:#1E5B2B;border-color:#BBD9BE}
+.saldo-caja.afavor{background:#F8DAD5;color:#8A2A1C;border-color:#EDBDB4}
+
+/* ---------- Lista de órdenes: filtros y páginas ---------- */
+.filtros{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.filtros .entrada{max-width:300px}
+.paginas{display:flex;gap:12px;align-items:center;justify-content:center;padding-top:8px}
+
+@media (max-width:860px){
+  .cols{grid-template-columns:1fr}
+  .lateral{position:static}
+  .segmento{overflow-x:auto;flex-wrap:nowrap;max-width:100%}
+}
+
+/* Ajustes finales */
+.search input{border:0;background:transparent;height:100%;padding:0;border-radius:0}
+.search input:focus-visible{outline:none}
+dl.cuentas dd{white-space:nowrap}
+.tabla-form td input,.tabla-form td select{min-width:90px}
+.campo .segmento{align-self:flex-start}

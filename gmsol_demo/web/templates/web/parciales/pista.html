@@ -1,0 +1,2 @@
+{% load formato %}{# Pista de progreso: Recibida · Revisión · Lista · Entregada #}
+<span class="pista {{ o|estado_clase }}" title="Recibida · Revisión · Lista · Entregada"><span class="p" aria-hidden="true">{% for paso in o|pista %}{% if not forloop.first %}<span class="s {{ paso }}"></span>{% endif %}<span class="n {{ paso }}"></span>{% endfor %}</span><span class="t">{{ o|estado_texto }}</span></span>

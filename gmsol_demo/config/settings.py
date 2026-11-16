@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'catalogo',
+    'web',
 ]
 
 MIDDLEWARE = [
@@ -140,3 +141,7 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+LOGIN_URL = 'web:login'
+LOGIN_REDIRECT_URL = 'web:inicio'
+LOGOUT_REDIRECT_URL = 'web:login'

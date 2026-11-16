@@ -1,0 +1,25 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingresar · GM Soluciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'web/css/gmsol.css' %}">
+</head>
+<body>
+<div class="login">
+<div class="panel">
+<img src="{% static 'web/img/logo.png' %}" alt="GM Soluciones tecnológicas">
+<h1>Ingresar</h1>
+{% if form.errors %}<div class="err">Usuario o contraseña incorrectos.</div>{% endif %}
+<form method="post">{% csrf_token %}
+<div><label for="id_username">Usuario</label>{{ form.username }}</div>
+<div><label for="id_password">Contraseña</label>{{ form.password }}</div>
+<input type="hidden" name="next" value="{{ next }}">
+<button class="btn pri" type="submit">Entrar</button>
+</form>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{% extends "web/base.html" %}
+{% load formato %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<h1>Inicio</h1>
+<div class="tiles">
+<div class="tile"><i class="dot wip"></i><b>{{ en_revision }}</b><span>En revisión / reparación</span></div>
+<div class="tile"><i class="dot ok"></i><b>{{ listas }}</b><span>Listas para entregar</span></div>
+<div class="tile"><i class="dot bad"></i><b>{{ devoluciones }}</b><span>Devoluciones por hacer</span></div>
+</div>
+<section class="panel">
+<h2>Órdenes en curso</h2>
+{% if ordenes %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>N°</th><th>Cliente</th><th>Equipo</th><th>Estado</th><th>Saldo</th></tr></thead>
+<tbody>
+{% for o in ordenes %}
+<tr><td><b>#{{ o.id }}</b></td><td>{{ o.cliente }}</td><td>{{ o|equipos_texto }}</td><td><span class="chip {{ o|estado_clase }}">{{ o|estado_texto }}</span></td><td>{{ o|saldo }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="vacio">No hay órdenes en curso.</p>
+{% endif %}
+</section>
+{% endblock %}

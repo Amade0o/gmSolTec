@@ -1,0 +1,86 @@
+/* GM Soluciones · diseño v2 ("H2 + pista de progreso").
+   Se carga DESPUÉS de gmsol.css y solo pisa lo que cambia.
+   Para volver al diseño v1 alcanza con sacar este archivo de base.html.
+   Los valores salen de guia-de-diseno-gmsol.md (v2). */
+:root{
+  --cond:'Barlow Condensed','Arial Narrow',sans-serif;   /* números grandes, fecha y títulos del menú */
+  --mono:'IBM Plex Mono',ui-monospace,monospace;         /* números de orden */
+  --line:#E3D9C8;
+  --hex:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);  /* hexágono del logo */
+}
+.app{font-size:15px}
+
+/* ---------- Franja superior: crema, de lado a lado, con el logo ---------- */
+.strip{padding:10px 24px;border-bottom:1px solid var(--line);background:var(--surface);min-height:64px}
+.strip .logo img{height:42px}
+.search,.btn{height:40px;border-radius:9px}
+.search{min-width:340px;background:var(--bg)}
+.btn{font:600 14.5px var(--font);padding:0 16px}
+
+/* ---------- Menú lateral: pegado al borde, de arriba a abajo ---------- */
+.app.f .body{padding:0;gap:0}
+.side.float{border-radius:0;align-self:stretch;width:236px;padding:22px 16px}
+.nav a,.nav .out{position:relative;min-height:36px;padding:6px 12px;gap:12px;border-radius:8px;font-weight:500;font-size:14.5px}
+.nav svg{width:18px;height:18px;stroke-width:1.6}
+.nav a.on{color:#FFD2AA}
+.nav a.on::after{content:"";position:absolute;right:12px;top:50%;width:9px;height:10px;margin-top:-5px;background:var(--cta);clip-path:var(--hex)}
+.gt{font-family:var(--cond);font-size:12.5px;letter-spacing:.14em;font-weight:600;margin:20px 0 4px 2px}
+.nav .gt:first-child{margin-top:0}
+.tag{border:0;padding:0;font-size:11px}
+.nav a.soon{opacity:.6}
+.nav form{margin:0}
+
+/* ---------- Contenido ---------- */
+.main{padding:28px 36px;gap:22px}
+.fecha{font-family:var(--cond);font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:-18px}
+h1{font-size:28px;font-weight:700;letter-spacing:-.015em}
+h2{font-size:16px;font-weight:700}
+
+/* Tarjetas de conteo: número condensado y hexágono de estado */
+.tiles{grid-template-columns:repeat(3,1fr);gap:14px}
+.tile{border-radius:12px;flex-direction:column;align-items:flex-start;gap:4px;padding:16px 20px}
+.tile .dot{display:none}
+.tile b{font-family:var(--cond);font-size:44px;font-weight:700;line-height:.95;font-variant-numeric:tabular-nums}
+.tile span{order:2;display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;color:var(--muted)}
+.tile span::before{content:"";width:10px;height:11px;flex:none;clip-path:var(--hex)}
+.tile:nth-child(1) span::before{background:#D69A1B}
+.tile:nth-child(2) span::before{background:#3E8E52}
+.tile:nth-child(3) span::before{background:#C4503C}
+
+/* Tabla dentro de un panel */
+.panel{border-radius:12px;padding:20px 22px}
+table{font-size:14.5px;font-variant-numeric:tabular-nums}
+th{font-size:11px;letter-spacing:.09em;font-weight:600}
+td{padding:12px}
+td.num b{font-family:var(--mono);font-weight:500;font-size:13.5px;color:var(--muted)}
+td.cli{font-weight:600}
+th.der,td.der{text-align:right}
+td.afavor{color:#8A2A1C;font-weight:600}
+
+/* ---------- Pista de progreso ----------
+   Recibida · Revisión · Lista · Entregada, dibujada como las pistas del logo.
+   Pasos hechos rellenos, el actual es un hexágono. Siempre va con el texto del estado. */
+.pista{display:inline-flex;align-items:center;gap:10px;background:none;--c:#D69A1B}
+.pista.ok{--c:#3E8E52}.pista.bad{--c:#C4503C}
+.pista .p{display:inline-flex;align-items:center}
+.pista .n{width:8px;height:8px;border-radius:50%;border:1.5px solid #CDBFA8;box-sizing:border-box;flex:none}
+.pista .s{width:12px;height:1.5px;background:#CDBFA8;flex:none}
+.pista .n.hecho{background:var(--c);border-color:var(--c)}
+.pista .s.hecho,.pista .s.actual{background:var(--c)}
+.pista .n.actual{width:11px;height:12px;border:0;border-radius:0;background:var(--c);clip-path:var(--hex)}
+.pista .t{font-size:14px;font-weight:500;color:#6B4A00;white-space:nowrap}
+.pista.ok .t{color:#1E5B2B}.pista.bad .t{color:#8A2A1C}
+
+@media (max-width:860px){
+  .side.float{align-self:auto;width:auto;padding:8px 10px;margin:0 12px;border-radius:12px;scrollbar-width:none}
+  .side.float::-webkit-scrollbar{display:none}
+  .nav a.on::after{display:none}
+  .main{padding:18px}
+  .search{min-width:0;flex:1}
+  /* los tres conteos en una fila, más chicos */
+  .tiles{grid-template-columns:repeat(3,1fr);gap:8px}
+  .tile{padding:10px 12px}
+  .tile b{font-size:32px}
+  .tile span{font-size:12.5px;align-items:flex-start}
+  .tile span::before{margin-top:3px}
+}

@@ -31,7 +31,7 @@ Charla y decisiones → .md de diseño → código (lo escribe el desarrollador,
 | 4 | **Caja y movimientos** | Efectivo y digital como cuentas, movimientos de caja y de stock, retiros del dueño, todo en una sola transacción al registrar la venta. Stock disponible = físico − reservado en órdenes abiertas | ⬜ |
 | 5 | **Compras y proveedores** | Compras, pagos a proveedores, cuenta corriente, stock entrante | ⬜ |
 | 6 | **Reglas de negocio** | Capa propia, separada de los modelos: transiciones de estado, cierre de venta, recargos (patrones *State* y *Strategy*) | ⬜ |
-| 7 | **Pantallas propias** | Se adelanta: va **antes** de la etapa 4. Primero se define el diseño (minimalista, nada genérico), después orden en una sola pantalla, ventas, pagos y devoluciones; más adelante caja y stock. Login (Django + HTMX) | ⏭️ siguiente |
+| 7 | **Pantallas propias** | Se adelanta: va **antes** de la etapa 4. Primero se define el diseño (minimalista, nada genérico), después orden en una sola pantalla, ventas, pagos y devoluciones; más adelante caja y stock. Login (Django + HTMX). **Paso 7.0 hecho** (login, Inicio, diseño v2) | 🔄 en curso |
 | 8 | **Integración con ARCA** | Comprobante ARCA, `facturar_arca` en cada pago (opción de facturar o no cada transferencia) | ⬜ |
 | 9 | **Estadísticas** | Por fechas, marcas, modelos, reparaciones, proveedores y clientes | ⬜ |
 | 10 | **Impresión de la orden** | PDF de dos partes (empleado y cliente, con aviso de 30 días) | ⬜ |

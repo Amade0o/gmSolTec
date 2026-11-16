@@ -12,7 +12,7 @@ from catalogo.models import (
     ModeloEquipo, OrdenTrabajo, Pago, Reparacion,
 )
 from catalogo.servicios import cerrar_orden
-from web.templatetags.formato import pesos
+from web.templatetags.formato import pesos, pista
 
 D = Decimal
 
@@ -131,6 +131,24 @@ class InicioTests(DatosBase):
         r = self.client.get(reverse("web:inicio"))
         self.assertContains(r, "Celular + 1 más")
 
+    def test_diseno_v2_y_fecha(self):
+        r = self.client.get(reverse("web:inicio"))
+        self.assertContains(r, "gmsol-v2.css")
+        self.assertContains(r, 'class="fecha"')
+
+    def test_pista_de_progreso_en_la_tabla(self):
+        self.orden("1000")                                        # en revisión
+        self.orden("1000", estado="arreglado", pagado="1000")     # lista
+        r = self.client.get(reverse("web:inicio"))
+        self.assertContains(r, 'class="pista wip"')
+        self.assertContains(r, 'class="pista ok"')
+        self.assertContains(r, 'class="n actual"', count=2)
+
+    def test_a_favor_se_marca_en_rojo(self):
+        self.orden("55000", pagado="10000", estado="no_arreglable")
+        r = self.client.get(reverse("web:inicio"))
+        self.assertContains(r, 'class="der afavor"')
+
     def test_cantidad_de_consultas_no_crece_con_las_ordenes(self):
         self.orden("1000")
         with CaptureQueriesContext(connection) as pocas:
@@ -148,3 +166,23 @@ class FormatoTests(TestCase):
         self.assertEqual(pesos(D("1234.5")), "$ 1.234,50")
         self.assertEqual(pesos(D("-10000.00")), "$ 10.000")
         self.assertEqual(pesos(0), "$ 0")
+
+
+class PistaTests(DatosBase):
+    """La pista: Recibida · Revisión · Lista · Entregada."""
+
+    def test_en_revision(self):
+        self.assertEqual(pista(self.orden()), ["hecho", "actual", "", ""])
+
+    def test_lista(self):
+        self.assertEqual(pista(self.orden(estado="arreglado")), ["hecho", "hecho", "actual", ""])
+
+    def test_no_arreglable_queda_en_el_paso_de_lista(self):
+        o = self.orden(pagado="500", estado="no_arreglable")
+        self.assertEqual(pista(o), ["hecho", "hecho", "actual", ""])
+
+    def test_cerrada_llega_al_final(self):
+        o = self.orden(estado="arreglado", pagado="1000")
+        cerrar_orden(o)
+        o = OrdenTrabajo.objects.get(pk=o.pk)
+        self.assertEqual(pista(o), ["hecho", "hecho", "hecho", "actual"])

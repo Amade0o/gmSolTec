@@ -43,6 +43,32 @@ def estado_clase(orden):
     return ESTADOS[orden.estado][1]
 
 
+# Pista de progreso: Recibida · Revisión · Lista · Entregada.
+# Para cada estado de la orden, en qué paso está (empieza en 0).
+PASO_ACTUAL = {
+    "pendiente": 1,
+    "lista": 2,
+    "no_arreglable": 2,     # se revisó y terminó ahí (en rojo)
+    "finalizada": 2,
+    "cerrada": 3,
+}
+
+
+@register.filter
+def pista(orden):
+    """Devuelve los 4 pasos: 'hecho', 'actual' o '' (todavía no llegó)."""
+    actual = PASO_ACTUAL[orden.estado]
+    pasos = []
+    for i in range(4):
+        if i < actual:
+            pasos.append("hecho")
+        elif i == actual:
+            pasos.append("actual")
+        else:
+            pasos.append("")
+    return pasos
+
+
 @register.filter
 def equipos_texto(orden):
     nombres = [e.modelo.nombre if e.modelo else e.get_tipo_display() for e in orden.equipos.all()]

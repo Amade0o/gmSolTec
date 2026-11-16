@@ -21,7 +21,7 @@
 {% include "web/parciales/campo.html" with campo=form.categoria %}
 {% include "web/parciales/campo.html" with campo=form.marca %}
 </div>
-<small class="ayuda">¿Falta una categoría o una marca? Cargala en el <a href="{% url 'admin:app_list' 'catalogo' %}">Catálogo</a>.</small>
+<small class="ayuda">¿Falta una categoría o una marca? Cargala en el Catálogo: <a href="{% url 'web:catalogo' 'categorias-producto' %}">categorías</a> o <a href="{% url 'web:catalogo' 'marcas' %}">marcas</a>.</small>
 <div class="fila-campos">
 {% include "web/parciales/campo.html" with campo=form.precio_compra %}
 {% include "web/parciales/campo.html" with campo=form.precio_venta %}

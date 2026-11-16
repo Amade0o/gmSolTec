@@ -9,7 +9,7 @@ from decimal import Decimal
 from django import forms
 
 from catalogo.models import (
-    CategoriaProducto, Cliente, EquipoRecibido, Marca, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
+    CategoriaProducto, CategoriaReparacion, Cliente, EquipoRecibido, Marca, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
     ModeloEquipo, Pago, Producto, Reparacion,
 )
 
@@ -243,36 +243,116 @@ class TelefonoForm(forms.Form):
 
 
 
+# ---------- Formularios con desplegables de cosas que se pueden desactivar ----------
+
+class ConDesactivablesForm(forms.ModelForm):
+    """Base para Producto, Modelo y Reparación.
+
+    En los desplegables (categoría, marca) solo aparecen los activos, pero si el registro ya
+    tiene uno desactivado se sigue mostrando, y mientras no se cambie no se vuelve a controlar:
+    así se puede editar un producto cuya categoría se desactivó.
+    """
+    campos_desactivables = {}       # campo -> (texto si está vacío, filtro de activos)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._excluir_sin_cambios = True
+        for campo, (vacio, activos) in self.campos_desactivables.items():
+            modelo = self._meta.model._meta.get_field(campo).related_model
+            opciones = modelo.objects.filter(**activos)
+            actual = getattr(self.instance, f"{campo}_id", None)
+            if actual:
+                opciones = opciones | modelo.objects.filter(pk=actual)
+            self.fields[campo].queryset = opciones.order_by("nombre")
+            self.fields[campo].empty_label = vacio
+            self.fields[campo].limit_choices_to = None
+
+    def _get_validation_exclusions(self):
+        excluir = super()._get_validation_exclusions()
+        if self._excluir_sin_cambios:
+            excluir |= {c for c in self.campos_desactivables if c not in self.changed_data}
+        return excluir
+
+    # Los nombres repetidos (ej.: mismo modelo en la misma marca) sí se controlan siempre
+    def validate_unique(self):
+        self._excluir_sin_cambios = False
+        try:
+            super().validate_unique()
+        finally:
+            self._excluir_sin_cambios = True
+
+    def validate_constraints(self):
+        self._excluir_sin_cambios = False
+        try:
+            super().validate_constraints()
+        finally:
+            self._excluir_sin_cambios = True
+
+
 # ---------- Productos ----------
 
-class ProductoForm(forms.ModelForm):
+class ProductoForm(ConDesactivablesForm):
+    campos_desactivables = {
+        "categoria": ("Elegí la categoría…", {"activa": True}),
+        "marca": ("Sin marca", {"activa": True}),
+    }
+
     class Meta:
         model = Producto
         fields = ["nombre", "categoria", "marca", "precio_compra", "precio_venta"]
         labels = {"categoria": "Categoría", "precio_compra": "Precio de compra", "precio_venta": "Precio de venta"}
         help_texts = {"precio_venta": "Cambiarlo no toca las ventas ya hechas: cada venta guarda su precio."}
 
+
+# ---------- Catálogo (una pestaña por tabla) ----------
+
+class CategoriaProductoForm(forms.ModelForm):
+    class Meta:
+        model = CategoriaProducto
+        fields = ["nombre"]
+
+
+class MarcaForm(forms.ModelForm):
+    class Meta:
+        model = Marca
+        fields = ["nombre"]
+
+
+class ModeloEquipoForm(ConDesactivablesForm):
+    campos_desactivables = {"marca": ("Elegí la marca…", {"activa": True})}
+
+    class Meta:
+        model = ModeloEquipo
+        fields = ["marca", "nombre", "tipo"]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Solo las activas, pero si el producto ya tiene una desactivada, se sigue mostrando
-        actual = self.instance
-        categorias = CategoriaProducto.objects.filter(activa=True)
-        marcas = Marca.objects.filter(activa=True)
-        if actual.pk:
-            categorias = categorias | CategoriaProducto.objects.filter(pk=actual.categoria_id)
-            marcas = marcas | Marca.objects.filter(pk=actual.marca_id)
-        self.fields["categoria"].queryset = categorias.order_by("nombre")
-        self.fields["categoria"].empty_label = "Elegí la categoría…"
-        self.fields["categoria"].limit_choices_to = None
-        self.fields["marca"].queryset = marcas.order_by("nombre")
-        self.fields["marca"].empty_label = "Sin marca"
-        self.fields["marca"].limit_choices_to = None
+        self.fields["tipo"].choices = [("", "Elegí el tipo…")] + [c for c in self.fields["tipo"].choices if c[0]]
 
-    def _get_validation_exclusions(self):
-        # El modelo solo acepta categorías y marcas activas. Si no se cambiaron, no se vuelven
-        # a controlar: así se puede editar el precio de un producto cuya categoría se desactivó.
-        excluir = super()._get_validation_exclusions()
-        for campo in ("categoria", "marca"):
-            if campo not in self.changed_data:
-                excluir.add(campo)
-        return excluir
+
+class CategoriaReparacionForm(forms.ModelForm):
+    class Meta:
+        model = CategoriaReparacion
+        fields = ["nombre"]
+
+
+class ReparacionForm(ConDesactivablesForm):
+    campos_desactivables = {"categoria": ("Elegí la categoría…", {"activo": True})}
+
+    class Meta:
+        model = Reparacion
+        fields = ["categoria", "nombre"]
+        labels = {"categoria": "Categoría"}
+        help_texts = {"nombre": "El precio no va acá: se pone en cada orden."}
+
+
+class MetodoPagoForm(forms.ModelForm):
+    class Meta:
+        model = MetodoPago
+        fields = ["nombre", "cuenta", "recargo_porcentaje"]
+        labels = {"recargo_porcentaje": "Recargo %"}
+        help_texts = {"recargo_porcentaje": "Cambiarlo no toca los pagos ya hechos: cada pago guarda su recargo."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["cuenta"].choices = [("", "Elegí la cuenta…")] + [c for c in self.fields["cuenta"].choices if c[0]]

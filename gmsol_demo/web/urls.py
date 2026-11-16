@@ -2,7 +2,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import views, views_catalogo
 
 app_name = "web"
 
@@ -40,4 +40,9 @@ urlpatterns = [
     path("productos/nuevo/", views.producto_nuevo, name="producto_nuevo"),
     path("productos/margen/", views.producto_margen, name="producto_margen"),
     path("productos/<int:numero>/", views.producto_detalle, name="producto_detalle"),
+
+    # Catálogo: categorías, marcas, modelos, reparaciones y métodos de pago
+    path("catalogo/", views_catalogo.catalogo, name="catalogo_inicio"),
+    path("catalogo/<slug:seccion>/", views_catalogo.catalogo, name="catalogo"),
+    path("catalogo/<slug:seccion>/<int:numero>/", views_catalogo.catalogo_editar, name="catalogo_editar"),
 ]

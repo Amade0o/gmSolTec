@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{# Catálogo: una pestaña por tabla, con la lista y el formulario para agregar #}
+{% block titulo %}{{ sec.titulo }} · Catálogo{% endblock %}
+{% block contenido %}
+<div class="head"><h1>Catálogo</h1></div>
+
+<nav class="segmento" aria-label="Tablas del catálogo">
+{% for clave, titulo in secciones %}<a href="{% url 'web:catalogo' clave %}" class="{% if clave == sec.clave %}on{% endif %}"{% if clave == sec.clave %} aria-current="page"{% endif %}>{{ titulo }}</a>{% endfor %}
+</nav>
+
+<section class="panel">
+<h2>Agregar</h2>
+{% if sec.ayuda %}<p class="ayuda">{{ sec.ayuda }}</p>{% endif %}
+<form method="post" class="fila-campos agregar" novalidate>{% csrf_token %}
+{% include "web/parciales/errores_form.html" %}
+{% for campo in form %}{% include "web/parciales/campo.html" with campo=campo %}{% endfor %}
+<button class="btn">Agregar</button>
+</form>
+</section>
+
+<section class="panel">
+<h2>{{ sec.titulo }}</h2>
+<form class="filtros" method="get" role="search">
+<nav class="segmento" aria-label="Filtrar por estado">
+<a href="?estado=activos{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if estado == 'activos' %}on{% endif %}">Activos</a><a href="?estado=todos{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if estado == 'todos' %}on{% endif %}">Todos</a>
+</nav>
+<input type="hidden" name="estado" value="{{ estado }}">
+<input class="entrada" name="q" value="{{ q }}" placeholder="Buscar" aria-label="Buscar en {{ sec.titulo }}">
+</form>
+{% if filas %}
+<div style="overflow-x:auto"><table>
+<thead><tr><th>Nombre</th>{% for titulo, _ in sec.columnas %}<th>{{ titulo }}</th>{% endfor %}<th></th></tr></thead>
+<tbody>
+{% for obj, valores, activo in filas %}
+<tr class="{% if not activo %}tachado{% endif %}">
+<td class="cli"><a class="fila-link" href="{% url 'web:catalogo_editar' sec.clave obj.pk %}">{{ obj.nombre }}</a>{% if not activo %} <span class="sec">(desactivado)</span>{% endif %}</td>
+{% for v in valores %}<td>{{ v }}</td>{% endfor %}
+<td class="der"><a class="enlace" href="{% url 'web:catalogo_editar' sec.clave obj.pk %}">Editar</a></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="vacio">No hay nada cargado{% if q %} que coincida con “{{ q }}”{% endif %}.</p>
+{% endif %}
+</section>
+{% endblock %}

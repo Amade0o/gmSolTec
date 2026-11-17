@@ -22,7 +22,6 @@
 {% include "web/parciales/campo.html" with campo=form.categoria %}
 {% include "web/parciales/campo.html" with campo=form.marca %}
 </div>
-<small class="ayuda">¿Falta una categoría o una marca? Cargala en el Catálogo: <a href="{% url 'web:catalogo' 'categorias-producto' %}">categorías</a> o <a href="{% url 'web:catalogo' 'marcas' %}">marcas</a>.</small>
 <div class="fila-campos">
 {% include "web/parciales/campo.html" with campo=form.precio_compra %}
 {% include "web/parciales/campo.html" with campo=form.precio_venta %}
@@ -67,6 +66,8 @@
 <p class="ayuda">Desactivado: no aparece al vender. Las ventas viejas lo siguen mostrando.</p>
 <form method="post">{% csrf_token %}<button class="btn pri ancho" type="submit" name="accion" value="activar">Activar</button></form>
 {% endif %}
+<form method="post" class="eliminar">{% csrf_token %}<button class="enlace peligro" type="submit" name="accion" value="eliminar" data-confirmar="¿Eliminar «{{ producto.nombre }}» para siempre? Solo se puede si nunca se vendió; si ya se vendió, desactivalo." data-confirmar-si="Sí, eliminar">Eliminar</button>
+<small class="ayuda">Solo si nunca se vendió. Si ya se vendió, desactivalo.</small></form>
 </section>
 {% endif %}
 </aside>

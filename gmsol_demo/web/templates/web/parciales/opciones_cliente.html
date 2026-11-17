@@ -1,6 +1,9 @@
-{% load formato %}{# Lista de clientes para elegir (radios). Sin buscar: los últimos atendidos. La reemplaza el buscador por HTMX. #}
+{% comment %} Lista de TODOS los clientes (A-Z) para elegir, que se filtra con el buscador. Llega de a partes:
+   la siguiente se pide sola al llegar al final (opciones_cliente_mas.html). {% endcomment %}
 <div class="opciones-cliente" id="opciones-{{ oc.campo }}">
-<label class="opcion"><input type="radio" name="{{ oc.campo }}" value=""{% if not oc.elegido %} checked{% endif %}><span><span class="nombre">{{ oc.vacio }}</span></span></label>
-{% for c in oc.lista %}<label class="opcion"><input type="radio" name="{{ oc.campo }}" value="{{ c.pk }}"{% if c.pk == oc.elegido %} checked{% endif %}><span><span class="nombre">{{ c.nombre }}</span>{% with tel=c|telefono_principal %}{% if tel %}<small>{{ tel }}</small>{% endif %}{% endwith %}</span></label>
-{% endfor %}<p class="ayuda" role="status">{% if oc.q %}{% if oc.lista %}{% if oc.mas %}Hay {{ oc.mas }} más: escribí un poco más para encontrarlo.{% else %}{{ oc.lista|length }} cliente{{ oc.lista|length|pluralize }} con “{{ oc.q }}”.{% endif %}{% else %}No hay clientes con “{{ oc.q }}”.{% endif %}{% else %}Últimos clientes atendidos. Para otro, buscalo por nombre o teléfono.{% endif %}</p>
+<p class="ayuda" role="status">{% if oc.q %}{% if oc.cantidad %}{{ oc.cantidad }} cliente{{ oc.cantidad|pluralize }} con “{{ oc.q }}”.{% else %}No hay clientes con “{{ oc.q }}”.{% if oc.campo == "cli-cliente" %} Si es nuevo, tocá «Cliente nuevo».{% endif %}{% endif %}{% else %}{{ oc.cantidad }} cliente{{ oc.cantidad|pluralize }}, de la A a la Z. Escribí para filtrar.{% endif %}</p>
+<div class="lista-clientes">
+{% if oc.vacio %}<label class="opcion"><input type="radio" name="{{ oc.campo }}" value=""{% if not oc.elegido %} checked{% endif %}><span><span class="nombre">{{ oc.vacio }}</span></span></label>
+{% endif %}{% include "web/parciales/opciones_cliente_mas.html" %}
+</div>
 </div>

@@ -6,4 +6,4 @@
 {% if pago.recargo_monto %}<div class="sec"><dt>Con recargo, paga</dt><dd>{{ pago.total_cobrado|pesos }}</dd></div>{% endif %}
 {% endif %}
 </dl>
-<div class="saldo-caja {% if saldo > 0 %}debe{% elif saldo < 0 %}afavor{% else %}ok{% endif %}">{{ saldo|saldo_monto }}</div>
+{% if total == 0 and not pago %}<div class="saldo-caja neutro">Sin precio todavía<small>Se completa cuando cargues el precio de la reparación.</small></div>{% else %}<div class="saldo-caja {% if saldo > 0 %}debe{% elif saldo < 0 %}afavor{% else %}ok{% endif %}">{{ saldo|saldo_monto }}</div>{% endif %}

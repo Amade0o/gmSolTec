@@ -20,15 +20,20 @@
 <section class="panel">
 <h2><span class="paso">1</span>Cliente</h2>
 {% include "web/parciales/errores_form.html" with form=cliente_form %}
-<fieldset class="campo elegir-cliente{% if cliente_form.cliente.errors %} con-error{% endif %}">
-<legend>Cliente existente</legend>
-{% include "web/parciales/buscar_cliente.html" %}
-{% for e in cliente_form.cliente.errors %}<small class="error">{{ e }}</small>{% endfor %}
+{# "De la lista" o "Cliente nuevo": se ve solo una de las dos partes (CSS con :has). Lo que se guarda lo decide "modo". #}
+<fieldset class="campo modo-cliente">
+<legend class="oculto">¿Cliente de la lista o nuevo?</legend>
+<div class="segmento opciones">{% for opcion in cliente_form.modo %}{{ opcion.tag }}<label for="{{ opcion.id_for_label }}">{{ opcion.choice_label }}</label>{% endfor %}</div>
 </fieldset>
-<div class="fila-campos agregar">
-<span class="o">o uno nuevo:</span>
+<div class="cliente-existente elegir-cliente">
+{% include "web/parciales/buscar_cliente.html" %}
+</div>
+<div class="cliente-nuevo">
+<div class="fila-campos">
 {% include "web/parciales/campo.html" with campo=cliente_form.nuevo_nombre clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=cliente_form.nuevo_telefono %}
+</div>
+<div id="clientes-parecidos" aria-live="polite"></div>
 </div>
 </section>
 
@@ -59,12 +64,12 @@
 
 <section class="panel">
 <h2><span class="paso">3</span>Reparaciones</h2>
-{% include "web/parciales/tabla_formset.html" with formset=reparaciones %}
+{% include "web/parciales/tabla_formset.html" with formset=reparaciones agregar="otra reparación" %}
 </section>
 
 <section class="panel">
 <h2><span class="paso">4</span>Productos que se lleva <span class="sub">opcional</span></h2>
-{% include "web/parciales/tabla_formset.html" with formset=productos %}
+{% include "web/parciales/tabla_formset.html" with formset=productos agregar="otro producto" %}
 </section>
 
 <section class="panel">

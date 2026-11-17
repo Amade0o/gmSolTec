@@ -1,6 +1,7 @@
-{# Un campo de formulario: etiqueta, control, ayuda y errores. Django ya agrega aria-describedby="<id>_helptext" y aria-invalid. #}
+{% load formato %}{% comment %} Un campo de formulario: etiqueta, control, ayuda y errores. Django ya agrega aria-describedby="<id>_helptext" y aria-invalid.
+   Si el desplegable es del catálogo, al lado de la etiqueta va "+ Nuevo" (abre el alta rápida). {% endcomment %}
 <div class="campo{% if campo.errors %} con-error{% endif %}{% if clase %} {{ clase }}{% endif %}">
-<label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+{% with alta=campo|alta_rapida %}{% if alta %}<div class="etiqueta-fila"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label><button type="button" class="enlace mas" data-no-precargar hx-get="{% url 'web:alta_rapida' alta.0 %}?destino={{ campo.auto_id }}" hx-target="#alta-rapida-cuerpo">+ {{ alta.1 }}</button></div>{% else %}<label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{% endif %}{% endwith %}
 {{ campo }}
 {% if campo.help_text %}<small class="ayuda" id="{{ campo.auto_id }}_helptext">{{ campo.help_text }}</small>{% endif %}
 {% for e in campo.errors %}<small class="error">{{ e }}</small>{% endfor %}

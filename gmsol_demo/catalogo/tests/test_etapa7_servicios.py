@@ -9,7 +9,7 @@ from catalogo.models import (
 from catalogo.servicios import (
     ReglaDeNegocioError, agregar_equipo, agregar_pago, agregar_producto, agregar_reparacion,
     cambiar_estado_equipo, crear_orden, entregar_orden, marcar_devuelta, quitar_producto,
-    quitar_reparacion, registrar_devolucion,
+    quitar_reparacion, registrar_devolucion, devolver_reparacion, monto_para_devolver,
 )
 from catalogo.tests.test_etapa3_correcciones import Base
 
@@ -147,3 +147,53 @@ class DevolucionYEntregaTests(Base):
         with self.assertRaises(ReglaDeNegocioError):
             entregar_orden(orden, self.efectivo)
         self.assertEqual(orden.pagos.count(), 0)            # el pago se deshizo
+
+
+class DevolverReparacionTests(Base):
+    """Devolver una reparación puntual desde Devoluciones (pedido del 17/11/2026)."""
+
+    def orden_dos_reparaciones(self, pagado):
+        orden = self.crear_orden(D("15000"))                       # batería
+        equipo = orden.equipos.get()
+        pantalla = agregar_reparacion(equipo, LineaReparacion(reparacion=self.reparacion, precio_vendido=D("40000")))
+        bateria = equipo.lineas_reparacion.exclude(pk=pantalla.pk).get()
+        if pagado:
+            self.pagar(orden, pagado)
+        return orden, bateria, pantalla
+
+    def test_pago_todo_devuelve_la_reparacion_entera(self):
+        orden, bateria, _ = self.orden_dos_reparaciones("55000")
+        self.assertEqual(monto_para_devolver(bateria), D("15000"))
+        dev = devolver_reparacion(bateria, self.efectivo)
+        self.assertTrue(dev.devuelta)
+        self.assertEqual(orden.total, D("40000"))                  # la batería ya no se cobra
+        self.assertEqual(orden.monto_adeudado, D("0"))             # pagó 55.000, le devolvieron 15.000
+        self.assertEqual(orden.equipos.get().lineas_reparacion.count(), 2)   # sigue a la vista
+
+    def test_pago_una_parte_devuelve_solo_lo_de_mas(self):
+        orden, bateria, _ = self.orden_dos_reparaciones("45000")
+        self.assertEqual(monto_para_devolver(bateria), D("5000"))  # 45.000 pagados − 40.000 que quedan
+        dev = devolver_reparacion(bateria)                         # sin método: queda pendiente
+        self.assertFalse(dev.devuelta)
+        self.assertEqual(orden.monto_a_devolver, D("5000"))
+
+    def test_si_no_pago_de_mas_no_hay_nada_para_devolver(self):
+        orden, bateria, _ = self.orden_dos_reparaciones("10000")
+        with self.assertRaises(ReglaDeNegocioError):
+            devolver_reparacion(bateria, self.efectivo)
+        self.assertFalse(Devolucion.objects.exists())
+
+    def test_no_se_devuelve_dos_veces_ni_se_quita(self):
+        orden, bateria, _ = self.orden_dos_reparaciones("55000")
+        devolver_reparacion(bateria, self.efectivo)
+        with self.assertRaises(ReglaDeNegocioError):
+            devolver_reparacion(bateria, self.efectivo)
+        with self.assertRaises(ReglaDeNegocioError):
+            quitar_reparacion(bateria)
+
+    def test_despues_de_devolver_se_puede_entregar(self):
+        orden, bateria, _ = self.orden_dos_reparaciones("55000")
+        devolver_reparacion(bateria, self.efectivo)
+        cambiar_estado_equipo(orden.equipos.get(), "arreglado")
+        venta = entregar_orden(orden)
+        self.assertEqual(venta.total, D("40000"))

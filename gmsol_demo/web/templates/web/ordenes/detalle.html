@@ -19,6 +19,7 @@
 <div class="pasos">
 
 {# ---------- Equipos ---------- #}
+{% with devueltas=orden.lineas_devueltas %}
 {% for equipo in orden.equipos.all %}
 <section class="panel">
 <h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
@@ -42,19 +43,21 @@
 <thead><tr><th scope="col">Reparación</th><th scope="col" class="der">Precio</th><th scope="col"><span class="oculto">Acción</span></th></tr></thead>
 <tbody>
 {% for linea in equipo.lineas_reparacion.all %}
-<tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}">
-<td>{{ linea.reparacion }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td>
-<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_reparacion"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace" type="submit" data-confirmar="¿Quitar «{{ linea.reparacion }}» de la orden?" data-confirmar-si="Sí, quitar">Quitar<span class="oculto"> {{ linea.reparacion }}</span></button></form>{% endif %}</td>
+<tr class="{% if equipo.estado == 'no_arreglable' or linea.id in devueltas %}tachado{% endif %}">
+<td>{{ linea.reparacion }}{% if linea.id in devueltas %} <span class="estado bad">Devuelta</span>{% endif %}</td><td class="der">{{ linea.precio_vendido|pesos }}</td>
+<td class="der">{% if not orden.cerrada and linea.id not in devueltas %}<form method="post" class="en-linea der">{% csrf_token %}<input type="hidden" name="accion" value="quitar_reparacion"><input type="hidden" name="linea" value="{{ linea.id }}">{% if orden.monto_pagado > 0 %}<a class="enlace" href="{% url 'web:devoluciones' %}?orden={{ orden.id }}&amp;linea={{ linea.id }}#devolver-reparacion">Devolver<span class="oculto"> {{ linea.reparacion }}</span></a>{% endif %}<button class="enlace" type="submit" data-confirmar="¿Quitar «{{ linea.reparacion }}» de la orden? Si el cliente ya la pagó, usá «Devolver»: así queda anotada y se le devuelve el dinero." data-confirmar-si="Sí, quitar">Quitar<span class="oculto"> {{ linea.reparacion }}</span></button></form>{% endif %}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>
 {% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobra: el equipo no tiene arreglo.</small>{% endif %}
+{% if devueltas %}<small class="ayuda">Las reparaciones devueltas quedan anotadas pero no se cobran.</small>{% endif %}
 
 {% if not orden.cerrada %}
 {% include "web/parciales/agregar_reparacion.html" with form=equipo.form_reparacion %}
 {% endif %}
 </section>
 {% endfor %}
+{% endwith %}
 
 {% if not orden.cerrada %}
 <details class="panel"{% if equipo_form.errors or equipo_rep_form.errors %} open{% endif %}>
@@ -175,7 +178,7 @@
 {% if orden.cerrada %}
 <div class="saldo-caja ok">Entregada<small><a href="{% url 'web:venta_detalle' orden.venta.id %}">Venta #{{ orden.venta.id }}</a> · {{ orden.venta.fecha|date:"j M, H:i" }}</small></div>
 {% else %}
-<div class="saldo-caja {% if orden.monto_adeudado > 0 %}debe{% elif orden.monto_adeudado < 0 %}afavor{% else %}ok{% endif %}">{{ orden|saldo }}</div>
+<div class="saldo-caja {{ orden|saldo_clase }}">{{ orden|saldo }}</div>
 {% if orden.estado == "lista" %}<a class="btn pri ancho" href="{% url 'web:orden_entregar' orden.id %}">Entregar equipo</a>{% endif %}
 {% if orden.estado == "pendiente" %}<p class="ayuda no-imprimir">Para entregar, marcá el resultado de cada equipo.</p>{% endif %}
 {% if orden.estado == "no_arreglable" %}<p class="ayuda no-imprimir">No tiene arreglo: registrá la devolución de la seña.</p>{% endif %}

@@ -251,6 +251,18 @@
   .tabla-form tbody tr:hover{background:none}
   .tabla-form td:first-child{width:55%}
   .tabla-form td :is(input,select){min-width:90px}
+  /* En lugares angostos (celular) cada fila se apila: lo primero a lo ancho y el resto debajo, con su título */
+  .tabla-form{container:filas/inline-size}
+  @container filas (width < 34rem){
+    .tabla-form :is(table,tbody,tr,td){display:block}
+    .tabla-form thead{display:none}
+    .tabla-form tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;padding-block:8px;border-bottom:1px dashed var(--line)}
+    .tabla-form td{padding:0;width:auto!important}
+    .tabla-form td:first-child{grid-column:1/-1}
+    .tabla-form td[data-label]::before{content:attr(data-label);display:block;font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:3px}
+    .tabla-form td.quitar{grid-column:1/-1;text-align:end;padding:0}
+    .tabla-form td :is(input,select){min-width:0}
+  }
 
   /* ---------- Tarjetas de conteo: número condensado y hexágono de estado ---------- */
   .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
@@ -318,11 +330,22 @@
   .con-error :is(input,select,textarea){border-color:var(--bad-punto);border-width:2px}
   .campo:has(:user-invalid) :is(label,legend){color:var(--bad-tinta)}
   small.error{color:var(--bad-tinta);font-size:.8125rem;font-weight:600}
-  .fila-campos{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  /* Campos en fila: alineados por arriba (si uno tiene ayuda debajo, los cuadros quedan parejos).
+     Los botones bajan lo que ocupa una etiqueta (13,5px × 1,45 + 5px ≈ 1,54rem) para quedar a la altura de los cuadros. */
+  .fila-campos{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
   .fila-campos>.campo{flex:1 1 150px}
   .fila-campos>.campo.ancho{flex:3 1 260px}
-  .fila-campos>.btn{flex:none}
-  .fila-campos .o{align-self:center;color:var(--muted);font-size:.84375rem;padding-top:20px}
+  .fila-campos>:is(.btn,label.en-linea,.o){flex:none;margin-top:1.54rem}
+  .fila-campos .o{color:var(--muted);font-size:.84375rem;line-height:2.5rem}
+  /* Formularios apilados: aire entre los campos y entre los campos y los botones */
+  .panel>form:not([class]),details>form{display:flex;flex-direction:column;gap:14px}
+  form .acts{margin-top:4px}
+  /* Etiqueta con "+ Nuevo" al lado (alta rápida del catálogo) */
+  .etiqueta-fila{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
+  .enlace.mas{font-weight:600;text-decoration:none;font-size:.8125rem;padding:.15rem .3rem;margin:-.15rem -.3rem;min-height:0;white-space:nowrap}
+  .enlace.mas:hover{text-decoration:underline}
+  .enlace.peligro{color:var(--bad-tinta)}
+  form.eliminar{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
   .campo.clave{flex:0 1 220px}
   .agregar{padding-top:12px;border-top:1px dashed var(--line)}
   form.en-linea{display:flex;gap:8px;align-items:center}
@@ -361,6 +384,7 @@
   .saldo-caja.debe{background:var(--wip-fondo);color:var(--wip-tinta);border-color:var(--wip-borde)}
   .saldo-caja.ok{background:var(--ok-fondo);color:var(--ok-tinta);border-color:var(--ok-borde)}
   .saldo-caja.afavor{background:var(--bad-fondo);color:var(--bad-tinta);border-color:var(--bad-borde)}
+  .saldo-caja.neutro{background:var(--surface);color:var(--muted);border-color:var(--line)}
   /* Mientras el servidor recalcula el resumen, se atenúa (solo si tarda) */
   #resumen,#margen{transition:opacity .15s .2s}
   .htmx-request :is(#resumen,#margen){opacity:.55}
@@ -385,10 +409,19 @@
   .grilla button{position:relative;width:24px;height:24px;border-radius:50%;border:2px solid var(--campo-borde);background:#fff;cursor:pointer;padding:0}
   .grilla button[aria-pressed=true]{background:var(--focus);border-color:var(--focus)}
 
-  /* ---------- Elegir cliente: buscador + últimos clientes ---------- */
+  /* ---------- Elegir cliente: buscador + lista de todos los clientes ---------- */
   .elegir-cliente{display:flex;flex-direction:column;gap:10px}
-  .opciones-cliente{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr));gap:8px}
-  .opciones-cliente .ayuda{grid-column:1/-1}
+  .opciones-cliente{display:flex;flex-direction:column;gap:8px}
+  .lista-clientes{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr));gap:8px;
+    max-height:19rem;overflow-y:auto;overscroll-behavior:contain;padding:4px;margin:-4px;scrollbar-color:var(--campo-borde) transparent}
+  .mas-clientes{grid-column:1/-1;padding:6px 2px}
+  /* "De la lista" o "Cliente nuevo": se ve solo la parte elegida */
+  .panel:has(input[name$="-modo"][value="nuevo"]:checked) .cliente-existente,
+  .panel:has(input[name$="-modo"][value="existente"]:checked) .cliente-nuevo{display:none}
+  .cliente-nuevo{display:flex;flex-direction:column;gap:10px}
+  .parecidos p{margin:0}
+  .parecidos ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .parecidos li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:500}
   .opcion{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:2.75rem;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:pointer}
   .opcion:hover{border-color:var(--campo-borde)}
   .opcion:has(:checked){border-color:var(--focus);background:var(--hover);box-shadow:inset 0 0 0 1px var(--focus)}
@@ -396,6 +429,31 @@
   .opcion input:focus-visible{outline:none}
   .opcion .nombre{font-weight:600;display:block;line-height:1.25}
   .opcion small{display:block;color:var(--muted);font-size:.8125rem}
+  .opcion.apagada{opacity:.65;cursor:not-allowed;background:var(--surface)}
+
+  /* ---------- Orden: "Agregar reparación" bien a la vista ---------- */
+  .agregar-destacado{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:10px;
+    background:var(--hover);border:1px solid var(--line);border-left:4px solid var(--cta)}
+  .titulo-agregar{margin:0;font-weight:700;color:var(--focus)}
+
+  /* ---------- Devoluciones: devolver una reparación ---------- */
+  .dr-lineas,.lista-reparaciones{display:flex;flex-direction:column;gap:10px}
+  .campo-corto{max-width:14rem}
+
+  /* ---------- Listas de filas: "+ Agregar otra" y "Quitar" ---------- */
+  .formset{display:flex;flex-direction:column;gap:8px}
+  .formset-acciones{align-items:center;gap:6px 16px}
+  .tabla-form td.quitar{width:1%;white-space:nowrap;padding-top:.6rem}
+  .tabla-form td.quitar:empty{padding:0}
+
+  /* Precio de lista / lo que falta: se ve el número con un lápiz para cambiarlo */
+  .por-defecto{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:2.5rem;padding:2px 2px 2px 11px;
+    border:1px dashed var(--campo-borde);border-radius:9px;background:var(--surface);font-weight:600;font-variant-numeric:tabular-nums}
+  .por-defecto[hidden]{display:none}
+  .por-defecto .valor{white-space:nowrap}
+  .lapiz{display:inline-grid;place-items:center;width:2.25rem;height:2.25rem;border:0;border-radius:7px;background:none;color:var(--focus);cursor:pointer;flex:none}
+  .lapiz:hover{background:var(--hover)}
+  .lapiz svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 }
 
 @layer extras{

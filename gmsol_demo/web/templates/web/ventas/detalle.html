@@ -25,7 +25,7 @@
 <thead><tr><th scope="col">Reparación</th><th scope="col" class="der">Precio</th></tr></thead>
 <tbody>
 {% for linea in equipo.lineas_reparacion.all %}
-<tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}"><td>{{ linea.reparacion }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td></tr>
+<tr class="{% if equipo.estado == 'no_arreglable' or linea.id in orden.lineas_devueltas %}tachado{% endif %}"><td>{{ linea.reparacion }}{% if linea.id in orden.lineas_devueltas %} <span class="estado bad">Devuelta</span>{% endif %}</td><td class="der">{{ linea.precio_vendido|pesos }}</td></tr>
 {% endfor %}
 </tbody></table></div>
 {% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobró: el equipo no tuvo arreglo.</small>{% endif %}

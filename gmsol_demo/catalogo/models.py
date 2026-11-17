@@ -176,13 +176,21 @@ class OrdenTrabajo(models.Model):
         return 'lista'  
 
     @property
+    def lineas_devueltas(self):
+        """Ids de las reparaciones que tienen una devolución: ya no se cobran."""
+        return {d.linea_reparacion_id for d in self.devoluciones.all() if d.linea_reparacion_id}
+
+    @property
     def total(self):
         total = Decimal("0.00")
+        devueltas = self.lineas_devueltas
 
         for equipo in self.equipos.all():
             if equipo.estado == "no_arreglable":
                 continue        # lo que no se arregla no se cobra
             for linea in equipo.lineas_reparacion.all():
+                if linea.id in devueltas:
+                    continue    # reparación devuelta: sigue en la orden, pero no se cobra
                 total += linea.subtotal
 
         for linea in self.lineas_producto.all():
@@ -343,8 +351,10 @@ class Devolucion(models.Model):
             linea = self.linea_reparacion
             if self.orden_trabajo_id and linea.equipo.orden_trabajo_id != self.orden_trabajo_id:
                 raise ValidationError({"linea_reparacion": "Esa reparación no es de esta orden."})
-            if linea.equipo.estado != "no_arreglable":
-                raise ValidationError({"linea_reparacion": "Solo se puede devolver la reparación de un equipo no arreglable."})
+            # Cualquier reparación de la orden se puede devolver (un equipo no arreglable, o una
+            # reparación que se cancela). Al devolverla deja de sumar al total. Una sola vez.
+            if linea.devoluciones.exclude(pk=self.pk).exists():
+                raise ValidationError({"linea_reparacion": "Esa reparación ya tiene una devolución."})
             if self.monto is None:
                 self.monto = linea.precio_vendido
         if self.monto is None:

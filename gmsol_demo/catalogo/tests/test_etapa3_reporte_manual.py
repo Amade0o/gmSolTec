@@ -79,11 +79,19 @@ class ModeloReporteTests(Base):
         self.assertEqual(d.monto, D("600"))
         self.assertEqual(orden.monto_a_devolver, D("600"))
 
-    def test_devolver_reparacion_de_equipo_que_se_arregla_no_se_puede(self):
+    def test_devolver_reparacion_de_equipo_que_se_arregla(self):
+        # Regla cambiada el 17/11/2026 (pedido del dueño): una reparación que se cancela también
+        # se puede devolver. Sigue en la orden, pero deja de sumar al total. Una sola vez.
         orden, _, _, _ = self.orden_mixta()
         linea1 = LineaReparacion.objects.get(equipo=orden.equipos.first())
+        d = Devolucion(orden_trabajo=orden, linea_reparacion=linea1)
+        d.full_clean()
+        d.save()
+        self.assertEqual(d.monto, D("1000"))
+        self.assertEqual(orden.total, D("0"))
+        self.assertTrue(LineaReparacion.objects.filter(pk=linea1.pk).exists())     # no se borra
         with self.assertRaises(ValidationError) as ctx:
-            Devolucion(orden_trabajo=orden, linea_reparacion=linea1).full_clean()
+            Devolucion(orden_trabajo=orden, linea_reparacion=linea1, monto=D("1")).full_clean()
         self.assertIn("linea_reparacion", ctx.exception.message_dict)
 
     def test_devolver_reparacion_de_otra_orden_no_se_puede(self):

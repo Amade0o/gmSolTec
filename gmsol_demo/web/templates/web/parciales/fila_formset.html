@@ -1,0 +1,8 @@
+{# Una fila de un formset. n = número de fila (para los lectores de pantalla); quitable = muestra "Quitar". #}
+<tr>
+{% for campo in form.visible_fields %}
+<td class="{% if campo.errors %}con-error{% endif %}" data-label="{{ campo.label }}"><label class="oculto" for="{{ campo.id_for_label }}">{{ campo.label }}, fila {{ n }}</label>{{ campo }}{% for e in campo.errors %}<small class="error">{{ e }}</small>{% endfor %}</td>
+{% endfor %}
+<td class="quitar">{% if quitable %}<button type="button" class="enlace" data-quitar-fila hidden>Quitar<span class="oculto"> la fila {{ n }}</span></button>{% endif %}</td>
+</tr>
+{% if form.non_field_errors %}<tr><td colspan="9">{% for e in form.non_field_errors %}<small class="error">{{ e }}</small>{% endfor %}</td></tr>{% endif %}

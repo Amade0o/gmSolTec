@@ -27,6 +27,8 @@
 <p class="ayuda">Desactivado: no aparece al cargar cosas nuevas. Lo ya cargado lo sigue mostrando.</p>
 <form method="post">{% csrf_token %}<button class="btn pri ancho" type="submit" name="accion" value="activar">Activar</button></form>
 {% endif %}
+<form method="post" class="eliminar">{% csrf_token %}<button class="enlace peligro" type="submit" name="accion" value="eliminar" data-confirmar="¿Eliminar «{{ obj.nombre }}» para siempre? Solo se puede si nunca se usó; si ya se usó, desactivalo." data-confirmar-si="Sí, eliminar">Eliminar</button>
+<small class="ayuda">Solo si nunca se usó. Si ya está en órdenes o productos, desactivalo.</small></form>
 </section>
 </aside>
 </div>

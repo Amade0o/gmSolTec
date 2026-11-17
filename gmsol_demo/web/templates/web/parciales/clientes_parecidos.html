@@ -1,0 +1,5 @@
+{# Aviso al cargar un cliente nuevo: ya hay uno con ese teléfono o ese nombre. #}
+{% load formato %}{% if parecidos %}<div class="aviso info parecidos">
+<p>Ojo, ya {% if parecidos|length == 1 %}hay un cliente parecido{% else %}hay clientes parecidos{% endif %}. ¿Es {% if parecidos|length == 1 %}este{% else %}alguno de estos{% endif %}?</p>
+<ul>{% for c in parecidos %}<li><span><b>{{ c.nombre }}</b>{% with tel=c|telefono_principal %}{% if tel %} · {{ tel }}{% endif %}{% endwith %}</span> <button type="button" class="btn chico" data-usar-cliente="{{ c.pk }}">Usar este</button></li>{% endfor %}</ul>
+</div>{% endif %}

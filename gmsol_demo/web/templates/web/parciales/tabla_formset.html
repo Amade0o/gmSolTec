@@ -1,16 +1,17 @@
-{# Un formset como tabla: una fila por formulario, primero qué y después el precio #}
+{% load formato %}{% comment %} Un formset como tabla: una fila por formulario, primero qué y después el precio.
+   Se muestra una sola fila; "+ Agregar otra" suma filas (app.js copia la <template>). Sin JS, se guarda la que hay. {% endcomment %}
+<div class="formset" data-formset="{{ formset.prefix }}">
 {{ formset.management_form }}
 {% for e in formset.non_form_errors %}<div class="aviso error" role="alert">{{ e }}</div>{% endfor %}
 <div class="tabla-form tabla-scroll"><table>
-<thead><tr>{% for campo in formset.empty_form.visible_fields %}<th scope="col">{{ campo.label }}</th>{% endfor %}</tr></thead>
+<thead><tr>{% for campo in formset.empty_form.visible_fields %}<th scope="col">{{ campo.label }}</th>{% endfor %}<th scope="col"><span class="oculto">Quitar</span></th></tr></thead>
 <tbody>
-{% for form in formset %}
-<tr>
-{% for campo in form.visible_fields %}
-<td class="{% if campo.errors %}con-error{% endif %}"><label class="oculto" for="{{ campo.id_for_label }}">{{ campo.label }}, fila {{ forloop.parentloop.counter }}</label>{{ campo }}{% for e in campo.errors %}<small class="error">{{ e }}</small>{% endfor %}</td>
-{% endfor %}
-</tr>
-{% if form.non_field_errors %}<tr><td colspan="9">{% for e in form.non_field_errors %}<small class="error">{{ e }}</small>{% endfor %}</td></tr>{% endif %}
-{% endfor %}
+{% for form in formset %}{% if forloop.counter0 < formset.min_num %}{% include "web/parciales/fila_formset.html" with n=forloop.counter quitable=False %}{% else %}{% include "web/parciales/fila_formset.html" with n=forloop.counter quitable=True %}{% endif %}{% endfor %}
 </tbody></table></div>
-{% if formset.empty_form.visible_fields|length %}{% for campo in formset.empty_form.visible_fields %}{% if campo.help_text %}<small class="ayuda">{{ campo.label }}: {{ campo.help_text }}</small> {% endif %}{% endfor %}{% endif %}
+<template data-fila-vacia>{% include "web/parciales/fila_formset.html" with form=formset.empty_form n="__num__" quitable=True %}</template>
+<div class="acts formset-acciones">
+<button type="button" class="btn chico" data-agregar-fila hidden>+ Agregar {{ agregar|default:"otra fila" }}</button>
+{% for campo in formset.empty_form.visible_fields %}{% with alta=campo|alta_rapida %}{% if alta %}<button type="button" class="enlace mas" data-no-precargar hx-get="{% url 'web:alta_rapida' alta.0 %}?destino=formset-{{ formset.prefix }}" hx-target="#alta-rapida-cuerpo">+ {{ alta.1 }} (al catálogo)</button>{% endif %}{% endwith %}{% endfor %}
+</div>
+{% for campo in formset.empty_form.visible_fields %}{% if campo.help_text %}<small class="ayuda">{{ campo.label }}: {{ campo.help_text }}</small> {% endif %}{% endfor %}
+</div>

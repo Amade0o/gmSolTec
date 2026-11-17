@@ -1,0 +1,10 @@
+{# Alta rápida (diálogo): marca, categoría, modelo o reparación sin salir de la pantalla #}
+<form hx-post="{% url 'web:alta_rapida' seccion %}" hx-target="#alta-rapida-cuerpo" novalidate>{% csrf_token %}
+<input type="hidden" name="destino" value="{{ destino }}">
+<h2 id="alta-rapida-titulo">{{ titulo }}</h2>
+{% if ayuda %}<p class="ayuda">{{ ayuda }}</p>{% endif %}
+{% include "web/parciales/errores_form.html" %}
+{% for campo in form %}{% include "web/parciales/campo.html" with campo=campo %}{% endfor %}
+<p class="ayuda">Queda en el Catálogo y elegido en la pantalla.</p>
+<div class="acts"><button type="button" class="btn" data-cerrar-dialogo>Cancelar</button><button type="submit" class="btn pri">Agregar</button></div>
+</form>

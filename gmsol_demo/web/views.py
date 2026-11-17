@@ -14,7 +14,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import Count, F, Max, ProtectedError, Q, Sum, Value
+from django.db.models.functions import Replace
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -29,6 +30,7 @@ from catalogo.models import (
 )
 from catalogo.servicios import ReglaDeNegocioError
 
+from .templatetags.formato import pesos
 from .forms import (
     ClienteForm, ClienteNuevoForm, ClienteOrdenForm, DevolucionForm, ElegirCliente, EntregaForm, EquipoForm, LineaProductoForm,
     LineaReparacionForm, MetodoForm, PagoForm, PagosVentaFormSet, ProductosFormSet,
@@ -274,7 +276,11 @@ def _hacer_accion(request, orden, accion, f):
         if not f["devolucion_form"].is_valid():
             return None
         datos = f["devolucion_form"].cleaned_data
-        servicios.registrar_devolucion(orden, datos["monto"], datos["linea_reparacion"], datos["nota"])
+        if datos["linea_reparacion"] and datos["monto"] is None:
+            # Reparación sin monto: sale del total y se devuelve lo que el cliente pagó de más por ella
+            servicios.devolver_reparacion(datos["linea_reparacion"], nota=datos["nota"])
+        else:
+            servicios.registrar_devolucion(orden, datos["monto"], datos["linea_reparacion"], datos["nota"])
         return "Devolución registrada: queda pendiente de hacer en Devoluciones."
     raise ReglaDeNegocioError("Acción desconocida.")
 
@@ -406,19 +412,72 @@ def venta_rapida(request):
 def venta_rapida_resumen(request):
     f = _formularios_venta(request.POST)
     total = _total_lineas(f["productos"])
-    asignado = 0
+    asignado, sin_monto = 0, 0
     for form in f["pagos"].forms:
-        if form.is_valid() and form.cleaned_data and form.cleaned_data.get("monto"):
-            asignado += form.cleaned_data["monto"]
+        if form.is_valid() and form.cleaned_data:
+            if form.cleaned_data.get("monto"):
+                asignado += form.cleaned_data["monto"]
+            elif form.cleaned_data.get("metodo_pago"):
+                sin_monto += 1
+    # Igual que al guardar: un pago con el monto vacío se lleva lo que falta
+    if sin_monto == 1 and total > asignado:
+        asignado = total
     return render(request, "web/parciales/resumen_venta.html", {
-        "total": total, "asignado": asignado, "falta": total - asignado,
+        "total": total, "asignado": asignado, "falta": total - asignado, "varios_sin_monto": sin_monto > 1,
     })
 
 
 # ---------- Devoluciones (paso 2: marcar que ya se devolvió) ----------
 
+def _para_devolver(numero, linea_id=None):
+    """Las reparaciones de una orden abierta, con cuánto se devolvería por cada una."""
+    numero = str(numero or "").strip().lstrip("#")
+    datos = {"numero": numero, "orden": None, "lineas": [], "linea_id": int(linea_id) if str(linea_id or "").isdigit() else None,
+             "metodo_form": MetodoForm(prefix="dr")}
+    if not numero.isdigit():
+        return datos
+    orden = OrdenTrabajo.objects.select_related("cliente", "venta").prefetch_related(*PREFETCH_ORDEN, "equipos__lineas_reparacion__reparacion").filter(pk=int(numero)).first()
+    datos["orden"] = orden
+    if orden is None or orden.cerrada:
+        return datos
+    devueltas = orden.lineas_devueltas
+    for n, equipo in enumerate(orden.equipos.all(), start=1):
+        for linea in equipo.lineas_reparacion.all():
+            ya = linea.id in devueltas
+            datos["lineas"].append({"linea": linea, "equipo": n, "devuelta": ya,
+                                    "monto": None if ya else servicios.monto_para_devolver(linea)})
+    return datos
+
+
+@login_required
+def reparaciones_para_devolver(request):
+    """Devoluciones → "Devolver una reparación": al escribir el N° de orden (HTMX)."""
+    return render(request, "web/parciales/reparaciones_devolver.html", {"dr": _para_devolver(request.GET.get("orden_buscar"))})
+
+
 @login_required
 def devoluciones(request):
+    if request.method == "POST" and request.POST.get("accion") == "devolver_reparacion":
+        linea = LineaReparacion.objects.filter(pk=request.POST.get("linea") or 0).select_related("equipo", "reparacion").first()
+        metodo_form = MetodoForm(request.POST, prefix="dr")
+        metodo = metodo_form.cleaned_data["metodo_pago"] if metodo_form.is_valid() else None
+        if linea is None:
+            messages.error(request, "Elegí qué reparación se devuelve.")
+        else:
+            try:
+                devolucion = servicios.devolver_reparacion(linea, metodo, request.POST.get("nota", "").strip())
+            except (ValidationError, ReglaDeNegocioError) as error:
+                _avisar_error(request, error)
+            else:
+                orden_id = linea.equipo.orden_trabajo_id
+                if devolucion.devuelta:
+                    messages.success(request, f"Orden #{orden_id}: se devolvió «{linea.reparacion}» ({pesos(devolucion.monto)}). Ya no se cobra.")
+                else:
+                    messages.success(request, f"Orden #{orden_id}: «{linea.reparacion}» ya no se cobra. Quedan {pesos(devolucion.monto)} "
+                                              "para devolver (abajo, en «Por devolver»).")
+                return redirect("web:devoluciones")
+        return redirect(f"{reverse('web:devoluciones')}?orden={request.POST.get('orden', '')}#devolver-reparacion")
+
     if request.method == "POST":
         devolucion = get_object_or_404(Devolucion, pk=request.POST.get("devolucion"))
         form = MetodoForm(request.POST, prefix=f"d{devolucion.id}")
@@ -450,6 +509,8 @@ def devoluciones(request):
 
     return render(request, "web/devoluciones.html", {
         "filas": filas, "hechas": hechas, "sin_registrar": sin_registrar,
+        # ?orden=12&linea=34 viene del botón "Devolver" de la orden
+        "dr": _para_devolver(request.GET.get("orden"), request.GET.get("linea")),
     })
 
 
@@ -482,56 +543,65 @@ def _buscar_clientes(q):
 
 
 # ---------- Elegir cliente (Nueva orden y Venta rápida) ----------
-# En lugar de un desplegable con todos los clientes: un buscador y, mientras no se
-# busca nada, los últimos clientes atendidos. Nombre del campo -> texto de "ninguno".
-CAMPOS_CLIENTE = {"cli-cliente": "Ninguno: cargo uno nuevo", "cliente": "Sin cliente"}
+# Una lista con TODOS los clientes (A-Z) que se filtra mientras se escribe. Se manda de a
+# partes: las siguientes se piden solas al llegar al final de la lista (así la pantalla
+# carga rápido aunque haya miles). Nombre del campo -> texto de la opción "ninguno".
+CAMPOS_CLIENTE = {"cli-cliente": None, "cliente": "Sin cliente"}
+CLIENTES_POR_PARTE = 40
 
 
-def _ultimos_atendidos(cuantos):
-    """Los clientes de las últimas órdenes y ventas (más recientes primero).
-    Son dos consultas chicas: no recorre toda la tabla de clientes."""
-    movimientos = sorted(
-        [*OrdenTrabajo.objects.order_by("-fecha_recepcion").values_list("fecha_recepcion", "cliente_id")[:40],
-         *Venta.objects.filter(cliente__isnull=False).order_by("-fecha").values_list("fecha", "cliente_id")[:40]],
-        reverse=True)
-    ids = list(dict.fromkeys(cliente for _, cliente in movimientos))[:cuantos]
-    por_id = Cliente.objects.prefetch_related("telefonos").in_bulk(ids)
-    lista = [por_id[i] for i in ids if i in por_id]
-    if len(lista) < cuantos:        # sistema nuevo: se completa con los últimos cargados
-        lista += Cliente.objects.exclude(pk__in=ids).prefetch_related("telefonos").order_by("-pk")[:cuantos - len(lista)]
-    return lista
-
-
-def _opciones_cliente(campo, q="", elegido=None):
+def _opciones_cliente(campo, q="", elegido=None, parte=1):
     elegido = int(elegido) if str(elegido or "").isdigit() else None
     q = q.strip()
-    mas = 0
+    consulta = Cliente.objects.all()
     if q:
-        cuantos = 8
-        consulta = Cliente.objects.filter(pk__in=_buscar_clientes(q)).order_by("nombre")
-        lista = list(consulta.prefetch_related("telefonos")[:cuantos + 1])
-        if len(lista) > cuantos:
-            mas = consulta.count() - cuantos
-            lista = lista[:cuantos]
-    else:
-        lista = _ultimos_atendidos(6)
-    # El elegido siempre se ve (por ejemplo, al volver con un error o desde la ficha del cliente)
-    if elegido and all(c.pk != elegido for c in lista):
+        consulta = consulta.filter(pk__in=_buscar_clientes(q))
+    pagina = Paginator(consulta.prefetch_related("telefonos").order_by("nombre", "pk"), CLIENTES_POR_PARTE).get_page(parte)
+    lista = list(pagina)
+    # El elegido siempre se ve arriba (al volver con un error o al venir desde la ficha del cliente)
+    if parte == 1 and elegido and all(c.pk != elegido for c in lista):
         actual = Cliente.objects.prefetch_related("telefonos").filter(pk=elegido).first()
         if actual:
             lista.insert(0, actual)
-    return {"campo": campo, "q": q, "lista": lista, "mas": mas, "elegido": elegido, "vacio": CAMPOS_CLIENTE[campo]}
+    return {"campo": campo, "q": q, "lista": lista, "elegido": elegido, "vacio": CAMPOS_CLIENTE[campo],
+            "cantidad": pagina.paginator.count, "parte": parte,
+            "siguiente": pagina.next_page_number() if pagina.has_next() else None}
 
 
 @login_required
 def buscar_clientes(request):
-    """Resultados del buscador de clientes (HTMX)."""
+    """Resultados del buscador de clientes (HTMX): la lista entera o, con "parte", la continuación."""
     campo = request.GET.get("campo")
     if campo not in CAMPOS_CLIENTE:
         raise Http404
-    return render(request, "web/parciales/opciones_cliente.html", {
-        "oc": _opciones_cliente(campo, request.GET.get("buscar_cliente", ""), request.GET.get(campo)),
-    })
+    parte = request.GET.get("parte", "1")
+    oc = _opciones_cliente(campo, request.GET.get("buscar_cliente", ""), request.GET.get(campo),
+                           int(parte) if parte.isdigit() else 1)
+    plantilla = "opciones_cliente_mas.html" if oc["parte"] > 1 else "opciones_cliente.html"
+    return render(request, f"web/parciales/{plantilla}", {"oc": oc})
+
+
+def _solo_digitos(campo):
+    expresion = F(campo)
+    for signo in (" ", "-", ".", "(", ")", "+"):
+        expresion = Replace(expresion, Value(signo), Value(""))
+    return expresion
+
+
+@login_required
+def clientes_parecidos(request):
+    """Al cargar un cliente nuevo: avisa si ya hay uno con ese teléfono o ese nombre (HTMX)."""
+    nombre = request.GET.get("cli-nuevo_nombre", "").strip()
+    telefono = "".join(ch for ch in request.GET.get("cli-nuevo_telefono", "") if ch.isdigit())
+    filtro = Q()
+    if len(telefono) >= 6:
+        # Se comparan solo los dígitos (los números se cargan con espacios, guiones o puntos)
+        filtro |= Q(pk__in=Telefono.objects.annotate(digitos=_solo_digitos("numero"))
+                    .filter(digitos__contains=telefono[-8:]).values("cliente_id"))
+    if len(nombre) >= 3:
+        filtro |= Q(nombre__iexact=nombre)
+    parecidos = list(Cliente.objects.filter(filtro).prefetch_related("telefonos")[:3]) if filtro else []
+    return render(request, "web/parciales/clientes_parecidos.html", {"parecidos": parecidos})
 
 
 @login_required
@@ -710,6 +780,15 @@ def _ultimos_movimientos(producto, cuantos=10):
 def _pantalla_producto(request, producto):
     form = ProductoForm(request.POST if request.method == "POST" else None, instance=producto)
     if request.method == "POST":
+        if request.POST.get("accion") == "eliminar" and producto.pk:
+            try:
+                producto.delete()
+            except ProtectedError:
+                messages.error(request, f"{producto.nombre} ya se vendió o está en una orden: no se puede eliminar sin "
+                                        "perder ese historial. Desactivalo: deja de aparecer al vender.")
+                return redirect("web:producto_detalle", numero=producto.pk)
+            messages.success(request, f"Se eliminó {producto.nombre}.")
+            return redirect("web:productos")
         if request.POST.get("accion") in ("activar", "desactivar") and producto.pk:
             producto.activo = request.POST["accion"] == "activar"
             producto.save(update_fields=["activo"])

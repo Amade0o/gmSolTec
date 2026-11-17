@@ -72,7 +72,7 @@ class ListaTests(Base):
 class NuevaOrdenTests(Base):
     def datos(self, **cambios):
         datos = {
-            "cli-cliente": "", "cli-nuevo_nombre": "Lucía Fernández", "cli-nuevo_telefono": "3584555555",
+            "cli-modo": "nuevo", "cli-cliente": "", "cli-nuevo_nombre": "Lucía Fernández", "cli-nuevo_telefono": "3584555555",
             "eq-tipo": "celular", "eq-modelo": self.modelo.id, "eq-problema": "Pantalla rota",
             "eq-tipo_bloqueo": "patron", "eq-clave_bloqueo": "1-5-9-6", "eq-accesorios_dejados": "",
             "rep-TOTAL_FORMS": "3", "rep-INITIAL_FORMS": "0", "rep-MIN_NUM_FORMS": "1", "rep-MAX_NUM_FORMS": "1000",
@@ -102,17 +102,29 @@ class NuevaOrdenTests(Base):
         self.assertTrue(orden.cliente.telefonos.get().principal)
 
     def test_cliente_existente_y_sin_sena(self):
-        datos = self.datos(**{"cli-cliente": self.juan.id, "cli-nuevo_nombre": "", "cli-nuevo_telefono": "",
+        datos = self.datos(**{"cli-modo": "existente", "cli-cliente": self.juan.id, "cli-nuevo_nombre": "", "cli-nuevo_telefono": "",
                               "sena-metodo_pago": "", "sena-monto": ""})
         self.client.post(reverse("web:orden_nueva"), datos)
         orden = OrdenTrabajo.objects.get(cliente=self.juan)
         self.assertEqual(orden.pagos.count(), 0)
 
     def test_sin_cliente_no_guarda(self):
-        r = self.client.post(reverse("web:orden_nueva"), self.datos(**{"cli-nuevo_nombre": ""}))
+        r = self.client.post(reverse("web:orden_nueva"), self.datos(**{"cli-modo": "existente"}))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Falta el cliente")
+        r = self.client.post(reverse("web:orden_nueva"), self.datos(**{"cli-nuevo_nombre": ""}))
+        self.assertContains(r, "Escribí el nombre del cliente nuevo")
         self.assertEqual(OrdenTrabajo.objects.count(), 0)
+
+    def test_el_modo_decide_el_cliente(self):
+        # "Cliente nuevo" con uno de la lista marcado: se crea el nuevo (lo de la lista se ignora)
+        self.client.post(reverse("web:orden_nueva"), self.datos(**{"cli-cliente": self.juan.id}))
+        self.assertEqual(OrdenTrabajo.objects.get().cliente.nombre, "Lucía Fernández")
+        # "De la lista" con un nombre nuevo escrito: se usa el de la lista y no se crea otro cliente
+        clientes_antes = Cliente.objects.count()
+        self.client.post(reverse("web:orden_nueva"), self.datos(**{"cli-modo": "existente", "cli-cliente": self.juan.id}))
+        self.assertEqual(OrdenTrabajo.objects.latest("id").cliente, self.juan)
+        self.assertEqual(Cliente.objects.count(), clientes_antes)
 
     def test_sena_de_mas_no_guarda_ni_el_cliente_nuevo(self):
         r = self.client.post(reverse("web:orden_nueva"), self.datos(**{"sena-monto": "99999"}))
@@ -277,22 +289,37 @@ class VentaRapidaTests(Base):
         self.assertFalse(Venta.objects.exists())
 
     def test_resumen(self):
+        # Con el método elegido y el monto vacío, ese pago se lleva lo que falta (igual que al guardar)
         r = self.client.post(reverse("web:venta_rapida_resumen"), self.datos())
         self.assertContains(r, "$ 5.000")
+        self.assertContains(r, "Pagos completos")
+        r = self.client.post(reverse("web:venta_rapida_resumen"), self.datos(**{"pago-0-metodo_pago": ""}))
         self.assertContains(r, "Falta asignar $ 5.000")
+        r = self.client.post(reverse("web:venta_rapida_resumen"), self.datos(**{"pago-1-metodo_pago": self.efectivo.id}))
+        self.assertContains(r, "más de un pago sin monto")
 
 
 class ElegirClienteTests(Base):
-    """Nueva orden y Venta rápida: buscador + últimos clientes atendidos (sin el desplegable con todos)."""
+    """Nueva orden y Venta rápida: la lista de TODOS los clientes (A-Z), que se filtra al escribir."""
 
-    def test_sin_buscar_muestra_los_ultimos_atendidos(self):
-        viejo = Cliente.objects.create(nombre="Cliente Sin Ordenes")
-        self.orden()                                   # Juan Pérez tiene una orden: aparece primero
+    def test_lista_completa_de_la_a_a_la_z(self):
+        Cliente.objects.create(nombre="Ana Acosta")
         r = self.client.get(reverse("web:orden_nueva"))
-        self.assertContains(r, 'name="cli-cliente" value=""')
-        self.assertContains(r, f'name="cli-cliente" value="{self.juan.id}"')
-        self.assertContains(r, "Últimos clientes atendidos")
-        self.assertContains(r, viejo.nombre)           # completa con los últimos cargados
+        html = r.content.decode()
+        self.assertIn("2 clientes, de la A a la Z", html)
+        self.assertLess(html.index("Ana Acosta"), html.index("Juan Pérez"))
+        self.assertNotContains(r, 'name="cli-cliente" value=""')   # en la orden no hay "ninguno": está "Cliente nuevo"
+
+    def test_llega_de_a_partes(self):
+        for i in range(45):
+            Cliente.objects.create(nombre=f"Otro {i:02d}")
+        r = self.client.get(reverse("web:venta_rapida"))
+        self.assertContains(r, 'class="opcion"', count=41)         # "Sin cliente" + los primeros 40
+        self.assertContains(r, "parte=2")                           # el resto se pide al llegar al final
+        self.assertNotContains(r, '<select name="cliente"')
+        r = self.client.get(reverse("web:buscar_clientes"), {"campo": "cliente", "parte": "2"})
+        self.assertContains(r, 'class="opcion"', count=6)          # 46 clientes − 40
+        self.assertNotContains(r, "parte=3")
 
     def test_desde_la_ficha_viene_elegido(self):
         r = self.client.get(reverse("web:orden_nueva") + f"?cliente={self.juan.id}")
@@ -315,12 +342,12 @@ class ElegirClienteTests(Base):
         r = self.client.get(reverse("web:buscar_clientes"), {"campo": "otro"})
         self.assertEqual(r.status_code, 404)
 
-    def test_venta_rapida_no_lista_todos_los_clientes(self):
-        for i in range(20):
-            Cliente.objects.create(nombre=f"Otro {i:02d}")
-        r = self.client.get(reverse("web:venta_rapida"))
-        self.assertContains(r, 'class="opcion"', count=7)       # "Sin cliente" + 6
-        self.assertNotContains(r, "<select name=\"cliente\"")
+    def test_avisa_cliente_parecido(self):
+        self.juan.telefonos.create(numero="3584 111-111", principal=True)
+        url = reverse("web:clientes_parecidos")
+        self.assertContains(self.client.get(url, {"cli-nuevo_telefono": "3584111111"}), "Juan Pérez")
+        self.assertContains(self.client.get(url, {"cli-nuevo_nombre": "juan pérez"}), "Usar este")
+        self.assertNotContains(self.client.get(url, {"cli-nuevo_nombre": "Otra Persona"}), "Usar este")
 
 
 class DevolucionesTests(Base):

@@ -3,8 +3,10 @@
 <div><dt>Total</dt><dd>{{ total|pesos }}</dd></div>
 <div><dt>Asignado a pagos</dt><dd>{{ asignado|pesos }}</dd></div>
 </dl>
-{% if falta > 0 %}
-<div class="saldo-caja debe">Falta asignar {{ falta|pesos }}<small>Un pago con el monto vacío se lleva lo que falta.</small></div>
+{% if varios_sin_monto %}
+<div class="saldo-caja debe">Hay más de un pago sin monto<small>Escribí el monto de todos menos uno: ese se lleva lo que falta.</small></div>
+{% elif falta > 0 %}
+<div class="saldo-caja debe">Falta asignar {{ falta|pesos }}<small>Elegí el método de pago: el monto se completa solo.</small></div>
 {% elif falta < 0 %}
 <div class="saldo-caja afavor">Los pagos superan el total por {{ falta|pesos }}</div>
 {% else %}

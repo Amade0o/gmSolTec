@@ -1,6 +1,10 @@
-<form method="post" class="fila-campos agregar">{% csrf_token %}
+{# Agregar una reparación a un equipo de la orden (bien a la vista, debajo de sus reparaciones). #}
+<form method="post" class="agregar-destacado" aria-labelledby="agregar-rep-{{ equipo.id }}">{% csrf_token %}
 <input type="hidden" name="accion" value="reparacion"><input type="hidden" name="equipo" value="{{ equipo.id }}">
+<p class="titulo-agregar" id="agregar-rep-{{ equipo.id }}">+ Agregar reparación a este equipo</p>
+<div class="fila-campos">
 {% include "web/parciales/campo.html" with campo=form.reparacion clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=form.precio_vendido %}
-<button class="btn" type="submit">Agregar reparación</button>
+<button class="btn pri" type="submit">Agregar</button>
+</div>
 </form>

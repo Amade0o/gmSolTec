@@ -3,7 +3,22 @@
 {% load formato %}
 {% block titulo %}Devoluciones{% endblock %}
 {% block contenido %}
-<div class="head"><h1>Devoluciones <span class="sub">Acá se marca que el dinero ya se devolvió</span></h1></div>
+<div class="head"><h1>Devoluciones <span class="sub">Acá se devuelve el dinero y se marca como hecho</span></h1></div>
+
+<section class="panel" id="devolver-reparacion">
+<h2>Devolver una reparación</h2>
+<p class="ayuda">Si el cliente ya no quiere una reparación o no se pudo hacer: deja de cobrarse, queda anotada como devuelta en la orden y se le devuelve lo que pagó de más.</p>
+<form method="post">{% csrf_token %}
+<input type="hidden" name="accion" value="devolver_reparacion">
+<div class="campo campo-corto">
+<label for="dr-orden">N° de orden</label>
+<input type="search" id="dr-orden" class="entrada" inputmode="numeric" autocomplete="off" placeholder="Ej.: 12" value="{{ dr.numero }}"
+       hx-get="{% url 'web:reparaciones_para_devolver' %}" hx-trigger="input changed delay:300ms, search" name="orden_buscar" data-sin-enter
+       hx-target="#dr-lineas" hx-swap="outerHTML" hx-sync="this:replace">
+</div>
+{% include "web/parciales/reparaciones_devolver.html" %}
+</form>
+</section>
 
 <section class="panel">
 <h2 id="t-por-devolver">Por devolver</h2>

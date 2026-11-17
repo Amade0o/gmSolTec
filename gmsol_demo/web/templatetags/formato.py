@@ -17,7 +17,36 @@ def pesos(valor):
 
 @register.filter
 def saldo(orden):
+    if _sin_precio(orden):
+        return "Sin precio todavía"
     return saldo_monto(orden.monto_adeudado)
+
+
+def _sin_precio(orden):
+    """Orden abierta sin nada cobrable ni pagado (ej.: solo la revisión a $0): no está "saldada"."""
+    return not orden.cerrada and orden.total == 0 and orden.monto_pagado == 0 and orden.estado == "pendiente"
+
+
+@register.filter
+def saldo_clase(orden):
+    """Color del recuadro del saldo: debe / a favor / ok / sin precio."""
+    if _sin_precio(orden):
+        return "neutro"
+    if orden.monto_adeudado > 0:
+        return "debe"
+    return "afavor" if orden.monto_adeudado < 0 else "ok"
+
+
+# Texto del botón "+ Nuevo" según el desplegable (ver forms.con_alta_rapida)
+NUEVO = {"categorias-producto": "Nueva categoría", "marcas": "Nueva marca", "modelos": "Nuevo modelo",
+         "categorias-reparacion": "Nueva categoría", "reparaciones": "Nueva reparación"}
+
+
+@register.filter
+def alta_rapida(campo):
+    """(sección, texto) si el desplegable admite "+ Nuevo"; si no, None."""
+    seccion = campo.field.widget.attrs.get("data-catalogo")
+    return (seccion, NUEVO[seccion]) if seccion in NUEVO else None
 
 
 @register.filter

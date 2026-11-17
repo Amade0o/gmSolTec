@@ -7,6 +7,7 @@ import re
 from decimal import Decimal
 
 from django import forms
+from django.urls import reverse
 
 from catalogo.models import (
     CategoriaProducto, CategoriaReparacion, Cliente, EquipoRecibido, Marca, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
@@ -15,6 +16,23 @@ from catalogo.models import (
 
 
 # ---------- Desplegables: solo lo activo, con textos claros ----------
+
+def con_alta_rapida(campo, seccion):
+    """Marca un desplegable del catálogo: la pantalla le pone un botón "+ Nuevo" que lo carga
+    sin salir de la pantalla (ver views_catalogo.alta_rapida)."""
+    campo.widget.attrs["data-catalogo"] = seccion
+
+
+class SelectConPrecio(forms.Select):
+    """Desplegable de productos: cada opción lleva su precio de lista (data-precio), para
+    mostrarlo en la fila y poder cambiarlo con el lápiz."""
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        opcion = super().create_option(name, value, label, selected, index, subindex, attrs)
+        producto = getattr(value, "instance", None)
+        if producto is not None:
+            opcion["attrs"]["data-precio"] = f"{producto.precio_venta}"
+        return opcion
+
 
 def clientes():
     return Cliente.objects.prefetch_related("telefonos").order_by("nombre")
@@ -36,7 +54,20 @@ class ElegirCliente(forms.ModelChoiceField):
         return texto_cliente(obj)
 
 
+class SelectConRecargo(forms.Select):
+    """Desplegable de métodos de pago: cada opción lleva su recargo (data-recargo), para mostrarlo
+    en el campo "Recargo %" con un lápiz para cambiarlo."""
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        opcion = super().create_option(name, value, label, selected, index, subindex, attrs)
+        metodo = getattr(value, "instance", None)
+        if metodo is not None:
+            opcion["attrs"]["data-recargo"] = f"{metodo.recargo_porcentaje}"
+        return opcion
+
+
 class ElegirMetodo(forms.ModelChoiceField):
+    widget = SelectConRecargo(attrs={"data-con-recargo": ""})
+
     def label_from_instance(self, obj):
         return texto_metodo(obj)
 
@@ -54,6 +85,10 @@ def campo_telefono(**kwargs):
 # ---------- Cliente de la orden: uno existente o uno nuevo ----------
 
 class ClienteOrdenForm(forms.Form):
+    """El cliente de la orden: uno de la lista O uno nuevo. Lo decide "modo"; lo del otro modo se ignora
+    (así no se puede elegir uno de la lista y cargar uno nuevo a la vez)."""
+    modo = forms.ChoiceField(choices=[("existente", "De la lista"), ("nuevo", "Cliente nuevo")],
+                             widget=forms.RadioSelect, initial="existente", required=False, label="Cliente")
     cliente = ElegirCliente(queryset=clientes(), required=False, empty_label="Elegí un cliente…")
     nuevo_nombre = forms.CharField(max_length=120, required=False, label="Nombre")
     nuevo_telefono = campo_telefono(required=False, label="Teléfono")
@@ -61,13 +96,25 @@ class ClienteOrdenForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["cliente"].queryset = clientes()      # se vuelve a leer en cada pantalla
+        # Al escribir el nombre o el teléfono del cliente nuevo, avisa si ya existe uno parecido
+        for campo in ("nuevo_nombre", "nuevo_telefono"):
+            self.fields[campo].widget.attrs.update({
+                "hx-get": reverse("web:clientes_parecidos"), "hx-trigger": "input changed delay:400ms",
+                "hx-target": "#clientes-parecidos", "hx-sync": "this:replace", "data-no-resumen": "",
+                "hx-include": f"[name='{self.add_prefix('nuevo_nombre')}'],[name='{self.add_prefix('nuevo_telefono')}']",
+            })
 
     def clean(self):
         datos = super().clean()
-        if datos.get("cliente") and datos.get("nuevo_nombre"):
-            raise forms.ValidationError("Elegí un cliente existente o cargá uno nuevo, no los dos.")
-        if not datos.get("cliente") and not datos.get("nuevo_nombre"):
-            raise forms.ValidationError("Falta el cliente: elegí uno o cargá su nombre.")
+        if datos.get("modo") == "nuevo":
+            datos["cliente"] = None
+            if not datos.get("nuevo_nombre"):
+                self.add_error("nuevo_nombre", "Escribí el nombre del cliente nuevo.")
+        else:
+            datos["modo"] = "existente"
+            datos["nuevo_nombre"], datos["nuevo_telefono"] = "", ""
+            if not datos.get("cliente"):
+                raise forms.ValidationError("Falta el cliente: elegilo de la lista o tocá «Cliente nuevo».")
         return datos
 
 
@@ -94,6 +141,7 @@ class EquipoForm(forms.ModelForm):
         self.fields["modelo"].queryset = ModeloEquipo.objects.filter(activo=True).select_related("marca").order_by("marca__nombre", "nombre")
         self.fields["modelo"].label_from_instance = lambda m: f"{m.marca} {m.nombre}"
         self.fields["modelo"].empty_label = "Sin modelo (PC u otro)"
+        con_alta_rapida(self.fields["modelo"], "modelos")
         self.fields["tipo"].choices = [("", "Elegí el tipo…")] + [c for c in self.fields["tipo"].choices if c[0]]
         # "Ninguno" primero: es el valor por defecto
         self.fields["tipo_bloqueo"].choices = [("ninguno", "Ninguno"), ("pin", "PIN"), ("patron", "Patrón"), ("contrasena", "Contraseña")]
@@ -124,21 +172,35 @@ class LineaReparacionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["reparacion"].queryset = Reparacion.objects.filter(activo=True).order_by("categoria__nombre", "nombre")
         self.fields["reparacion"].empty_label = "Elegí la reparación…"
+        con_alta_rapida(self.fields["reparacion"], "reparaciones")
 
 
 class LineaProductoForm(forms.ModelForm):
+    """Una fila de producto. La cantidad vacía es 1 y el precio vacío es el de lista
+    (la pantalla lo muestra con un lápiz para cambiarlo). Una fila sin producto se ignora."""
     class Meta:
         model = LineaProductoOrden
         fields = ["producto", "cantidad_adquirida", "precio_vendido"]
         labels = {"cantidad_adquirida": "Cantidad", "precio_vendido": "Precio c/u"}
-        widgets = {"precio_vendido": forms.NumberInput(attrs={"placeholder": "De lista"})}
+        widgets = {
+            "producto": SelectConPrecio(attrs={"data-con-precio": ""}),
+            "cantidad_adquirida": forms.NumberInput(attrs={"min": "1"}),     # vacía = 1
+            "precio_vendido": forms.NumberInput(attrs={"placeholder": "Precio de lista", "data-por-defecto": "precio"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["producto"].queryset = Producto.objects.filter(activo=True).order_by("nombre")
-        self.fields["producto"].label_from_instance = lambda p: f"{p.nombre} · ${p.precio_venta:,.0f}".replace(",", ".")
+        self.fields["producto"].label_from_instance = lambda p: p.nombre
         self.fields["producto"].empty_label = "Elegí el producto…"
-        self.fields["cantidad_adquirida"].initial = 1
+        self.fields["cantidad_adquirida"].required = False
+
+    def has_changed(self):
+        # Sin producto la fila está vacía, aunque tenga una cantidad escrita
+        return bool(self.data.get(self.add_prefix("producto"))) if self.is_bound else super().has_changed()
+
+    def clean_cantidad_adquirida(self):
+        return self.cleaned_data.get("cantidad_adquirida") or 1
 
 
 class LineaProductoVentaForm(LineaProductoForm):
@@ -153,18 +215,19 @@ class PagoForm(forms.ModelForm):
         model = Pago
         fields = ["metodo_pago", "monto", "recargo_porcentaje"]
         labels = {"monto": "Monto", "recargo_porcentaje": "Recargo %"}
-        widgets = {"recargo_porcentaje": forms.NumberInput(attrs={"placeholder": "El del método"})}
+        widgets = {"recargo_porcentaje": forms.NumberInput(attrs={"placeholder": "El del método", "data-por-defecto": "recargo"})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["metodo_pago"].queryset = metodos_activos()
 
 
-# Formsets: varias filas del mismo formulario. Las filas vacías se ignoran.
+# Formsets: varias filas del mismo formulario. Se muestra UNA fila; "+ Agregar otra" suma filas
+# (app.js copia la fila vacía). Las filas vacías se ignoran.
 # La primera reparación es obligatoria (min_num=1): viene cargada con "Revisión / diagnóstico".
-ReparacionesFormSet = forms.formset_factory(LineaReparacionForm, extra=2, min_num=1, validate_min=True)
-ProductosFormSet = forms.formset_factory(LineaProductoForm, extra=2)
-ProductosVentaFormSet = forms.formset_factory(LineaProductoVentaForm, extra=2, min_num=1, validate_min=True)
+ReparacionesFormSet = forms.formset_factory(LineaReparacionForm, extra=0, min_num=1, validate_min=True)
+ProductosFormSet = forms.formset_factory(LineaProductoForm, extra=1)
+ProductosVentaFormSet = forms.formset_factory(LineaProductoVentaForm, extra=0, min_num=1, validate_min=True)
 
 
 # ---------- Formularios chicos del detalle de la orden ----------
@@ -174,15 +237,15 @@ class DevolucionForm(forms.Form):
         queryset=LineaReparacion.objects.none(), required=False, label="Devolver una reparación completa",
         empty_label="No, un monto")
     monto = forms.DecimalField(max_digits=10, decimal_places=2, required=False, min_value=Decimal("0.01"),
-                               label="Monto", widget=forms.NumberInput(attrs={"placeholder": "Vacío: el de la reparación"}))
+                               label="Monto", widget=forms.NumberInput(attrs={"placeholder": "Vacío: se calcula solo"}))
     nota = forms.CharField(max_length=300, required=False, label="Nota")
 
     def __init__(self, *args, orden=None, **kwargs):
         super().__init__(*args, **kwargs)
         if orden is not None:
-            # Solo reparaciones de equipos no arreglables de esta orden
+            # Cualquier reparación de esta orden que todavía no se devolvió
             self.fields["linea_reparacion"].queryset = LineaReparacion.objects.filter(
-                equipo__orden_trabajo=orden, equipo__estado="no_arreglable").select_related("reparacion")
+                equipo__orden_trabajo=orden, devoluciones__isnull=True).select_related("reparacion")
             self.fields["linea_reparacion"].label_from_instance = (
                 lambda l: f"Equipo {l.equipo_id} · {l.reparacion} · ${l.precio_vendido:,.0f}".replace(",", "."))
 
@@ -201,9 +264,9 @@ class PagoVentaForm(forms.Form):
     """Como PagoForm, pero el monto puede quedar vacío: se completa con lo que falta."""
     metodo_pago = ElegirMetodo(queryset=metodos_activos(), label="Método")
     monto = forms.DecimalField(max_digits=10, decimal_places=2, required=False, label="Monto",
-                               widget=forms.NumberInput(attrs={"placeholder": "Lo que falta"}))
+                               widget=forms.NumberInput(attrs={"data-por-defecto": "resto"}))
     recargo_porcentaje = forms.DecimalField(max_digits=5, decimal_places=2, required=False, min_value=0,
-                                            label="Recargo %", widget=forms.NumberInput(attrs={"placeholder": "El del método"}))
+                                            label="Recargo %", widget=forms.NumberInput(attrs={"placeholder": "El del método", "data-por-defecto": "recargo"}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -211,7 +274,7 @@ class PagoVentaForm(forms.Form):
         self.fields["metodo_pago"].empty_label = "Elegí el método…"
 
 
-PagosVentaFormSet = forms.formset_factory(PagoVentaForm, extra=1, min_num=1, validate_min=True)
+PagosVentaFormSet = forms.formset_factory(PagoVentaForm, extra=0, min_num=1, validate_min=True)
 
 
 class EntregaForm(forms.Form):
@@ -219,7 +282,7 @@ class EntregaForm(forms.Form):
     metodo_pago = ElegirMetodo(queryset=metodos_activos(), required=False, label="Método",
                                empty_label="Elegí con qué paga…")
     recargo_porcentaje = forms.DecimalField(max_digits=5, decimal_places=2, required=False, min_value=0,
-                                            label="Recargo %", widget=forms.NumberInput(attrs={"placeholder": "El del método"}))
+                                            label="Recargo %", widget=forms.NumberInput(attrs={"placeholder": "El del método", "data-por-defecto": "recargo"}))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -309,6 +372,11 @@ class ProductoForm(ConDesactivablesForm):
         labels = {"categoria": "Categoría", "precio_compra": "Precio de compra", "precio_venta": "Precio de venta"}
         help_texts = {"precio_venta": "Cambiarlo no toca las ventas ya hechas: cada venta guarda su precio."}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        con_alta_rapida(self.fields["categoria"], "categorias-producto")
+        con_alta_rapida(self.fields["marca"], "marcas")
+
 
 # ---------- Catálogo (una pestaña por tabla) ----------
 
@@ -334,6 +402,7 @@ class ModeloEquipoForm(ConDesactivablesForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["tipo"].choices = [("", "Elegí el tipo…")] + [c for c in self.fields["tipo"].choices if c[0]]
+        con_alta_rapida(self.fields["marca"], "marcas")
 
 
 class CategoriaReparacionForm(forms.ModelForm):
@@ -350,6 +419,46 @@ class ReparacionForm(ConDesactivablesForm):
         fields = ["categoria", "nombre"]
         labels = {"categoria": "Categoría"}
         help_texts = {"nombre": "El precio no va acá: se pone en cada orden."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        con_alta_rapida(self.fields["categoria"], "categorias-reparacion")
+
+
+# ---------- Alta rápida desde otra pantalla (sin salir de la orden o del producto) ----------
+# Modelo y reparación necesitan una marca o categoría: se elige de la lista o se escribe una nueva.
+
+class _ConPadreNuevo:
+    campo_padre = ""            # "marca" / "categoria"
+    modelo_padre = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        padre = self.fields[self.campo_padre]
+        padre.required = False
+        padre.widget.attrs.pop("data-catalogo", None)       # sin un "+ Nuevo" adentro del "+ Nuevo"
+        self.order_fields([self.campo_padre, "nuevo_padre"])
+
+    def clean(self):
+        datos = super().clean()
+        nuevo = (datos.get("nuevo_padre") or "").strip()
+        if nuevo:
+            # Si ya existe con ese nombre se usa esa; si no, se crea (la vista deshace todo si el resto falla)
+            padre = self.modelo_padre.objects.filter(nombre__iexact=nuevo).first()
+            datos[self.campo_padre] = padre or self.modelo_padre.objects.create(nombre=nuevo)
+        elif not datos.get(self.campo_padre):
+            self.add_error(self.campo_padre, "Elegí una de la lista o escribí una nueva.")
+        return datos
+
+
+class ModeloRapidoForm(_ConPadreNuevo, ModeloEquipoForm):
+    campo_padre, modelo_padre = "marca", Marca
+    nuevo_padre = forms.CharField(max_length=60, required=False, label="o una marca nueva")
+
+
+class ReparacionRapidaForm(_ConPadreNuevo, ReparacionForm):
+    campo_padre, modelo_padre = "categoria", CategoriaReparacion
+    nuevo_padre = forms.CharField(max_length=60, required=False, label="o una categoría nueva")
 
 
 class MetodoPagoForm(forms.ModelForm):

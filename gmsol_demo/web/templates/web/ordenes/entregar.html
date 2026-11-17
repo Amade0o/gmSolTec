@@ -16,9 +16,9 @@
 <div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-lleva"><table>
 <thead><tr><th scope="col">Detalle</th><th scope="col" class="der">Importe</th></tr></thead>
 <tbody>
-{% for equipo in orden.equipos.all %}{% for linea in equipo.lineas_reparacion.all %}
-<tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}"><td>{% if equipo.modelo %}{{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %} · {{ linea.reparacion }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
-{% endfor %}{% endfor %}
+{% with devueltas=orden.lineas_devueltas %}{% for equipo in orden.equipos.all %}{% for linea in equipo.lineas_reparacion.all %}
+<tr class="{% if equipo.estado == 'no_arreglable' or linea.id in devueltas %}tachado{% endif %}"><td>{% if equipo.modelo %}{{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %} · {{ linea.reparacion }}{% if linea.id in devueltas %} <span class="estado bad">Devuelta</span>{% endif %}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
+{% endfor %}{% endfor %}{% endwith %}
 {% for linea in orden.lineas_producto.all %}
 <tr><td>{{ linea.cantidad_adquirida }} × {{ linea.producto }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
 {% endfor %}
@@ -34,7 +34,7 @@
 <div><dt>Total</dt><dd>{{ orden.total|pesos }}</dd></div>
 <div><dt>Ya pagó</dt><dd>{{ orden.monto_pagado|pesos }}</dd></div>
 </dl>
-<div class="saldo-caja {% if orden.monto_adeudado > 0 %}debe{% elif orden.monto_adeudado < 0 %}afavor{% else %}ok{% endif %}">{{ orden|saldo }}</div>
+<div class="saldo-caja {{ orden|saldo_clase }}">{{ orden|saldo }}</div>
 {% if orden.estado != "lista" %}
 <p class="ayuda">Esta orden todavía no se puede entregar: {{ orden|estado_texto|lower }}.</p>
 {% else %}

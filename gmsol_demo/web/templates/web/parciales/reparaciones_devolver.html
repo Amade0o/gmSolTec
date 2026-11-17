@@ -1,0 +1,32 @@
+{% load formato %}{# Devoluciones → "Devolver una reparación": las reparaciones de la orden escrita, con cuánto se devuelve. #}
+<div id="dr-lineas" class="dr-lineas">
+{% if not dr.numero %}
+<p class="ayuda">Escribí el número de la orden para ver sus reparaciones.</p>
+{% elif not dr.orden %}
+<p class="ayuda">No hay ninguna orden #{{ dr.numero }}.</p>
+{% elif dr.orden.cerrada %}
+<p class="ayuda">La orden #{{ dr.orden.id }} ya se entregó (venta #{{ dr.orden.venta.id }}): no se puede devolver desde acá.</p>
+{% else %}
+<input type="hidden" name="orden" value="{{ dr.orden.id }}">
+<fieldset class="campo">
+<legend>Orden #{{ dr.orden.id }} · {{ dr.orden.cliente }} — pagó {{ dr.orden.monto_pagado|pesos }}. ¿Qué reparación se devuelve?</legend>
+<div class="lista-reparaciones">
+{% for d in dr.lineas %}<label class="opcion{% if d.devuelta or not d.monto %} apagada{% endif %}"><input type="radio" name="linea" value="{{ d.linea.id }}"{% if d.devuelta or not d.monto %} disabled{% elif d.linea.id == dr.linea_id %} checked{% endif %} required>
+<span><span class="nombre">{{ d.linea.reparacion }} <span class="sec">· equipo {{ d.equipo }} · {{ d.linea.precio_vendido|pesos }}</span></span>
+<small>{% if d.devuelta %}Ya devuelta.{% elif d.monto %}Sale del total y se le devuelven <b>{{ d.monto|pesos }}</b>.{% else %}No hay dinero para devolver: lo que pagó sigue cubriendo el resto. Si no se hace, quitala desde la orden.{% endif %}</small></span></label>
+{% endfor %}
+</div>
+</fieldset>
+<div class="fila-campos">
+<div class="campo">
+<label for="{{ dr.metodo_form.metodo_pago.id_for_label }}">¿Con qué se le devuelve?</label>
+<select name="{{ dr.metodo_form.metodo_pago.html_name }}" id="{{ dr.metodo_form.metodo_pago.id_for_label }}">
+<option value="">Todavía no: queda pendiente</option>
+{% for valor, texto in dr.metodo_form.metodo_pago.field.choices %}{% if valor %}<option value="{{ valor }}">{{ texto }}</option>{% endif %}{% endfor %}
+</select>
+</div>
+<div class="campo ancho"><label for="dr-nota">Nota <span class="sec">(opcional)</span></label><input type="text" id="dr-nota" name="nota" maxlength="300" placeholder="Por ejemplo: el cliente no quiso cambiar la batería"></div>
+<button class="btn pri" type="submit" data-confirmar="¿Devolver la reparación elegida? Deja de cobrarse y queda anotada como devuelta en la orden." data-confirmar-si="Sí, devolver">Devolver</button>
+</div>
+{% endif %}
+</div>

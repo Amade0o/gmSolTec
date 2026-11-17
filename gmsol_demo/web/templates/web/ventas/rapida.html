@@ -13,12 +13,13 @@
 <div class="pasos">
 <section class="panel">
 <h2><span class="paso">1</span>Productos</h2>
-{% include "web/parciales/tabla_formset.html" with formset=productos %}
+{% include "web/parciales/tabla_formset.html" with formset=productos agregar="otro producto" %}
 </section>
 
 <section class="panel">
 <h2><span class="paso">2</span>Pago</h2>
-{% include "web/parciales/tabla_formset.html" with formset=pagos %}
+<p class="ayuda">El monto se completa solo con lo que falta pagar. Si paga con dos métodos, tocá el lápiz y escribí cuánto paga con el primero.</p>
+{% include "web/parciales/tabla_formset.html" with formset=pagos agregar="otro pago (pagar con dos métodos)" %}
 </section>
 
 <section class="panel">

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.utils import timezone
@@ -163,6 +165,38 @@ def registrar_devolucion(orden, monto=None, linea_reparacion=None, nota=""):
     devolucion = Devolucion(orden_trabajo=orden, monto=monto, linea_reparacion=linea_reparacion, nota=nota)
     devolucion.full_clean()         # orden abierta, no más de lo pagado, reparación válida
     devolucion.save()
+    return devolucion
+
+
+def monto_para_devolver(linea):
+    """Cuánto se le devuelve al cliente si se devuelve esta reparación: lo que pagó de más
+    una vez que la reparación sale del total, y nunca más que su precio.
+    Ej.: pagó $10.000 de una orden de $55.000; si se devuelve una reparación de $15.000
+    todavía debe $30.000, así que no hay nada para devolver (es 0)."""
+    orden = linea.equipo.orden_trabajo
+    cuenta = linea.equipo.estado != "no_arreglable" and linea.id not in orden.lineas_devueltas
+    total_sin_la_linea = orden.total - (linea.subtotal if cuenta else 0)
+    a_favor = orden.monto_pagado - orden.monto_a_devolver - total_sin_la_linea
+    return max(min(linea.precio_vendido, a_favor), Decimal("0.00"))
+
+
+@transaction.atomic
+def devolver_reparacion(linea, metodo=None, nota=""):
+    """Devuelve una reparación de la orden: deja de cobrarse (sigue a la vista, marcada como
+    devuelta) y se registra la devolución del dinero. Con 'metodo' queda hecha en el acto;
+    sin método queda pendiente en Devoluciones."""
+    orden = linea.equipo.orden_trabajo
+    _orden_abierta(orden)
+    if linea.devoluciones.exists():
+        raise ReglaDeNegocioError("Esa reparación ya fue devuelta.")
+    monto = monto_para_devolver(linea)
+    if monto <= 0:
+        raise ReglaDeNegocioError(
+            f"No hay dinero para devolver por «{linea.reparacion}»: lo que pagó el cliente sigue cubriendo el resto "
+            "de la orden. Si esa reparación no se hace, quitala desde la orden.")
+    devolucion = registrar_devolucion(orden, monto=monto, linea_reparacion=linea, nota=nota)
+    if metodo is not None:
+        marcar_devuelta(devolucion, metodo)
     return devolucion
 
 

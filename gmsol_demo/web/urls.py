@@ -29,11 +29,13 @@ urlpatterns = [
 
     # Devoluciones: acá se marca que el dinero ya se devolvió
     path("devoluciones/", views.devoluciones, name="devoluciones"),
+    path("devoluciones/reparaciones/", views.reparaciones_para_devolver, name="reparaciones_para_devolver"),
 
     # Clientes
     path("clientes/", views.lista_clientes, name="clientes"),
     path("clientes/nuevo/", views.cliente_nuevo, name="cliente_nuevo"),
     path("clientes/buscar/", views.buscar_clientes, name="buscar_clientes"),
+    path("clientes/parecidos/", views.clientes_parecidos, name="clientes_parecidos"),
     path("clientes/<int:numero>/", views.cliente_detalle, name="cliente_detalle"),
 
     # Productos (el stock llega con la etapa 4)
@@ -46,4 +48,5 @@ urlpatterns = [
     path("catalogo/", views_catalogo.catalogo, name="catalogo_inicio"),
     path("catalogo/<slug:seccion>/", views_catalogo.catalogo, name="catalogo"),
     path("catalogo/<slug:seccion>/<int:numero>/", views_catalogo.catalogo_editar, name="catalogo_editar"),
+    path("catalogo/<slug:seccion>/nuevo/", views_catalogo.alta_rapida, name="alta_rapida"),
 ]

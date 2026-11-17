@@ -2,4 +2,7 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+
+# Base de datos local: tiene los datos reales del local, no va al repositorio
 db.sqlite3
+*.sqlite3

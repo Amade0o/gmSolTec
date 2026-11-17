@@ -137,3 +137,18 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 | 12 | Nueva orden busca la reparación "Revisión / diagnóstico" por nombre. Si se renombra o desactiva en el Catálogo, la primera fila viene vacía |
 | 10 | Ventas: no hay forma de anular una venta mal hecha (hoy solo desde el admin) |
 | 7 | Texto del saldo: la guía dice "A favor del cliente: $X (se debe devolver)"; la pantalla muestra "A favor: $ X (devolver)". Unificar |
+
+
+---
+
+## Cambios del 17/11/2026 (pedidos del dueño)
+
+- **Cliente de la orden:** "De la lista" **o** "Cliente nuevo" (campo `modo`; lo del otro modo se ignora). La lista muestra **todos** los clientes de la A a la Z, se filtra al escribir y llega de a 40 (el resto se pide solo al bajar). Al cargar uno nuevo avisa si ya existe uno con ese teléfono o nombre ("Usar este").
+- **"+ Nuevo" al lado de los desplegables del catálogo** (modelo, reparación, categoría, marca): diálogo con HTMX, sin salir de la pantalla (`views_catalogo.alta_rapida`). Modelo y reparación aceptan una marca/categoría nueva escrita. Si ya existe con ese nombre, se elige esa.
+- **Eliminar** en catálogo y productos: solo si nunca se usó; si se usó, se ofrece desactivar.
+- **Listas de filas:** una sola fila; "+ Agregar otra" y "Quitar" (app.js). Cantidad vacía = 1; una fila sin producto se ignora.
+- **Precio de lista, lo que falta pagar y recargo del método** se muestran con un lápiz para cambiarlos (vacío = automático, misma cuenta que el servidor).
+- **Saldo "Sin precio todavía"** en órdenes abiertas sin nada cobrable ni pagado (antes decía "Saldado").
+- **Devolver una reparación** desde Devoluciones (o el botón "Devolver" de la orden): ver la regla en `diagrama-clases-modulos-1-a-3-v6.md` §4.5.
+- **"Agregar reparación"** destacado dentro de cada equipo.
+- Las plantillas no usan `{# #}` de varias líneas (se imprime como texto): hay un test que lo controla.

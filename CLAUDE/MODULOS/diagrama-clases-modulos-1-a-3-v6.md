@@ -202,7 +202,7 @@ classDiagram
 | Cliente — Venta | 0..1 — 0..n | `PROTECT` | ✅ Cliente opcional en venta directa. En una reparación se copia el de la orden al cerrar |
 | OrdenTrabajo — Devolucion | 1 — 0..n | `PROTECT` | Solo en órdenes abiertas. Entre todas las devoluciones no pueden superar lo pagado |
 | MetodoPago — Devolucion | 0..1 — 0..n | `PROTECT` | Se elige al devolver; es informativo (la seña retenida nunca estuvo en la caja) |
-| LineaReparacion — Devolucion | 0..1 — 0..n | `PROTECT` | Solo reparaciones de la misma orden y de un equipo no arreglable |
+| LineaReparacion — Devolucion | 0..1 — 0..n | `PROTECT` | Solo reparaciones de la misma orden, una devolución por reparación (✅ 17/11/2026: también de equipos que se arreglan, ver §4.5) |
 
 Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables. Criterio de `on_delete`: `CASCADE` cuando la clase es **parte de** otra; `PROTECT` cuando apunta a un dato que no debe desaparecer si está en uso.
 
@@ -272,7 +272,8 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 | Regla | Detalle |
 |---|---|
 | **Dos pasos separados** | 1) *Registrar que hay que devolver*: en la orden, con monto o eligiendo una reparación. El dinero **sigue reservado** (`monto_a_devolver`). 2) *Marcar que ya se devolvió*: en el menú Devoluciones se elige el método y la fecha se completa sola. Recién ahí baja `monto_pagado` y `monto_retenido` |
-| **Devolver una reparación completa** | Se elige la reparación y el monto se completa con su precio. Solo reparaciones de un equipo `no_arreglable` y de la misma orden |
+| **Devolver una reparación completa** | Se elige la reparación y el monto se completa con su precio. Solo reparaciones de la misma orden, una vez cada una |
+| **Devolver una reparación que se cancela** | ✅ 17/11/2026 (pedido del dueño): cualquier reparación de una orden abierta se puede devolver, aunque el equipo se arregle (el cliente ya no la quiere). **No se borra:** queda en la orden marcada como devuelta y **deja de sumar al total** (`OrdenTrabajo.lineas_devueltas`). El monto se calcula solo (`servicios.monto_para_devolver`): lo que el cliente pagó de más una vez que la reparación sale del total, nunca más que su precio; si es 0 no hay nada que devolver y se ofrece quitarla. Se hace desde el menú Devoluciones (con método = hecha en el acto; sin método = queda pendiente) o desde la orden |
 | **Límites** | Entre todas las devoluciones (pendientes y hechas) no superan lo pagado. Solo en órdenes abiertas (sin Venta) |
 | **Orden mixta** | Si un equipo no se arregla, su reparación sale del total y el pago queda de más: se devuelve la diferencia y recién con saldo 0 se cierra la orden con Venta |
 | **Equipo nuevo** | Siempre empieza `pendiente`. Un equipo nuevo no puede crearse con un resultado |

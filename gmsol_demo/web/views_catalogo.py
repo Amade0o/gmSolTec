@@ -64,7 +64,8 @@ def _seccion(clave):
 
 
 def _filas(sec, consulta):
-    return [(obj, [mostrar(obj) for _, mostrar in sec["columnas"]], getattr(obj, sec["activo"])) for obj in consulta]
+    # Cada valor va con el título de su columna (en el celular la tabla pasa a tarjetas y lo muestra)
+    return [(obj, [(titulo, mostrar(obj)) for titulo, mostrar in sec["columnas"]], getattr(obj, sec["activo"])) for obj in consulta]
 
 
 @login_required

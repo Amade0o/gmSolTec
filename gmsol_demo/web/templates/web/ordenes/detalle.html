@@ -1,15 +1,18 @@
 {% extends "web/base.html" %}
-{# Detalle de la orden: estados, reparaciones, productos, pagos y devoluciones #}
-{% load formato %}
+{# Detalle de la orden: estados, reparaciones, productos, pagos y devoluciones. Se puede imprimir como comprobante. #}
+{% load formato static estaticos %}
 {% block titulo %}Orden #{{ orden.id }}{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:ordenes' %}">Órdenes</a> / #{{ orden.id }}</div>
+{% url 'web:ordenes' as u_ordenes %}{% with n=orden.id|stringformat:"s" %}{% include "web/parciales/migas.html" with a1=u_ordenes t1="Órdenes" actual="#"|add:n %}{% endwith %}
 <div class="head">
 <div>
 <h1>Orden #{{ orden.id }} <span class="sub"><a href="{% url 'web:cliente_detalle' orden.cliente_id %}">{{ orden.cliente }}</a>{% for t in orden.cliente.telefonos.all %} · {{ t.numero }}{% endfor %}</span></h1>
 <p class="sec">Recibida el {{ orden.fecha_recepcion|date:"j \d\e F, H:i" }}</p>
 </div>
+<div class="acts">
 {% include "web/parciales/pista.html" with o=orden %}
+<button type="button" class="btn" data-imprimir hidden><svg aria-hidden="true"><use href="{% estatico 'web/img/iconos.svg' %}#i-imprimir"/></svg>Imprimir</button>
+</div>
 </div>
 
 <div class="cols">
@@ -18,43 +21,44 @@
 {# ---------- Equipos ---------- #}
 {% for equipo in orden.equipos.all %}
 <section class="panel">
-<h2>Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
+<h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
 <dl class="datos">
 <div><dt>Problema</dt><dd>{{ equipo.problema|linebreaksbr }}</dd></div>
-<div><dt>Bloqueo</dt><dd>{{ equipo.get_tipo_bloqueo_display }}{% if equipo.clave_bloqueo %} · <b class="clave">{{ equipo.clave_bloqueo }}</b>{% endif %}</dd></div>
+<div><dt>Bloqueo</dt><dd>{{ equipo.get_tipo_bloqueo_display }}{% if equipo.clave_bloqueo %}<span class="no-imprimir"> · </span><b class="clave">{{ equipo.clave_bloqueo }}</b>{% endif %}</dd></div>
 {% if equipo.accesorios_dejados %}<div><dt>Dejó</dt><dd>{{ equipo.accesorios_dejados }}</dd></div>{% endif %}
 </dl>
 
 {% if orden.cerrada %}
 <p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
 {% else %}
-<form method="post" class="segmento estados" aria-label="Estado del equipo">{% csrf_token %}
+<p class="solo-imprimir"><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
+<form method="post" class="segmento estados" aria-label="Estado del equipo {{ forloop.counter }}">{% csrf_token %}
 <input type="hidden" name="accion" value="estado"><input type="hidden" name="equipo" value="{{ equipo.id }}">
-{% for valor, nombre in estados_equipo %}<button name="estado" value="{{ valor }}" class="{% if equipo.estado == valor %}on{% endif %}"{% if equipo.estado == valor %} aria-pressed="true"{% endif %}>{{ nombre }}</button>{% endfor %}
+{% for valor, nombre in estados_equipo %}<button type="submit" name="estado" value="{{ valor }}" aria-pressed="{% if equipo.estado == valor %}true{% else %}false{% endif %}"{% if equipo.estado == valor %} class="on"{% endif %}>{{ nombre }}</button>{% endfor %}
 </form>
 {% endif %}
 
-<table>
-<thead><tr><th>Reparación</th><th class="der">Precio</th><th></th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-equipo-{{ equipo.id }}"><table>
+<thead><tr><th scope="col">Reparación</th><th scope="col" class="der">Precio</th><th scope="col"><span class="oculto">Acción</span></th></tr></thead>
 <tbody>
 {% for linea in equipo.lineas_reparacion.all %}
 <tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}">
 <td>{{ linea.reparacion }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td>
-<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_reparacion"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace">Quitar</button></form>{% endif %}</td>
+<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_reparacion"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace" type="submit" data-confirmar="¿Quitar «{{ linea.reparacion }}» de la orden?" data-confirmar-si="Sí, quitar">Quitar<span class="oculto"> {{ linea.reparacion }}</span></button></form>{% endif %}</td>
 </tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobra: el equipo no tiene arreglo.</small>{% endif %}
 
 {% if not orden.cerrada %}
-{% if equipo.id == reparacion_equipo %}{% include "web/parciales/agregar_reparacion.html" with form=reparacion_form %}{% else %}{% include "web/parciales/agregar_reparacion.html" with form=reparacion_vacio %}{% endif %}
+{% include "web/parciales/agregar_reparacion.html" with form=equipo.form_reparacion %}
 {% endif %}
 </section>
 {% endfor %}
 
 {% if not orden.cerrada %}
 <details class="panel"{% if equipo_form.errors or equipo_rep_form.errors %} open{% endif %}>
-<summary><h2>Agregar otro equipo</h2></summary>
+<summary class="titulo">Agregar otro equipo</summary>
 <form method="post">{% csrf_token %}
 <input type="hidden" name="accion" value="equipo">
 {% include "web/parciales/errores_form.html" with form=equipo_form %}
@@ -72,23 +76,23 @@
 {% include "web/parciales/campo.html" with campo=equipo_rep_form.reparacion clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=equipo_rep_form.precio_vendido %}
 </div>
-<button class="btn">Agregar equipo</button>
+<button class="btn" type="submit">Agregar equipo</button>
 </form>
 </details>
 {% endif %}
 
 {# ---------- Productos ---------- #}
 <section class="panel">
-<h2>Productos</h2>
+<h2 id="t-productos">Productos</h2>
 {% if orden.lineas_producto.all %}
-<table>
-<thead><tr><th>Producto</th><th class="der">Cant.</th><th class="der">Precio</th><th class="der">Subtotal</th><th></th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-productos"><table>
+<thead><tr><th scope="col">Producto</th><th scope="col" class="der">Cant.</th><th scope="col" class="der">Precio</th><th scope="col" class="der">Subtotal</th><th scope="col"><span class="oculto">Acción</span></th></tr></thead>
 <tbody>
 {% for linea in orden.lineas_producto.all %}
 <tr><td>{{ linea.producto }}</td><td class="der">{{ linea.cantidad_adquirida }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td><td class="der">{{ linea.subtotal|pesos }}</td>
-<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_producto"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace">Quitar</button></form>{% endif %}</td></tr>
+<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_producto"><input type="hidden" name="linea" value="{{ linea.id }}"><button class="enlace" type="submit" data-confirmar="¿Quitar {{ linea.cantidad_adquirida }} × «{{ linea.producto }}» de la orden?" data-confirmar-si="Sí, quitar">Quitar<span class="oculto"> {{ linea.producto }}</span></button></form>{% endif %}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% else %}<p class="vacio">Sin productos.</p>{% endif %}
 {% if not orden.cerrada %}
 <form method="post" class="fila-campos agregar">{% csrf_token %}
@@ -96,24 +100,24 @@
 {% include "web/parciales/campo.html" with campo=producto_form.producto clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=producto_form.cantidad_adquirida %}
 {% include "web/parciales/campo.html" with campo=producto_form.precio_vendido %}
-<button class="btn">Agregar producto</button>
+<button class="btn" type="submit">Agregar producto</button>
 </form>
 {% endif %}
 </section>
 
 {# ---------- Pagos ---------- #}
 <section class="panel">
-<h2>Pagos</h2>
+<h2 id="t-pagos">Pagos</h2>
 {% if orden.pagos.all %}
-<table>
-<thead><tr><th>Fecha</th><th>Método</th><th class="der">Monto</th><th class="der">Recargo</th><th class="der">Cobrado</th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-pagos"><table>
+<thead><tr><th scope="col">Fecha</th><th scope="col">Método</th><th scope="col" class="der">Monto</th><th scope="col" class="der">Recargo</th><th scope="col" class="der">Cobrado</th></tr></thead>
 <tbody>
 {% for pago in orden.pagos.all %}
 <tr><td class="sec">{{ pago.fecha|date:"j M, H:i" }}</td><td>{{ pago.metodo_pago.nombre }}</td><td class="der">{{ pago.monto|pesos }}</td>
 <td class="der sec">{% if pago.recargo_porcentaje %}{{ pago.recargo_porcentaje|floatformat:"-2" }}% · {{ pago.recargo_monto|pesos }}{% else %}—{% endif %}</td>
 <td class="der">{{ pago.total_cobrado|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% else %}<p class="vacio">Sin pagos.</p>{% endif %}
 {% if not orden.cerrada %}
 <form method="post" class="fila-campos agregar">{% csrf_token %}
@@ -122,25 +126,25 @@
 {% include "web/parciales/campo.html" with campo=pago_form.metodo_pago %}
 {% include "web/parciales/campo.html" with campo=pago_form.monto %}
 {% include "web/parciales/campo.html" with campo=pago_form.recargo_porcentaje %}
-<button class="btn">Registrar pago</button>
+<button class="btn" type="submit">Registrar pago</button>
 </form>
 {% endif %}
 </section>
 
 {# ---------- Devoluciones: acá solo se REGISTRA; se hacen en Devoluciones ---------- #}
 {% if orden.devoluciones.all or orden.monto_pagado > 0 and not orden.cerrada %}
-<section class="panel">
-<h2>Devoluciones</h2>
+<section class="panel{% if not orden.devoluciones.all %} no-imprimir{% endif %}">
+<h2 id="t-devoluciones">Devoluciones</h2>
 {% if orden.devoluciones.all %}
-<table>
-<thead><tr><th>Registrada</th><th>Detalle</th><th class="der">Monto</th><th>Estado</th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-devoluciones"><table>
+<thead><tr><th scope="col">Registrada</th><th scope="col">Detalle</th><th scope="col" class="der">Monto</th><th scope="col">Estado</th></tr></thead>
 <tbody>
 {% for d in orden.devoluciones.all %}
 <tr><td class="sec">{{ d.fecha_registro|date:"j M" }}</td><td>{% if d.linea_reparacion %}{{ d.linea_reparacion.reparacion }}{% endif %}{% if d.nota %} <span class="sec">{{ d.nota }}</span>{% endif %}</td>
 <td class="der">{{ d.monto|pesos }}</td>
 <td>{% if d.devuelta %}<span class="estado ok">Devuelta · {{ d.metodo_pago.nombre }}</span>{% else %}<span class="estado bad">Falta devolver</span>{% endif %}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% if orden.monto_a_devolver %}<p class="ayuda">Para marcarla como hecha, andá a <a href="{% url 'web:devoluciones' %}">Devoluciones</a>.</p>{% endif %}
 {% endif %}
 {% if not orden.cerrada %}
@@ -150,7 +154,7 @@
 {% include "web/parciales/campo.html" with campo=devolucion_form.linea_reparacion clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=devolucion_form.monto %}
 {% include "web/parciales/campo.html" with campo=devolucion_form.nota %}
-<button class="btn">Registrar que hay que devolver</button>
+<button class="btn" type="submit">Registrar que hay que devolver</button>
 </form>
 {% endif %}
 </section>
@@ -173,11 +177,12 @@
 {% else %}
 <div class="saldo-caja {% if orden.monto_adeudado > 0 %}debe{% elif orden.monto_adeudado < 0 %}afavor{% else %}ok{% endif %}">{{ orden|saldo }}</div>
 {% if orden.estado == "lista" %}<a class="btn pri ancho" href="{% url 'web:orden_entregar' orden.id %}">Entregar equipo</a>{% endif %}
-{% if orden.estado == "pendiente" %}<p class="ayuda">Para entregar, marcá el resultado de cada equipo.</p>{% endif %}
-{% if orden.estado == "no_arreglable" %}<p class="ayuda">No tiene arreglo: registrá la devolución de la seña.</p>{% endif %}
+{% if orden.estado == "pendiente" %}<p class="ayuda no-imprimir">Para entregar, marcá el resultado de cada equipo.</p>{% endif %}
+{% if orden.estado == "no_arreglable" %}<p class="ayuda no-imprimir">No tiene arreglo: registrá la devolución de la seña.</p>{% endif %}
 {% if orden.estado == "finalizada" %}<p class="ayuda">Terminó sin venta: no tuvo arreglo y no queda dinero del cliente.</p>{% endif %}
 {% endif %}
 </section>
 </aside>
 </div>
+<p class="solo-imprimir sec">GM Soluciones tecnológicas · Impreso el {% now "j/n/Y H:i" %}</p>
 {% endblock %}

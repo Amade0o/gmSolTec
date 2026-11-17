@@ -2,7 +2,7 @@
 {# Catálogo: editar un registro y activarlo o desactivarlo #}
 {% block titulo %}{{ obj.nombre }} · Catálogo{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:catalogo' sec.clave %}">Catálogo · {{ sec.titulo }}</a> / {{ obj.nombre }}</div>
+{% url 'web:catalogo' sec.clave as u_seccion %}{% include "web/parciales/migas.html" with a1=u_seccion t1="Catálogo · "|add:sec.titulo actual=obj.nombre %}
 <div class="head"><h1>{{ obj.nombre }}{% if not activo %} <span class="sub">Desactivado</span>{% endif %}</h1></div>
 
 <div class="cols">
@@ -13,7 +13,7 @@
 <div class="fila-campos">
 {% for campo in form %}{% include "web/parciales/campo.html" with campo=campo %}{% endfor %}
 </div>
-<button class="btn pri">Guardar</button>
+<button class="btn pri" type="submit">Guardar</button>
 </form>
 </section>
 
@@ -22,10 +22,10 @@
 <h2>Estado</h2>
 {% if activo %}
 <p class="ayuda">Activo: aparece en los desplegables.</p>
-<form method="post">{% csrf_token %}<button class="btn ancho" name="accion" value="desactivar">Desactivar</button></form>
+<form method="post">{% csrf_token %}<button class="btn ancho" type="submit" name="accion" value="desactivar" data-confirmar="¿Desactivar «{{ obj.nombre }}»? Deja de aparecer en los desplegables. Lo ya cargado lo sigue mostrando." data-confirmar-si="Sí, desactivar">Desactivar</button></form>
 {% else %}
 <p class="ayuda">Desactivado: no aparece al cargar cosas nuevas. Lo ya cargado lo sigue mostrando.</p>
-<form method="post">{% csrf_token %}<button class="btn pri ancho" name="accion" value="activar">Activar</button></form>
+<form method="post">{% csrf_token %}<button class="btn pri ancho" type="submit" name="accion" value="activar">Activar</button></form>
 {% endif %}
 </section>
 </aside>

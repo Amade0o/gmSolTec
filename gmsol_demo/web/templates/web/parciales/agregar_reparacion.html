@@ -2,5 +2,5 @@
 <input type="hidden" name="accion" value="reparacion"><input type="hidden" name="equipo" value="{{ equipo.id }}">
 {% include "web/parciales/campo.html" with campo=form.reparacion clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=form.precio_vendido %}
-<button class="btn">Agregar reparación</button>
+<button class="btn" type="submit">Agregar reparación</button>
 </form>

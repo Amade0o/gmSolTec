@@ -4,9 +4,11 @@
 {% block contenido %}
 <div class="head"><h1>Venta rápida <span class="sub">Productos sin orden de trabajo</span></h1></div>
 
+{% comment %} hx-*: cada vez que se cambia un campo, el servidor recalcula el resumen de la derecha.
+   hx-sync="this:replace": si llega un cambio nuevo, se descarta el cálculo anterior (nunca queda un total viejo). {% endcomment %}
 <form method="post" class="cols" novalidate
-      hx-post="{% url 'web:venta_rapida_resumen' %}" hx-trigger="load, input delay:300ms, change"
-      hx-target="#resumen" hx-swap="innerHTML">
+      hx-post="{% url 'web:venta_rapida_resumen' %}" hx-trigger="load, input delay:300ms"
+      hx-target="#resumen" hx-swap="innerHTML" hx-sync="this:replace">
 {% csrf_token %}
 <div class="pasos">
 <section class="panel">
@@ -21,20 +23,17 @@
 
 <section class="panel">
 <h2><span class="paso">3</span>Cliente <span class="sub">opcional</span></h2>
-<div class="campo ancho">
-<label for="id_cliente">Cliente</label>
-<select name="cliente" id="id_cliente">
-<option value="">Sin cliente</option>
-{% for c in clientes %}<option value="{{ c.id }}"{% if cliente_elegido and c.id == cliente_elegido.id %} selected{% endif %}>{{ c.nombre }}{% for t in c.telefonos.all|slice:":1" %} · {{ t.numero }}{% endfor %}</option>{% endfor %}
-</select>
-</div>
+<fieldset class="campo elegir-cliente">
+<legend>Cliente</legend>
+{% include "web/parciales/buscar_cliente.html" %}
+</fieldset>
 </section>
 </div>
 
 <aside class="lateral">
 <section class="panel resumen">
 <h2>Resumen</h2>
-<div id="resumen"></div>
+<div id="resumen" aria-live="polite"></div>
 <button class="btn pri ancho" type="submit">Registrar venta</button>
 </section>
 </aside>

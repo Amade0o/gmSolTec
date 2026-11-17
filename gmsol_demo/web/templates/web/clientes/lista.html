@@ -8,31 +8,26 @@
 <a class="btn" href="{% url 'web:cliente_nuevo' %}">Nuevo cliente</a>
 </div>
 
-<form class="filtros" method="get" role="search">
-<input class="entrada" name="q" value="{{ q }}" placeholder="Nombre, teléfono o email" aria-label="Buscar cliente por nombre, teléfono o email">
-</form>
+<search><form class="filtros" method="get">
+<input type="search" class="entrada" name="q" value="{{ q }}" placeholder="Nombre, teléfono o email" aria-label="Buscar cliente por nombre, teléfono o email" spellcheck="false">
+</form></search>
 
 <section class="panel">
 {% if pagina.object_list %}
-<div style="overflow-x:auto"><table>
-<thead><tr><th>Cliente</th><th>Teléfono</th><th class="der">Órdenes</th><th>Última orden</th></tr></thead>
+<div class="tabla-tarjetas"><table>
+<caption class="oculto">Clientes</caption>
+<thead><tr><th scope="col">Cliente</th><th scope="col">Teléfono</th><th scope="col" class="der">Órdenes</th><th scope="col">Última orden</th></tr></thead>
 <tbody>
 {% for c in pagina %}
 <tr>
-<td class="cli"><a class="fila-link" href="{% url 'web:cliente_detalle' c.id %}">{{ c.nombre }}</a></td>
-<td>{{ c|telefono_principal|default:"—" }}</td>
-<td class="der">{{ c.cant_ordenes }}</td>
-<td class="sec">{{ c.ultima_orden|date:"j M Y"|default:"—" }}</td>
+<td class="cli" data-label="Cliente"><a class="fila-link" href="{% url 'web:cliente_detalle' c.id %}">{{ c.nombre }}</a></td>
+<td data-label="Teléfono">{{ c|telefono_principal|default:"—" }}</td>
+<td class="der" data-label="Órdenes">{{ c.cant_ordenes }}</td>
+<td class="sec" data-label="Última orden">{{ c.ultima_orden|date:"j M Y"|default:"—" }}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>
-{% if pagina.has_other_pages %}
-<nav class="paginas" aria-label="Páginas">
-{% if pagina.has_previous %}<a class="btn" href="?q={{ q|urlencode }}&amp;pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
-<span class="sec">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
-{% if pagina.has_next %}<a class="btn" href="?q={{ q|urlencode }}&amp;pagina={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
-</nav>
-{% endif %}
+{% include "web/parciales/paginas.html" %}
 {% else %}
 <p class="vacio">No hay clientes{% if q %} que coincidan con “{{ q }}”{% endif %}.</p>
 {% endif %}

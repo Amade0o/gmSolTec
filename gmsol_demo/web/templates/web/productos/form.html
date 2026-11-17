@@ -3,7 +3,7 @@
 {% load formato %}
 {% block titulo %}{% if producto.pk %}{{ producto.nombre }}{% else %}Nuevo producto{% endif %}{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:productos' %}">Productos</a> / {% if producto.pk %}{{ producto.nombre }}{% else %}Nuevo{% endif %}</div>
+{% url 'web:productos' as u_productos %}{% if producto.pk %}{% include "web/parciales/migas.html" with a1=u_productos t1="Productos" actual=producto.nombre %}{% else %}{% include "web/parciales/migas.html" with a1=u_productos t1="Productos" actual="Nuevo" %}{% endif %}
 <div class="head">
 <h1>{% if producto.pk %}{{ producto.nombre }}{% if not producto.activo %} <span class="sub">Desactivado</span>{% endif %}{% else %}Nuevo producto{% endif %}</h1>
 </div>
@@ -12,9 +12,10 @@
 <div class="pasos">
 <section class="panel">
 <h2>Datos</h2>
+{# hx-*: al cambiar un precio, el servidor recalcula el margen. hx-sync descarta el cálculo viejo si llega uno nuevo. #}
 <form method="post" novalidate id="form-producto"
       hx-post="{% url 'web:producto_margen' %}" hx-trigger="input delay:300ms from:#id_precio_compra, input delay:300ms from:#id_precio_venta"
-      hx-target="#margen" hx-swap="innerHTML">{% csrf_token %}
+      hx-target="#margen" hx-swap="innerHTML" hx-sync="this:replace">{% csrf_token %}
 {% include "web/parciales/errores_form.html" %}
 {% include "web/parciales/campo.html" with campo=form.nombre %}
 <div class="fila-campos">
@@ -27,25 +28,25 @@
 {% include "web/parciales/campo.html" with campo=form.precio_venta %}
 </div>
 <div class="acts">
-<button class="btn pri">Guardar</button>
-{% if not producto.pk %}<button class="btn" name="despues" value="otro">Guardar y cargar otro</button>{% endif %}
+<button class="btn pri" type="submit">Guardar</button>
+{% if not producto.pk %}<button class="btn" type="submit" name="despues" value="otro">Guardar y cargar otro</button>{% endif %}
 </div>
 </form>
 </section>
 
 {% if producto.pk %}
 <section class="panel">
-<h2>Últimas ventas</h2>
+<h2 id="t-ventas">Últimas ventas</h2>
 {% if movimientos %}
-<table>
-<thead><tr><th>Fecha</th><th>Dónde</th><th class="der">Cant.</th><th class="der">Precio</th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-ventas"><table>
+<thead><tr><th scope="col">Fecha</th><th scope="col">Dónde</th><th scope="col" class="der">Cant.</th><th scope="col" class="der">Precio</th></tr></thead>
 <tbody>
 {% for fecha, linea, venta, orden in movimientos %}
 <tr><td class="sec">{{ fecha|date:"j M Y" }}</td>
 <td>{% if venta %}<a href="{% url 'web:venta_detalle' venta.id %}">Venta #{{ venta.id }}</a>{% else %}<a href="{% url 'web:orden_detalle' orden.id %}">Orden #{{ orden.id }}</a>{% endif %}</td>
 <td class="der">{{ linea.cantidad_adquirida }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% else %}<p class="vacio">Todavía no se vendió.</p>{% endif %}
 </section>
 {% endif %}
@@ -54,17 +55,17 @@
 <aside class="lateral">
 <section class="panel resumen">
 <h2>Margen</h2>
-<div id="margen">{% include "web/parciales/margen.html" %}</div>
+<div id="margen" aria-live="polite">{% include "web/parciales/margen.html" %}</div>
 </section>
 {% if producto.pk %}
 <section class="panel">
 <h2>Estado</h2>
 {% if producto.activo %}
 <p class="ayuda">Activo: aparece al vender y al cargar órdenes.</p>
-<form method="post">{% csrf_token %}<button class="btn ancho" name="accion" value="desactivar">Desactivar</button></form>
+<form method="post">{% csrf_token %}<button class="btn ancho" type="submit" name="accion" value="desactivar" data-confirmar="¿Desactivar «{{ producto.nombre }}»? Deja de aparecer al vender y al cargar órdenes. Las ventas viejas lo siguen mostrando." data-confirmar-si="Sí, desactivar">Desactivar</button></form>
 {% else %}
 <p class="ayuda">Desactivado: no aparece al vender. Las ventas viejas lo siguen mostrando.</p>
-<form method="post">{% csrf_token %}<button class="btn pri ancho" name="accion" value="activar">Activar</button></form>
+<form method="post">{% csrf_token %}<button class="btn pri ancho" type="submit" name="accion" value="activar">Activar</button></form>
 {% endif %}
 </section>
 {% endif %}

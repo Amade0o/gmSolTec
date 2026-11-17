@@ -15,6 +15,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Max, Q, Sum
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -179,10 +180,12 @@ def orden_nueva(request):
             else:
                 messages.success(request, f"Orden #{orden.id} creada.")
                 return redirect("web:orden_detalle", numero=orden.id)
+        elegido = request.POST.get("cli-cliente")
     else:
         cliente = request.GET.get("cliente", "")
         f = _formularios_nueva_orden(cliente=int(cliente) if cliente.isdigit() else None)
-    return render(request, "web/ordenes/nueva.html", f)
+        elegido = cliente
+    return render(request, "web/ordenes/nueva.html", {**f, "oc": _opciones_cliente("cli-cliente", elegido=elegido)})
 
 
 @login_required
@@ -219,7 +222,6 @@ def _formularios_detalle(orden, datos=None, accion=None):
         return datos if accion == nombre else None
     return {
         "reparacion_form": LineaReparacionForm(con_datos("reparacion"), prefix="rep"),
-        "reparacion_vacio": LineaReparacionForm(prefix="rep"),     # para los otros equipos
         # A qué equipo se le quiso agregar la reparación (para mostrar el error solo ahí)
         "reparacion_equipo": int(datos["equipo"]) if accion == "reparacion" and datos.get("equipo", "").isdigit() else None,
         "equipo_form": EquipoForm(con_datos("equipo"), prefix="eq"),
@@ -297,6 +299,11 @@ def orden_detalle(request, numero):
     orden = _orden_para_mostrar(numero)
     if f is None:
         f = _formularios_detalle(orden)
+    # Un formulario "Agregar reparación" por equipo. Mismo prefijo (lo que se envía no cambia),
+    # pero cada uno con sus propios id: si no, las etiquetas del 2.º equipo apuntaban al 1.º.
+    for equipo in orden.equipos.all():
+        equipo.form_reparacion = (f["reparacion_form"] if equipo.id == f["reparacion_equipo"]
+                                  else LineaReparacionForm(prefix="rep", auto_id=f"id_eq{equipo.id}_%s"))
     return render(request, "web/ordenes/detalle.html", {
         "orden": orden, "estados_equipo": EQUIPO_ORDEN_ESTADO_CHOICES, **f,
     })
@@ -390,7 +397,7 @@ def venta_rapida(request):
                 messages.success(request, f"Venta #{venta.id} registrada.")
                 return redirect("web:venta_rapida")
     return render(request, "web/ventas/rapida.html", {
-        **f, "clientes": clientes(), "cliente_elegido": cliente_elegido,
+        **f, "oc": _opciones_cliente("cliente", elegido=cliente_elegido.pk if cliente_elegido else None),
     })
 
 
@@ -472,6 +479,59 @@ def _buscar_clientes(q):
     """Clientes por nombre, teléfono o email (sin repetidos, para usar con __in)."""
     return Cliente.objects.filter(
         Q(nombre__icontains=q) | Q(telefonos__numero__icontains=q) | Q(email__icontains=q)).values("pk")
+
+
+# ---------- Elegir cliente (Nueva orden y Venta rápida) ----------
+# En lugar de un desplegable con todos los clientes: un buscador y, mientras no se
+# busca nada, los últimos clientes atendidos. Nombre del campo -> texto de "ninguno".
+CAMPOS_CLIENTE = {"cli-cliente": "Ninguno: cargo uno nuevo", "cliente": "Sin cliente"}
+
+
+def _ultimos_atendidos(cuantos):
+    """Los clientes de las últimas órdenes y ventas (más recientes primero).
+    Son dos consultas chicas: no recorre toda la tabla de clientes."""
+    movimientos = sorted(
+        [*OrdenTrabajo.objects.order_by("-fecha_recepcion").values_list("fecha_recepcion", "cliente_id")[:40],
+         *Venta.objects.filter(cliente__isnull=False).order_by("-fecha").values_list("fecha", "cliente_id")[:40]],
+        reverse=True)
+    ids = list(dict.fromkeys(cliente for _, cliente in movimientos))[:cuantos]
+    por_id = Cliente.objects.prefetch_related("telefonos").in_bulk(ids)
+    lista = [por_id[i] for i in ids if i in por_id]
+    if len(lista) < cuantos:        # sistema nuevo: se completa con los últimos cargados
+        lista += Cliente.objects.exclude(pk__in=ids).prefetch_related("telefonos").order_by("-pk")[:cuantos - len(lista)]
+    return lista
+
+
+def _opciones_cliente(campo, q="", elegido=None):
+    elegido = int(elegido) if str(elegido or "").isdigit() else None
+    q = q.strip()
+    mas = 0
+    if q:
+        cuantos = 8
+        consulta = Cliente.objects.filter(pk__in=_buscar_clientes(q)).order_by("nombre")
+        lista = list(consulta.prefetch_related("telefonos")[:cuantos + 1])
+        if len(lista) > cuantos:
+            mas = consulta.count() - cuantos
+            lista = lista[:cuantos]
+    else:
+        lista = _ultimos_atendidos(6)
+    # El elegido siempre se ve (por ejemplo, al volver con un error o desde la ficha del cliente)
+    if elegido and all(c.pk != elegido for c in lista):
+        actual = Cliente.objects.prefetch_related("telefonos").filter(pk=elegido).first()
+        if actual:
+            lista.insert(0, actual)
+    return {"campo": campo, "q": q, "lista": lista, "mas": mas, "elegido": elegido, "vacio": CAMPOS_CLIENTE[campo]}
+
+
+@login_required
+def buscar_clientes(request):
+    """Resultados del buscador de clientes (HTMX)."""
+    campo = request.GET.get("campo")
+    if campo not in CAMPOS_CLIENTE:
+        raise Http404
+    return render(request, "web/parciales/opciones_cliente.html", {
+        "oc": _opciones_cliente(campo, request.GET.get("buscar_cliente", ""), request.GET.get(campo)),
+    })
 
 
 @login_required

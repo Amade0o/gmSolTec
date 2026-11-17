@@ -1,0 +1,2 @@
+{# Migas: <nav> con lista ordenada; la última es la pantalla actual. Uso: include con a1/t1 (enlace y texto), a2/t2 opcional y actual. #}
+<nav class="migas" aria-label="Ruta"><ol><li><a href="{{ a1 }}">{{ t1 }}</a></li>{% if a2 %}<li><a href="{{ a2 }}">{{ t2 }}</a></li>{% endif %}<li aria-current="page">{{ actual }}</li></ol></nav>

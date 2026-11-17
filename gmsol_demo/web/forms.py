@@ -45,12 +45,18 @@ def metodos_activos():
     return MetodoPago.objects.filter(activo=True).order_by("nombre")
 
 
+# Teléfono: type="tel" abre el teclado numérico en el celular.
+# Sin autocomplete="tel": son datos del cliente, no de quien atiende el mostrador.
+def campo_telefono(**kwargs):
+    return forms.CharField(max_length=30, widget=forms.TextInput(attrs={"type": "tel", "spellcheck": "false"}), **kwargs)
+
+
 # ---------- Cliente de la orden: uno existente o uno nuevo ----------
 
 class ClienteOrdenForm(forms.Form):
     cliente = ElegirCliente(queryset=clientes(), required=False, empty_label="Elegí un cliente…")
     nuevo_nombre = forms.CharField(max_length=120, required=False, label="Nombre")
-    nuevo_telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
+    nuevo_telefono = campo_telefono(required=False, label="Teléfono")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -231,14 +237,14 @@ class ClienteForm(forms.ModelForm):
 
 
 class ClienteNuevoForm(ClienteForm):
-    telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
+    telefono = campo_telefono(required=False, label="Teléfono")
 
     class Meta(ClienteForm.Meta):
         fields = ["nombre", "telefono", "email", "direccion", "notas"]
 
 
 class TelefonoForm(forms.Form):
-    numero = forms.CharField(max_length=30, label="Teléfono")
+    numero = campo_telefono(label="Teléfono")
     principal = forms.BooleanField(required=False, label="Principal")
 
 

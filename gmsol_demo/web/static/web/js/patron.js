@@ -2,27 +2,30 @@
 // Se tocan los puntos en orden y se guarda en el campo "Clave" como "1-5-9-6".
 // También muestra u oculta el campo "Clave" según el tipo de bloqueo.
 // Sin este archivo la pantalla funciona igual: la clave se escribe a mano.
-(function () {
-  var patron = document.querySelector("[data-patron]");
-  var opciones = document.querySelector("[data-bloqueo]");
+(() => {
+  const patron = document.querySelector("[data-patron]");
+  const opciones = document.querySelector("[data-bloqueo]");
   if (!patron || !opciones) return;
 
-  var clave = document.getElementById(patron.dataset.patron);
-  var campoClave = clave.closest(".campo");
-  var linea = patron.querySelector("polyline");
-  var puntos = patron.querySelectorAll("[data-punto]");
-  var secuencia = [];
+  const clave = document.getElementById(patron.dataset.patron);
+  const campoClave = clave.closest(".campo");
+  const linea = patron.querySelector("polyline");
+  const puntos = patron.querySelectorAll("[data-punto]");
+  let secuencia = [];
 
   // Centro de cada punto dentro del dibujo (grilla de 3x3 en 150x150)
-  function centro(numero) {
-    var i = numero - 1;
-    return (25 + (i % 3) * 50) + "," + (25 + Math.floor(i / 3) * 50);
-  }
+  const centro = (numero) => {
+    const i = numero - 1;
+    return `${25 + (i % 3) * 50},${25 + Math.floor(i / 3) * 50}`;
+  };
 
   function dibujar() {
-    puntos.forEach(function (b) {
-      b.classList.toggle("on", secuencia.indexOf(b.dataset.punto) !== -1);
-    });
+    for (const b of puntos) {
+      const orden = secuencia.indexOf(b.dataset.punto);
+      // aria-pressed dice si el punto está marcado; el nombre dice en qué orden
+      b.setAttribute("aria-pressed", orden !== -1);
+      b.setAttribute("aria-label", orden === -1 ? `Punto ${b.dataset.punto}` : `Punto ${b.dataset.punto}, paso ${orden + 1}`);
+    }
     linea.setAttribute("points", secuencia.map(centro).join(" "));
     clave.value = secuencia.join("-");
     clave.dispatchEvent(new Event("input", { bubbles: true }));
@@ -35,8 +38,7 @@
   }
 
   function segunTipo() {
-    var elegido = opciones.querySelector("input:checked");
-    var tipo = elegido ? elegido.value : "ninguno";
+    const tipo = opciones.querySelector("input:checked")?.value ?? "ninguno";
     patron.hidden = tipo !== "patron";
     campoClave.hidden = tipo === "ninguno";
     if (tipo === "ninguno") clave.value = "";
@@ -44,19 +46,19 @@
     if (tipo === "patron") leerClave();
   }
 
-  puntos.forEach(function (b) {
-    b.addEventListener("click", function () {
-      if (secuencia.indexOf(b.dataset.punto) === -1) {
+  for (const b of puntos) {
+    b.addEventListener("click", () => {
+      if (!secuencia.includes(b.dataset.punto)) {
         secuencia.push(b.dataset.punto);
         dibujar();
       }
     });
-  });
-  patron.querySelector("[data-borrar]").addEventListener("click", function () {
+  }
+  patron.querySelector("[data-borrar]").addEventListener("click", () => {
     secuencia = [];
     dibujar();
   });
-  opciones.addEventListener("change", function () {
+  opciones.addEventListener("change", () => {
     clave.value = "";       // al cambiar de tipo, la clave anterior ya no sirve
     segunTipo();
   });

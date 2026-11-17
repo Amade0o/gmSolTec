@@ -212,8 +212,14 @@ class EntregarTests(Base):
         self.assertContains(r, f"#{pendiente.id}<")         # buscando aparecen todas las abiertas
 
     def test_menu_marca_la_seccion_correcta(self):
+        ordenes = reverse("web:ordenes")
         r = self.client.get(reverse("web:entregar"))
-        self.assertNotContains(r, 'class="on"><svg aria-hidden="true"><use href="#i-ordenes"/>')
+        self.assertNotContains(r, f'href="{ordenes}" class="on"')
+        r = self.client.get(ordenes)
+        self.assertContains(r, f'href="{ordenes}" class="on" aria-current="page"')
+        r = self.client.get(reverse("web:orden_nueva"))         # subpantalla: marca la sección, no "esta página"
+        self.assertContains(r, f'href="{ordenes}" class="on" aria-current="true"')
+        self.assertContains(r, f'href="{reverse("web:inicio")}"><svg', count=1)  # Inicio, sin marcar
 
     def test_cobra_el_saldo_y_entrega(self):
         o = self.orden("1000", estado="arreglado", pagado="400")
@@ -274,6 +280,47 @@ class VentaRapidaTests(Base):
         r = self.client.post(reverse("web:venta_rapida_resumen"), self.datos())
         self.assertContains(r, "$ 5.000")
         self.assertContains(r, "Falta asignar $ 5.000")
+
+
+class ElegirClienteTests(Base):
+    """Nueva orden y Venta rápida: buscador + últimos clientes atendidos (sin el desplegable con todos)."""
+
+    def test_sin_buscar_muestra_los_ultimos_atendidos(self):
+        viejo = Cliente.objects.create(nombre="Cliente Sin Ordenes")
+        self.orden()                                   # Juan Pérez tiene una orden: aparece primero
+        r = self.client.get(reverse("web:orden_nueva"))
+        self.assertContains(r, 'name="cli-cliente" value=""')
+        self.assertContains(r, f'name="cli-cliente" value="{self.juan.id}"')
+        self.assertContains(r, "Últimos clientes atendidos")
+        self.assertContains(r, viejo.nombre)           # completa con los últimos cargados
+
+    def test_desde_la_ficha_viene_elegido(self):
+        r = self.client.get(reverse("web:orden_nueva") + f"?cliente={self.juan.id}")
+        self.assertContains(r, f'name="cli-cliente" value="{self.juan.id}" checked')
+
+    def test_buscar(self):
+        Cliente.objects.create(nombre="María Gómez")
+        url = reverse("web:buscar_clientes")
+        r = self.client.get(url, {"campo": "cliente", "buscar_cliente": "maría"})
+        self.assertContains(r, "María Gómez")
+        self.assertNotContains(r, "Juan Pérez")
+        self.assertContains(r, 'name="cliente" value=""')       # "Sin cliente" siempre está
+        r = self.client.get(url, {"campo": "cliente", "buscar_cliente": "nadie"})
+        self.assertContains(r, "No hay clientes con")
+        # el elegido no se pierde aunque no coincida con lo buscado
+        r = self.client.get(url, {"campo": "cliente", "buscar_cliente": "maría", "cliente": self.juan.id})
+        self.assertContains(r, f'value="{self.juan.id}" checked')
+
+    def test_buscar_campo_desconocido(self):
+        r = self.client.get(reverse("web:buscar_clientes"), {"campo": "otro"})
+        self.assertEqual(r.status_code, 404)
+
+    def test_venta_rapida_no_lista_todos_los_clientes(self):
+        for i in range(20):
+            Cliente.objects.create(nombre=f"Otro {i:02d}")
+        r = self.client.get(reverse("web:venta_rapida"))
+        self.assertContains(r, 'class="opcion"', count=7)       # "Sin cliente" + 6
+        self.assertNotContains(r, "<select name=\"cliente\"")
 
 
 class DevolucionesTests(Base):

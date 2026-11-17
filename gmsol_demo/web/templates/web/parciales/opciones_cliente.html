@@ -1,0 +1,6 @@
+{% load formato %}{# Lista de clientes para elegir (radios). Sin buscar: los últimos atendidos. La reemplaza el buscador por HTMX. #}
+<div class="opciones-cliente" id="opciones-{{ oc.campo }}">
+<label class="opcion"><input type="radio" name="{{ oc.campo }}" value=""{% if not oc.elegido %} checked{% endif %}><span><span class="nombre">{{ oc.vacio }}</span></span></label>
+{% for c in oc.lista %}<label class="opcion"><input type="radio" name="{{ oc.campo }}" value="{{ c.pk }}"{% if c.pk == oc.elegido %} checked{% endif %}><span><span class="nombre">{{ c.nombre }}</span>{% with tel=c|telefono_principal %}{% if tel %}<small>{{ tel }}</small>{% endif %}{% endwith %}</span></label>
+{% endfor %}<p class="ayuda" role="status">{% if oc.q %}{% if oc.lista %}{% if oc.mas %}Hay {{ oc.mas }} más: escribí un poco más para encontrarlo.{% else %}{{ oc.lista|length }} cliente{{ oc.lista|length|pluralize }} con “{{ oc.q }}”.{% endif %}{% else %}No hay clientes con “{{ oc.q }}”.{% endif %}{% else %}Últimos clientes atendidos. Para otro, buscalo por nombre o teléfono.{% endif %}</p>
+</div>

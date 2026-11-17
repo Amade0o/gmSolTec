@@ -1,27 +1,33 @@
 {% extends "web/base.html" %}
 {# Nueva orden: cliente, equipo, reparaciones, productos y seña (resumen en vivo) #}
-{% load static %}
+{% load static estaticos %}
 {% block titulo %}Nueva orden{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:ordenes' %}">Órdenes</a> / Nueva</div>
+{% url 'web:ordenes' as u_ordenes %}{% include "web/parciales/migas.html" with a1=u_ordenes t1="Órdenes" actual="Nueva" %}
 <div class="head">
 <h1>Nueva orden <span class="sub">El número se asigna al guardar</span></h1>
 </div>
 
-{# hx-*: cada vez que se cambia un campo, el servidor recalcula el resumen de la derecha #}
+{% comment %} hx-*: cada vez que se cambia un campo, el servidor recalcula el resumen de la derecha.
+   hx-sync="this:replace": si llega un cambio nuevo, se descarta el cálculo anterior (nunca queda un total viejo).
+   El buscador de clientes no dispara este cálculo (lo frena app.js). {% endcomment %}
 <form method="post" class="cols" novalidate
-      hx-post="{% url 'web:orden_nueva_resumen' %}" hx-trigger="load, input delay:300ms, change"
-      hx-target="#resumen" hx-swap="innerHTML">
+      hx-post="{% url 'web:orden_nueva_resumen' %}" hx-trigger="load, input delay:300ms"
+      hx-target="#resumen" hx-swap="innerHTML" hx-sync="this:replace">
 {% csrf_token %}
 <div class="pasos">
 
 <section class="panel">
 <h2><span class="paso">1</span>Cliente</h2>
 {% include "web/parciales/errores_form.html" with form=cliente_form %}
-<div class="fila-campos">
-{% include "web/parciales/campo.html" with campo=cliente_form.cliente clase="ancho" %}
-<span class="o">o nuevo</span>
-{% include "web/parciales/campo.html" with campo=cliente_form.nuevo_nombre %}
+<fieldset class="campo elegir-cliente{% if cliente_form.cliente.errors %} con-error{% endif %}">
+<legend>Cliente existente</legend>
+{% include "web/parciales/buscar_cliente.html" %}
+{% for e in cliente_form.cliente.errors %}<small class="error">{{ e }}</small>{% endfor %}
+</fieldset>
+<div class="fila-campos agregar">
+<span class="o">o uno nuevo:</span>
+{% include "web/parciales/campo.html" with campo=cliente_form.nuevo_nombre clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=cliente_form.nuevo_telefono %}
 </div>
 </section>
@@ -35,16 +41,16 @@
 </div>
 {% include "web/parciales/campo.html" with campo=equipo_form.problema %}
 <div class="fila-campos">
-<div class="campo">
-<span class="etiqueta">{{ equipo_form.tipo_bloqueo.label }}</span>
+<fieldset class="campo">
+<legend>{{ equipo_form.tipo_bloqueo.label }}</legend>
 <div class="segmento opciones" data-bloqueo>{% for opcion in equipo_form.tipo_bloqueo %}{{ opcion.tag }}<label for="{{ opcion.id_for_label }}">{{ opcion.choice_label }}</label>{% endfor %}</div>
-</div>
+</fieldset>
 {% include "web/parciales/campo.html" with campo=equipo_form.clave_bloqueo clase="clave" %}
 </div>
 <div class="patron" data-patron="{{ equipo_form.clave_bloqueo.id_for_label }}" hidden>
-<div class="grilla" aria-label="Dibujá el patrón tocando los puntos en orden">
+<div class="grilla" role="group" aria-label="Patrón: tocá los puntos en orden">
 <svg class="trazo" viewBox="0 0 150 150" aria-hidden="true"><polyline points=""/></svg>
-{% for i in "123456789" %}<button type="button" data-punto="{{ i }}" aria-label="Punto {{ i }}"></button>{% endfor %}
+{% for i in "123456789" %}<button type="button" data-punto="{{ i }}" aria-pressed="false" aria-label="Punto {{ i }}"></button>{% endfor %}
 </div>
 <button type="button" class="btn chico" data-borrar>Borrar patrón</button>
 </div>
@@ -75,11 +81,11 @@
 <aside class="lateral">
 <section class="panel resumen">
 <h2>Resumen</h2>
-<div id="resumen"></div>
+<div id="resumen" aria-live="polite"></div>
 <button class="btn pri ancho" type="submit">Guardar orden</button>
 <a class="btn ancho" href="{% url 'web:ordenes' %}">Cancelar</a>
 </section>
 </aside>
 </form>
 {% endblock %}
-{% block scripts %}<script src="{% static 'web/js/patron.js' %}"></script>{% endblock %}
+{% block scripts %}<script src="{% estatico 'web/js/patron.js' %}" defer></script>{% endblock %}

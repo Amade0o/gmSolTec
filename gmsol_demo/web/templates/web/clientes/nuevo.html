@@ -2,7 +2,7 @@
 {# Alta de cliente #}
 {% block titulo %}Nuevo cliente{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:clientes' %}">Clientes</a> / Nuevo</div>
+{% url 'web:clientes' as u_clientes %}{% include "web/parciales/migas.html" with a1=u_clientes t1="Clientes" actual="Nuevo" %}
 <div class="head"><h1>Nuevo cliente</h1></div>
 
 <section class="panel">
@@ -18,8 +18,8 @@
 </div>
 {% include "web/parciales/campo.html" with campo=form.notas %}
 <div class="acts">
-<button class="btn pri">Guardar</button>
-<button class="btn" name="despues" value="orden">Guardar y crear orden</button>
+<button class="btn pri" type="submit">Guardar</button>
+<button class="btn" type="submit" name="despues" value="orden">Guardar y crear orden</button>
 </div>
 </form>
 </section>

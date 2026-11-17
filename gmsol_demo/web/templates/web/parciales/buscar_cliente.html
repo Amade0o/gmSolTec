@@ -1,0 +1,8 @@
+{# Elegir cliente: buscador (HTMX) + lista de opciones. Necesita "oc" (ver views._opciones_cliente). #}
+<label class="oculto" for="buscar-{{ oc.campo }}">Buscar cliente por nombre o teléfono</label>
+<input type="search" id="buscar-{{ oc.campo }}" name="buscar_cliente" class="entrada" placeholder="Buscar por nombre o teléfono…"
+       spellcheck="false" autocomplete="off" aria-controls="opciones-{{ oc.campo }}" data-buscar-cliente
+       hx-get="{% url 'web:buscar_clientes' %}" hx-trigger="input changed delay:250ms, search"
+       hx-target="#opciones-{{ oc.campo }}" hx-swap="outerHTML" hx-sync="this:replace"
+       hx-include="#opciones-{{ oc.campo }} input:checked" hx-vals='{"campo": "{{ oc.campo }}"}'>
+{% include "web/parciales/opciones_cliente.html" %}

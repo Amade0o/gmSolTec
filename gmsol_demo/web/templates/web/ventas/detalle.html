@@ -1,14 +1,15 @@
 {% extends "web/base.html" %}
-{# Detalle de una venta (directa o de una orden) #}
-{% load formato %}
+{# Detalle de una venta (directa o de una orden). Se puede imprimir como comprobante. #}
+{% load formato static estaticos %}
 {% block titulo %}Venta #{{ venta.id }}{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:ventas' %}">Ventas</a> / #{{ venta.id }}</div>
+{% url 'web:ventas' as u_ventas %}{% with n=venta.id|stringformat:"s" %}{% include "web/parciales/migas.html" with a1=u_ventas t1="Ventas" actual="#"|add:n %}{% endwith %}
 <div class="head">
 <div>
 <h1>Venta #{{ venta.id }} <span class="sub">{% if venta.cliente %}<a href="{% url 'web:cliente_detalle' venta.cliente_id %}">{{ venta.cliente }}</a>{% else %}Sin cliente{% endif %}</span></h1>
 <p class="sec">{{ venta.fecha|date:"j \d\e F \d\e Y, H:i" }} · {% if orden %}Entrega de la <a href="{% url 'web:orden_detalle' orden.id %}">orden #{{ orden.id }}</a>{% else %}Venta directa{% endif %}</p>
 </div>
+<button type="button" class="btn" data-imprimir hidden><svg aria-hidden="true"><use href="{% estatico 'web/img/iconos.svg' %}#i-imprimir"/></svg>Imprimir</button>
 </div>
 
 <div class="cols">
@@ -18,15 +19,15 @@
 {# ---------- Lo que se cobró de la orden ---------- #}
 {% for equipo in orden.equipos.all %}
 <section class="panel">
-<h2>Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
+<h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
 <p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
-<table>
-<thead><tr><th>Reparación</th><th class="der">Precio</th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-equipo-{{ equipo.id }}"><table>
+<thead><tr><th scope="col">Reparación</th><th scope="col" class="der">Precio</th></tr></thead>
 <tbody>
 {% for linea in equipo.lineas_reparacion.all %}
 <tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}"><td>{{ linea.reparacion }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobró: el equipo no tuvo arreglo.</small>{% endif %}
 </section>
 {% endfor %}
@@ -35,30 +36,30 @@
 {% with lineas=orden.lineas_producto.all|default:venta.lineas_producto.all %}
 {% if lineas %}
 <section class="panel">
-<h2>Productos</h2>
-<table>
-<thead><tr><th>Producto</th><th class="der">Cant.</th><th class="der">Precio</th><th class="der">Subtotal</th></tr></thead>
+<h2 id="t-productos">Productos</h2>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-productos"><table>
+<thead><tr><th scope="col">Producto</th><th scope="col" class="der">Cant.</th><th scope="col" class="der">Precio</th><th scope="col" class="der">Subtotal</th></tr></thead>
 <tbody>
 {% for linea in lineas %}
 <tr><td>{{ linea.producto }}</td><td class="der">{{ linea.cantidad_adquirida }}</td><td class="der">{{ linea.precio_vendido|pesos }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 </section>
 {% endif %}
 {% endwith %}
 
 <section class="panel">
-<h2>Pagos</h2>
+<h2 id="t-pagos">Pagos</h2>
 {% if pagos %}
-<table>
-<thead><tr><th>Fecha</th><th>Método</th><th class="der">Monto</th><th class="der">Recargo</th><th class="der">Cobrado</th></tr></thead>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-pagos"><table>
+<thead><tr><th scope="col">Fecha</th><th scope="col">Método</th><th scope="col" class="der">Monto</th><th scope="col" class="der">Recargo</th><th scope="col" class="der">Cobrado</th></tr></thead>
 <tbody>
 {% for pago in pagos %}
 <tr><td class="sec">{{ pago.fecha|date:"j M, H:i" }}</td><td>{{ pago.metodo_pago.nombre }}</td><td class="der">{{ pago.monto|pesos }}</td>
 <td class="der sec">{% if pago.recargo_porcentaje %}{{ pago.recargo_porcentaje|floatformat:"-2" }}% · {{ pago.recargo_monto|pesos }}{% else %}—{% endif %}</td>
 <td class="der">{{ pago.total_cobrado|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 {% if orden %}<small class="ayuda">Incluye la seña y los pagos hechos mientras la orden estaba abierta.</small>{% endif %}
 {% else %}<p class="vacio">Sin pagos.</p>{% endif %}
 </section>
@@ -77,4 +78,5 @@
 </section>
 </aside>
 </div>
+<p class="solo-imprimir sec">GM Soluciones tecnológicas · Impreso el {% now "j/n/Y H:i" %}</p>
 {% endblock %}

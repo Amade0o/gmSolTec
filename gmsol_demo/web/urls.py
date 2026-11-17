@@ -33,6 +33,7 @@ urlpatterns = [
     # Clientes
     path("clientes/", views.lista_clientes, name="clientes"),
     path("clientes/nuevo/", views.cliente_nuevo, name="cliente_nuevo"),
+    path("clientes/buscar/", views.buscar_clientes, name="buscar_clientes"),
     path("clientes/<int:numero>/", views.cliente_detalle, name="cliente_detalle"),
 
     # Productos (el stock llega con la etapa 4)

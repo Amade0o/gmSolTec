@@ -1,9 +1,9 @@
 {% extends "web/base.html" %}
-{# Cobrar el saldo y cerrar la orden (crea la venta) #}
+{# Cobrar el saldo y cerrar la orden (crea la venta). Esta pantalla ya es la confirmación: no pide otra. #}
 {% load formato %}
 {% block titulo %}Entregar orden #{{ orden.id }}{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:ordenes' %}">Órdenes</a> / <a href="{% url 'web:orden_detalle' orden.id %}">#{{ orden.id }}</a> / Entregar</div>
+<nav class="migas" aria-label="Ruta"><ol><li><a href="{% url 'web:ordenes' %}">Órdenes</a></li><li><a href="{% url 'web:orden_detalle' orden.id %}">#{{ orden.id }}</a></li><li aria-current="page">Entregar</li></ol></nav>
 <div class="head">
 <h1>Entregar orden #{{ orden.id }} <span class="sub">{{ orden.cliente }}</span></h1>
 {% include "web/parciales/pista.html" with o=orden %}
@@ -12,9 +12,9 @@
 <div class="cols">
 <div class="pasos">
 <section class="panel">
-<h2>Qué se lleva</h2>
-<table>
-<thead><tr><th>Detalle</th><th class="der">Importe</th></tr></thead>
+<h2 id="t-lleva">Qué se lleva</h2>
+<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-lleva"><table>
+<thead><tr><th scope="col">Detalle</th><th scope="col" class="der">Importe</th></tr></thead>
 <tbody>
 {% for equipo in orden.equipos.all %}{% for linea in equipo.lineas_reparacion.all %}
 <tr class="{% if equipo.estado == 'no_arreglable' %}tachado{% endif %}"><td>{% if equipo.modelo %}{{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %} · {{ linea.reparacion }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
@@ -22,7 +22,7 @@
 {% for linea in orden.lineas_producto.all %}
 <tr><td>{{ linea.cantidad_adquirida }} × {{ linea.producto }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 <p class="ayuda">¿Se lleva algo más? <a href="{% url 'web:orden_detalle' orden.id %}">Agregalo en la orden</a> o hacé una <a href="{% url 'web:venta_rapida' %}">venta rápida</a> aparte.</p>
 </section>
 </div>
@@ -43,9 +43,9 @@
 {% if orden.monto_adeudado > 0 %}
 {% include "web/parciales/campo.html" with campo=form.metodo_pago %}
 {% include "web/parciales/campo.html" with campo=form.recargo_porcentaje %}
-<button class="btn pri ancho">Cobrar {{ orden.monto_adeudado|pesos }} y entregar</button>
+<button class="btn pri ancho" type="submit">Cobrar {{ orden.monto_adeudado|pesos }} y entregar</button>
 {% else %}
-<button class="btn pri ancho">Entregar</button>
+<button class="btn pri ancho" type="submit">Entregar</button>
 {% endif %}
 </form>
 {% endif %}

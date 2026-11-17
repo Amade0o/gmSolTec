@@ -18,7 +18,7 @@ La interfaz que va a usar el dueño todos los días, en la PC del local y, de a 
 |---|---|---|
 | 1 | ✅ **App nueva `web`** | Vistas, plantillas y archivos estáticos. `catalogo` sigue siendo solo modelos, servicios y admin |
 | 2 | ✅ **Las vistas no tienen reglas de negocio** | Llaman a funciones de `catalogo/servicios.py` (`cerrar_orden`, `vender_directo` y las nuevas). Así las reglas están en un solo lugar |
-| 3 | ✅ **CSS propio** | Sin Bootstrap ni Tailwind. Los valores de la guía van como variables CSS: `gmsol.css` (base v1) + `gmsol-v2.css` (diseño v2, se carga encima; sacándolo se vuelve a la v1) |
+| 3 | ✅ **CSS propio** | Sin Bootstrap ni Tailwind. Los valores de la guía van como variables CSS: un solo `gmsol.css` en capas (`@layer`), con tamaños en `rem` (ver la sección 8 de la guía de diseño) |
 | 4 | ✅ **HTMX para lo dinámico** | El resumen de la orden (total, saldo) se recalcula **en el servidor** al cambiar un campo, con la misma lógica de recargos y totales del sistema. Evita duplicar reglas en JavaScript |
 | 5 | ✅ **JavaScript propio solo para el patrón de bloqueo** | La grilla de 9 puntos que guarda `1-5-9-6` (`static/web/js/patron.js`). Sin JS la clave se escribe a mano |
 | 6 | ✅ **HTMX en un archivo local** | Se descarga una vez a `static/`, sin depender de internet para funcionar |
@@ -48,11 +48,12 @@ gmsol_demo/
     │   ├── ordenes/            lista, nueva, detalle
     │   └── parciales/          trozos que HTMX actualiza (resumen, filas)
     └── static/web/
-        ├── css/gmsol.css       base (v1)
-        ├── css/gmsol-v2.css    diseño v2, se carga encima
+        ├── css/gmsol.css       todos los estilos (diseño v2), en capas
+        ├── fuentes/            Figtree, Barlow Condensed, IBM Plex Mono (woff2)
         ├── js/htmx.min.js
+        ├── js/app.js           avisos, confirmar, imprimir, buscador de clientes
         ├── js/patron.js
-        └── img/                logo.png, logo-oscuro.png
+        └── img/                logo.webp, favicon.png, iconos.svg (+ logo.png original)
 ```
 
 ---

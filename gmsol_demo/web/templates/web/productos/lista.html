@@ -8,42 +8,37 @@
 <a class="btn" href="{% url 'web:producto_nuevo' %}">Nuevo producto</a>
 </div>
 
-<form class="filtros" method="get" role="search">
-<nav class="segmento" aria-label="Filtrar por estado">
-{% for clave, nombre in estados %}<a href="?estado={{ clave }}{% if categoria %}&amp;categoria={{ categoria }}{% endif %}{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if clave == estado %}on{% endif %}">{{ nombre }}</a>{% endfor %}
+<search><form class="filtros" method="get">
+<nav class="segmento filtro" aria-label="Filtrar por estado">
+{% for clave, nombre in estados %}<a href="{% querystring estado=clave pagina=None %}"{% if clave == estado %} aria-current="page"{% endif %}>{{ nombre }}</a>{% endfor %}
 </nav>
 <input type="hidden" name="estado" value="{{ estado }}">
-<select class="entrada" name="categoria" aria-label="Categoría" style="max-width:220px">
+<select class="entrada" name="categoria" aria-label="Categoría">
 <option value="">Todas las categorías</option>
 {% for c in categorias %}<option value="{{ c.id }}"{% if c.id == categoria %} selected{% endif %}>{{ c.nombre }}{% if not c.activa %} (desactivada){% endif %}</option>{% endfor %}
 </select>
-<input class="entrada" name="q" value="{{ q }}" placeholder="Nombre o marca" aria-label="Buscar por nombre o marca">
-<button class="btn">Filtrar</button>
-</form>
+<input type="search" class="entrada" name="q" value="{{ q }}" placeholder="Nombre o marca" aria-label="Buscar por nombre o marca" spellcheck="false">
+<button class="btn" type="submit">Filtrar</button>
+</form></search>
 
 <section class="panel">
 {% if pagina.object_list %}
-<div style="overflow-x:auto"><table>
-<thead><tr><th>Producto</th><th>Categoría</th><th>Marca</th><th class="der">Compra</th><th class="der">Venta</th><th class="der">Margen</th></tr></thead>
+<div class="tabla-tarjetas"><table>
+<caption class="oculto">Productos</caption>
+<thead><tr><th scope="col">Producto</th><th scope="col">Categoría</th><th scope="col">Marca</th><th scope="col" class="der">Compra</th><th scope="col" class="der">Venta</th><th scope="col" class="der">Margen</th></tr></thead>
 <tbody>
 {% for p in pagina %}
 <tr class="{% if not p.activo %}tachado{% endif %}">
-<td class="cli"><a class="fila-link" href="{% url 'web:producto_detalle' p.id %}">{{ p.nombre }}</a>{% if not p.activo %} <span class="sec">(desactivado)</span>{% endif %}</td>
-<td>{{ p.categoria }}</td>
-<td class="sec">{{ p.marca|default:"—" }}</td>
-<td class="der sec">{{ p.precio_compra|pesos }}</td>
-<td class="der"><b>{{ p.precio_venta|pesos }}</b></td>
-<td class="der{% if p.margen is not None and p.margen < 0 %} perdida{% endif %}">{% if p.margen is None %}—{% else %}{{ p.margen|floatformat:"-1" }} %{% endif %}</td>
+<td class="cli" data-label="Producto"><a class="fila-link" href="{% url 'web:producto_detalle' p.id %}">{{ p.nombre }}</a>{% if not p.activo %} <span class="sec">(desactivado)</span>{% endif %}</td>
+<td data-label="Categoría">{{ p.categoria }}</td>
+<td class="sec" data-label="Marca">{{ p.marca|default:"—" }}</td>
+<td class="der sec" data-label="Compra">{{ p.precio_compra|pesos }}</td>
+<td class="der" data-label="Venta"><b>{{ p.precio_venta|pesos }}</b></td>
+<td class="der{% if p.margen is not None and p.margen < 0 %} perdida{% endif %}" data-label="Margen">{% if p.margen is None %}—{% else %}{{ p.margen|floatformat:"-1" }} %{% endif %}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>
-{% if pagina.has_other_pages %}
-<nav class="paginas" aria-label="Páginas">
-{% if pagina.has_previous %}<a class="btn" href="?estado={{ estado }}&amp;categoria={{ categoria|default:'' }}&amp;q={{ q|urlencode }}&amp;pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
-<span class="sec">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
-{% if pagina.has_next %}<a class="btn" href="?estado={{ estado }}&amp;categoria={{ categoria|default:'' }}&amp;q={{ q|urlencode }}&amp;pagina={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
-</nav>
-{% endif %}
+{% include "web/parciales/paginas.html" %}
 {% else %}
 <p class="vacio">No hay productos{% if q %} que coincidan con “{{ q }}”{% endif %}.</p>
 {% endif %}

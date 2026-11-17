@@ -1,13 +1,13 @@
 {# Un formset como tabla: una fila por formulario, primero qué y después el precio #}
 {{ formset.management_form }}
-{% for e in formset.non_form_errors %}<div class="aviso error">{{ e }}</div>{% endfor %}
-<div class="tabla-form"><table>
-<thead><tr>{% for campo in formset.empty_form.visible_fields %}<th>{{ campo.label }}</th>{% endfor %}</tr></thead>
+{% for e in formset.non_form_errors %}<div class="aviso error" role="alert">{{ e }}</div>{% endfor %}
+<div class="tabla-form tabla-scroll"><table>
+<thead><tr>{% for campo in formset.empty_form.visible_fields %}<th scope="col">{{ campo.label }}</th>{% endfor %}</tr></thead>
 <tbody>
 {% for form in formset %}
 <tr>
 {% for campo in form.visible_fields %}
-<td class="{% if campo.errors %}con-error{% endif %}">{{ campo }}{% for e in campo.errors %}<small class="error">{{ e }}</small>{% endfor %}</td>
+<td class="{% if campo.errors %}con-error{% endif %}"><label class="oculto" for="{{ campo.id_for_label }}">{{ campo.label }}, fila {{ forloop.parentloop.counter }}</label>{{ campo }}{% for e in campo.errors %}<small class="error">{{ e }}</small>{% endfor %}</td>
 {% endfor %}
 </tr>
 {% if form.non_field_errors %}<tr><td colspan="9">{% for e in form.non_field_errors %}<small class="error">{{ e }}</small>{% endfor %}</td></tr>{% endif %}

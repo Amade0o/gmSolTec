@@ -124,7 +124,12 @@ En la v2 el estado se muestra como **hexágono de color + texto del color**, sin
 ## 8. Cómo se implementa
 
 - **Django + plantillas + HTMX**, con **CSS propio** (sin Bootstrap ni Tailwind). Los valores de esta guía van como variables CSS.
-- **Dos archivos:** `gmsol.css` (base v1) y `gmsol-v2.css` (lo que cambia en la v2). Lo nuevo va en `gmsol-v2.css`.
-- Tipografías por enlace a Google Fonts (Figtree, Barlow Condensed, IBM Plex Mono). Pasan a archivos locales en la etapa 12.
-- **JavaScript** solo para el cálculo en vivo y el patrón de bloqueo.
+- **Un solo archivo `gmsol.css`**, ordenado en capas (`@layer base, disposicion, componentes, pantallas, extras`): lo de una capa posterior gana sin pelear por especificidad. Los colores son variables (`--ok-fondo`, `--campo-borde`…): **no escribir colores sueltos**.
+- **Tamaños de letra en `rem`** y alturas con `min-height` (no `height`): si se agranda la letra, nada se corta. Los campos tienen como mínimo 16px de letra (si no, el iPhone hace zoom).
+- **Contraste:** texto 4.5:1, bordes de campos y foco 3:1. En el menú oscuro el foco usa `--cta`.
+- Tipografías **alojadas en el proyecto** (`static/web/fuentes/`, woff2 latino): sin pedidos a Google.
+- **JavaScript** solo para mejoras (`app.js`: avisos flotantes, confirmar, imprimir, buscador de clientes; `patron.js`). Todo funciona sin JS.
+- **Tablas:** las de listado van en `<div class="tabla-tarjetas">` con `data-label` en cada celda (en el celular pasan a tarjetas); las demás en `<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="…">`. `<th scope="col">` siempre.
+- **Acciones que borran o desactivan:** botón con `data-confirmar="¿…?"` (abre el diálogo de confirmación).
+- Íconos en `static/web/img/iconos.svg` (`<use href="…/iconos.svg#i-nombre">`).
 - Las pantallas se construyen en este orden: inicio, nueva orden, lista de órdenes, detalle de orden (cerrar y devolver), venta rápida, entregar.

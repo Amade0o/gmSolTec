@@ -1,0 +1,8 @@
+{# Anterior / Siguiente de una lista. {% querystring %} conserva los filtros y la búsqueda. #}
+{% if pagina.has_other_pages %}
+<nav class="paginas" aria-label="Páginas">
+{% if pagina.has_previous %}<a class="btn" href="{% querystring pagina=pagina.previous_page_number %}">Anterior</a>{% endif %}
+<span class="sec">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+{% if pagina.has_next %}<a class="btn" href="{% querystring pagina=pagina.next_page_number %}">Siguiente</a>{% endif %}
+</nav>
+{% endif %}

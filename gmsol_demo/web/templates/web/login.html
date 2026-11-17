@@ -1,19 +1,21 @@
-{% load static %}<!doctype html>
+{% load static estaticos %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="text-scale" content="scale">
 <title>Ingresar · GM Soluciones</title>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'web/css/gmsol.css' %}">
-<link rel="stylesheet" href="{% static 'web/css/gmsol-v2.css' %}">
+<link rel="icon" href="{% static 'web/img/favicon.png' %}" type="image/png">
+<link rel="preload" href="{% static 'web/fuentes/figtree-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{% estatico 'web/css/gmsol.css' %}">
 </head>
 <body>
-<div class="login">
+<main class="login">
 <div class="panel">
-<img src="{% static 'web/img/logo.png' %}" alt="GM Soluciones tecnológicas">
+<img src="{% static 'web/img/logo.webp' %}" width="261" height="128" alt="GM Soluciones tecnológicas" fetchpriority="high">
 <h1>Ingresar</h1>
-{% if form.errors %}<div class="err">Usuario o contraseña incorrectos.</div>{% endif %}
+{% if form.errors %}<div class="err" role="alert">Usuario o contraseña incorrectos.</div>{% endif %}
+{# Django ya pone autocomplete="username" y "current-password": el navegador ofrece la contraseña guardada #}
 <form method="post">{% csrf_token %}
 <div><label for="id_username">Usuario</label>{{ form.username }}</div>
 <div><label for="id_password">Contraseña</label>{{ form.password }}</div>
@@ -21,6 +23,6 @@
 <button class="btn pri" type="submit">Entrar</button>
 </form>
 </div>
-</div>
+</main>
 </body>
 </html>

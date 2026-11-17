@@ -51,7 +51,7 @@ class AccesoTests(DatosBase):
     def test_pantalla_de_ingreso(self):
         r = self.client.get(reverse("web:login"))
         self.assertContains(r, "Ingresar")
-        self.assertContains(r, "logo.png")
+        self.assertContains(r, "logo.webp")
 
     def test_ingresar_con_clave_correcta(self):
         r = self.client.post(reverse("web:login"), {"username": "papa", "password": "clave-segura-123"})
@@ -77,7 +77,7 @@ class InicioTests(DatosBase):
         r = self.client.get(reverse("web:inicio"))
         self.assertEqual(r.status_code, 200)
         for texto in ("Órdenes de trabajo", "Devoluciones", "Facturación ARCA", "Cerrar sesión",
-                      "Nueva orden", "Venta rápida", "Entregar equipo", "logo.png", "gmsol.css"):
+                      "Nueva orden", "Venta rápida", "Entregar equipo", "logo.webp", "gmsol.css", "Saltar al contenido"):
             self.assertContains(r, texto)
 
     def test_vacio(self):
@@ -133,7 +133,8 @@ class InicioTests(DatosBase):
 
     def test_diseno_v2_y_fecha(self):
         r = self.client.get(reverse("web:inicio"))
-        self.assertContains(r, "gmsol-v2.css")
+        self.assertContains(r, "gmsol.css")
+        self.assertNotContains(r, "fonts.googleapis.com")      # fuentes alojadas en el proyecto
         self.assertContains(r, 'class="fecha"')
 
     def test_pista_de_progreso_en_la_tabla(self):

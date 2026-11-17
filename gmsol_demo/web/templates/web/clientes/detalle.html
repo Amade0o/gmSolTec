@@ -3,7 +3,7 @@
 {% load formato %}
 {% block titulo %}{{ cliente.nombre }}{% endblock %}
 {% block contenido %}
-<div class="migas"><a href="{% url 'web:clientes' %}">Clientes</a> / {{ cliente.nombre }}</div>
+{% url 'web:clientes' as u_clientes %}{% include "web/parciales/migas.html" with a1=u_clientes t1="Clientes" actual=cliente.nombre %}
 <div class="head">
 <h1>{{ cliente.nombre }}</h1>
 <a class="btn pri" href="{% url 'web:orden_nueva' %}?cliente={{ cliente.id }}">Nueva orden</a>
@@ -31,23 +31,23 @@
 </div>
 {% include "web/parciales/campo.html" with campo=datos_form.direccion %}
 {% include "web/parciales/campo.html" with campo=datos_form.notas %}
-<button class="btn">Guardar datos</button>
+<button class="btn" type="submit">Guardar datos</button>
 </form>
 </details>
 </section>
 
 {# ---------- Teléfonos ---------- #}
 <section class="panel">
-<h2>Teléfonos</h2>
+<h2 id="t-telefonos">Teléfonos</h2>
 {% if telefonos %}
-<table>
+<table aria-labelledby="t-telefonos">
 <tbody>
 {% for t in telefonos %}
 <tr>
 <td>{{ t.numero }}{% if t.principal %} <span class="estado ok">Principal</span>{% endif %}</td>
-<td class="der"><form method="post" class="en-linea" style="justify-content:flex-end">{% csrf_token %}<input type="hidden" name="telefono" value="{{ t.id }}">
-{% if not t.principal %}<button class="enlace" name="accion" value="principal">Hacer principal</button>{% endif %}
-<button class="enlace" name="accion" value="quitar_telefono">Quitar</button></form></td>
+<td class="der"><form method="post" class="en-linea der">{% csrf_token %}<input type="hidden" name="telefono" value="{{ t.id }}">
+{% if not t.principal %}<button class="enlace" type="submit" name="accion" value="principal">Hacer principal</button>{% endif %}
+<button class="enlace" type="submit" name="accion" value="quitar_telefono" data-confirmar="¿Quitar el teléfono {{ t.numero }}?" data-confirmar-si="Sí, quitar">Quitar</button></form></td>
 </tr>
 {% endfor %}
 </tbody></table>
@@ -56,24 +56,24 @@
 <input type="hidden" name="accion" value="telefono">
 {% include "web/parciales/campo.html" with campo=telefono_form.numero clase="ancho" %}
 <label class="en-linea">{{ telefono_form.principal }} Principal</label>
-<button class="btn">Agregar teléfono</button>
+<button class="btn" type="submit">Agregar teléfono</button>
 </form>
 </section>
 
 {# ---------- Órdenes ---------- #}
 <section class="panel">
-<h2>Órdenes de trabajo</h2>
+<h2 id="t-ordenes">Órdenes de trabajo</h2>
 {% if ordenes %}
-<div style="overflow-x:auto"><table>
-<thead><tr><th>N°</th><th>Recibida</th><th>Equipo</th><th>Estado</th><th class="der">Saldo</th></tr></thead>
+<div class="tabla-tarjetas"><table aria-labelledby="t-ordenes">
+<thead><tr><th scope="col">N°</th><th scope="col">Recibida</th><th scope="col">Equipo</th><th scope="col">Estado</th><th scope="col" class="der">Saldo</th></tr></thead>
 <tbody>
 {% for o in ordenes %}
 <tr>
-<td class="num"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td>
-<td class="sec">{{ o.fecha_recepcion|date:"j M Y" }}</td>
-<td>{{ o|equipos_texto }}</td>
-<td>{% include "web/parciales/pista.html" %}</td>
-<td class="der{% if o.monto_adeudado < 0 and not o.cerrada %} afavor{% endif %}">{% if o.cerrada %}<a class="sec" href="{% url 'web:venta_detalle' o.venta.id %}">Venta #{{ o.venta.id }}</a>{% else %}{{ o|saldo }}{% endif %}</td>
+<td class="num" data-label="N°"><a href="{% url 'web:orden_detalle' o.id %}"><b>#{{ o.id }}</b></a></td>
+<td class="sec" data-label="Recibida">{{ o.fecha_recepcion|date:"j M Y" }}</td>
+<td data-label="Equipo">{{ o|equipos_texto }}</td>
+<td data-label="Estado">{% include "web/parciales/pista.html" %}</td>
+<td class="der{% if o.monto_adeudado < 0 and not o.cerrada %} afavor{% endif %}" data-label="Saldo">{% if o.cerrada %}<a class="sec" href="{% url 'web:venta_detalle' o.venta.id %}">Venta #{{ o.venta.id }}</a>{% else %}{{ o|saldo }}{% endif %}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>
@@ -83,14 +83,14 @@
 {# ---------- Compras directas ---------- #}
 {% if compras %}
 <section class="panel">
-<h2>Compras en el mostrador</h2>
-<table>
-<thead><tr><th>N°</th><th>Fecha</th><th>Detalle</th><th class="der">Total</th></tr></thead>
+<h2 id="t-compras">Compras en el mostrador</h2>
+<div class="tabla-tarjetas"><table aria-labelledby="t-compras">
+<thead><tr><th scope="col">N°</th><th scope="col">Fecha</th><th scope="col">Detalle</th><th scope="col" class="der">Total</th></tr></thead>
 <tbody>
 {% for v in compras %}
-<tr><td class="num"><a href="{% url 'web:venta_detalle' v.id %}"><b>#{{ v.id }}</b></a></td><td class="sec">{{ v.fecha|date:"j M Y" }}</td><td>{{ v|venta_texto }}</td><td class="der">{{ v.total|pesos }}</td></tr>
+<tr><td class="num" data-label="N°"><a href="{% url 'web:venta_detalle' v.id %}"><b>#{{ v.id }}</b></a></td><td class="sec" data-label="Fecha">{{ v.fecha|date:"j M Y" }}</td><td data-label="Detalle">{{ v|venta_texto }}</td><td class="der" data-label="Total">{{ v.total|pesos }}</td></tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 </section>
 {% endif %}
 </div>

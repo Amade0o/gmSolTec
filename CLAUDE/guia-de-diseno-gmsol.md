@@ -25,7 +25,8 @@
 |---|---|
 | Fondo de la app | `#F6F1E7` (crema) |
 | Paneles | `#FDFBF6` |
-| Líneas y bordes | `#E0D6C3` |
+| Líneas y bordes | `#E0D6C3` (paneles, divisores) |
+| Borde de lo que se toca | `#958369` (`--control-borde`, 3:1): botón secundario, buscador, filtros, tarjetas de cliente. Desde el 18/11/2026: con el borde fino se perdían |
 | Texto | `#2B2420` |
 | Texto secundario | `#6A5F55` |
 | **Botón principal** | Fondo `#F08030` (naranja del logo) con texto **`#201818`** |
@@ -62,7 +63,7 @@ En la v2 el estado se muestra como **hexágono de color + texto del color**, sin
 | Título de pantalla | 28 px, 700 |
 | Título de panel | 16 px, 700 |
 | Etiqueta de campo | 13,5 px, 600, color secundario |
-| Tabla | 14,5 px, números tabulares. Encabezados en mayúscula, 11 px. Nombre del cliente en 600. Montos alineados a la derecha |
+| Tabla | 14,5 px, números tabulares. Encabezados en tipo normal (sin mayúsculas), 13 px, 600 (18/11/2026: antes mayúscula 11 px, se leían mal). Nombre del cliente en 600. Montos alineados a la derecha |
 | Números de las tarjetas de conteo | Barlow Condensed 44 px, 700 |
 
 ---
@@ -83,10 +84,10 @@ En la v2 el estado se muestra como **hexágono de color + texto del color**, sin
 
 ## 5. Componentes
 
-- **Botón principal:** naranja, texto oscuro, 44 px. **Botón secundario:** fondo de panel, borde fino. **Enlace:** cobre oscuro, subrayado.
+- **Botón principal:** naranja, texto oscuro, 44 px. **Botón secundario:** fondo de panel, borde `--control-borde`. **Enlace:** cobre oscuro, subrayado.
 - **Estado:** hexágono de color + texto del color, 14 px, peso 500. (El chip con fondo de la v1 queda en `gmsol.css` por si hace falta.)
 - **Pista de progreso** (el toque propio de la v2): el estado de una orden se dibuja como las **pistas de circuito del logo**, con cuatro nodos: *Recibida → Revisión → Lista → Entregada*. Los pasos hechos van rellenos, el paso actual es un **hexágono** y lo que falta es un círculo vacío. Toma el color del estado (no arreglable: queda en el tercer paso, en rojo). **Siempre va acompañada del texto del estado**: no hay que aprender a leerla. Es decorativa para lectores de pantalla (`aria-hidden`). Se calcula con el filtro `pista` de `web/templatetags/formato.py`, no se guarda nada.
-- **Tarjeta de conteo:** número grande en Barlow Condensed y debajo la etiqueta con su hexágono de color.
+- **Tarjeta de conteo:** número grande en Barlow Condensed y debajo la etiqueta con su hexágono de color. En Inicio cada una es un enlace a su lista (en revisión → Órdenes filtradas, listas → Entregar, devoluciones → Devoluciones).
 - **Panel:** fondo de panel, borde fino, radio 14 px, título arriba. Los pasos de un formulario llevan un número en círculo carbón.
 - **Campo de solo lectura:** fondo crema oscuro, valor en negrita (para valores calculados).
 - **Selector de opciones corto** (tipo de bloqueo): control segmentado, con la opción activa en carbón.
@@ -126,7 +127,7 @@ En la v2 el estado se muestra como **hexágono de color + texto del color**, sin
 - **Django + plantillas + HTMX**, con **CSS propio** (sin Bootstrap ni Tailwind). Los valores de esta guía van como variables CSS.
 - **Un solo archivo `gmsol.css`**, ordenado en capas (`@layer base, disposicion, componentes, pantallas, extras`): lo de una capa posterior gana sin pelear por especificidad. Los colores son variables (`--ok-fondo`, `--campo-borde`…): **no escribir colores sueltos**.
 - **Tamaños de letra en `rem`** y alturas con `min-height` (no `height`): si se agranda la letra, nada se corta. Los campos tienen como mínimo 16px de letra (si no, el iPhone hace zoom).
-- **Contraste:** texto 4.5:1, bordes de campos y foco 3:1. En el menú oscuro el foco usa `--cta`.
+- **Contraste:** texto 4.5:1, bordes de campos, de controles, pasos vacíos de la pista y foco 3:1. En el menú oscuro el foco usa `--cta`.
 - Tipografías **alojadas en el proyecto** (`static/web/fuentes/`, woff2 latino): sin pedidos a Google.
 - **JavaScript** solo para mejoras (`app.js`: avisos flotantes, confirmar, imprimir, buscador de clientes; `patron.js`). Todo funciona sin JS.
 - **Tablas:** las de listado van en `<div class="tabla-tarjetas">` con `data-label` en cada celda (en el celular pasan a tarjetas); las demás en `<div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="…">`. `<th scope="col">` siempre.

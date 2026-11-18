@@ -69,7 +69,7 @@ gmsol_demo/
 | `/ordenes/<n>/entregar/` | Cobrar el saldo y entregar (crea la Venta) | `entregar_orden` |
 | `/devoluciones/` | Marcar que el dinero ya se devolvió; avisa órdenes con saldo a favor sin devolución registrada | `marcar_devuelta` |
 | `/ventas/rapida/` | Venta rápida | `vender_directo` |
-| `/ventas/` | Ventas: filtro por período (hoy, 7 días, este mes, todas), búsqueda por cliente o `#n`, total del período | `Venta.total` |
+| `/ventas/` | Ventas: filtro por período (hoy, 7 días, este mes, todas), búsqueda por cliente o número (igual que en órdenes), total del período | `Venta.total` |
 | `/ventas/<n>/` | Detalle de la venta. Si cerró una orden, muestra sus equipos, productos y pagos | |
 | `/clientes/` | Clientes: búsqueda por nombre, teléfono o email; cantidad de órdenes y la última | |
 | `/clientes/nuevo/` | Alta de cliente ("Guardar y crear orden" abre Nueva orden con el cliente elegido) | `crear_cliente` |
@@ -102,7 +102,7 @@ gmsol_demo/
 | Paso | Qué se hace |
 |---|---|
 | **7.0** ✅ | App `web`, plantilla base (franja y menú), `gmsol.css` con las variables de la guía, login, logo e **Inicio**. Rediseño v2 (`gmsol-v2.css`, fecha del día, pista de progreso) |
-| **7.1** ✅ | Lista de órdenes: filtros por estado, búsqueda por cliente o teléfono, `#12` abre la orden |
+| **7.1** ✅ | Lista de órdenes: filtros por estado, búsqueda por cliente o teléfono (el teléfono se compara solo con los dígitos), `#12` abre la orden. `12` sin numeral también la abre si ningún cliente tiene un teléfono que coincida; si coincide alguno, muestra la lista con la orden #12 primera (18/11/2026) |
 | **7.2** ✅ | **Nueva orden** (el servicio `crear_orden`, el formulario, el resumen con HTMX y el patrón de bloqueo) |
 | **7.3** ✅ | Detalle de orden: estados, reparaciones, productos, pagos, registrar devoluciones |
 | **7.4** ✅ | Venta rápida |
@@ -152,3 +152,27 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 - **Devolver una reparación** desde Devoluciones (o el botón "Devolver" de la orden): ver la regla en `diagrama-clases-modulos-1-a-3-v6.md` §4.5.
 - **"Agregar reparación"** destacado dentro de cada equipo.
 - Las plantillas no usan `{# #}` de varias líneas (se imprime como texto): hay un test que lo controla.
+
+
+## Cambios del 18/11/2026 (pedidos del dueño)
+
+- **Estado de la orden** (debajo del Resumen): cómo quedó cada equipo con botones claros ("Ya está arreglado", "No tenía falla", "No tiene arreglo", "Me equivoqué: volver a «en revisión»") y el **siguiente paso**: devolver lo que sobra ("Ya le devolví $X", `servicios.devolver_saldo_a_favor`) o "Cobrar $X y entregar" / "Entregar al cliente". La pista de una orden terminada sin arreglo llega al final.
+- **Borrar lo cargado por error, como en el admin** (servicios: `quitar_pago`, `anular_devolucion`, `quitar_equipo`, `eliminar_orden`, `anular_venta_directa`, `eliminar_cliente`): solo en órdenes abiertas y nunca dejando dinero sin registrar.
+- **Tipos de equipo** en una tabla (`TipoEquipo`, migración 0017) editable en el Catálogo.
+- **Catálogo agrupado** (Equipos · Reparaciones · Productos · Pagos) y **textos explícitos en todos los botones** ("Agregar marca", "Guardar cliente", "Entregar al cliente y cerrar la orden"…).
+- Alta rápida de modelo/reparación: la marca o categoría nueva se escribe en el mismo lugar con "+ Escribir una … nueva".
+- Al elegir un producto, la cantidad se completa con 1. "Registrar un pago" y "Agregar un producto" van en recuadros de color como "Agregar reparación".
+- Orden con todos los equipos no arreglables **y productos**: queda "Lista para entregar" (ver diagrama v6 §4.2).
+- **Equipo sin arreglo:** después de devolver la seña (si hubo), "Devolver el equipo al cliente" cierra la orden con una venta de $0 (`cerrar_orden` acepta `finalizada`). Esas órdenes siguen "en curso" y aparecen en Entregar hasta devolver el equipo.
+- **Venta rápida:** el resumen muestra el recargo de cada método y "El cliente paga $X".
+- **Registro de ventas** (antes "Ventas"): con qué se cobró cada venta, cuánto entró con recargo y los totales del período por cuenta (efectivo / digital).
+
+## Cambios del 18/11/2026 (tarde)
+
+- Precio con lápiz: todo el recuadro es tocable (antes había que tocar justo el lápiz).
+- Registro de ventas: columna **Tipo** (Orden #N / Venta rápida) y, en las órdenes, también los productos que se llevó.
+- «Revisión / diagnóstico» va **una sola vez por equipo**: solo la primera fila la ofrece y el servidor lo controla (`Reparacion.es_revision`).
+- Las devoluciones son del precio **sin recargo**: el recargo de la tarjeta lo devuelve la plataforma (se aclara en pantalla).
+- "Catálogo" pasa a llamarse **Configuración** (grupo "Ajustes" del menú). Las direcciones siguen en `/catalogo/`.
+- **Imprimir** en la orden abre dos opciones: *la orden* (una hoja, sin devoluciones) y *el comprobante para el cliente* (media hoja con condiciones; el texto de las condiciones es de ejemplo hasta tener el contrato).
+- Pendiente para estadísticas: ver solo productos (diagrama v6, §5.4 #22).

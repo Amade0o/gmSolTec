@@ -216,7 +216,7 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 |---|---|
 | **Nada se borra, se desactiva** | `activa` / `activo` en las clases editables |
 | **El margen no se guarda** | Se calcula; `Configuracion.margen_por_defecto` solo sugiere el precio de venta |
-| **Enumeraciones** | Tipo de equipo, tipo de modelo, estado del equipo, tipo de bloqueo y cuenta del método de pago. Valor interno simple (`contrasena`, `ninguno`) y etiqueta legible |
+| **Enumeraciones** | Estado del equipo, tipo de bloqueo y cuenta del método de pago. Valor interno simple (`contrasena`, `ninguno`) y etiqueta legible. ✅ 18/11/2026: el **tipo de equipo** dejó de ser una enumeración: es la tabla `TipoEquipo` (nombre, clave, activo), editable en el Catálogo. Equipos y modelos apuntan a `TipoEquipo.clave` (la columna sigue guardando `celular`, `notebook`, `pc`) |
 | **Orden en tres niveles** | OrdenTrabajo → EquipoRecibido → LineaReparacion |
 | **Precio por orden** | Las líneas guardan su propio precio: órdenes y ventas viejas no cambian |
 | **Problema, accesorios y clave** | Texto libre. Los accesorios que deja el cliente son una nota, no productos. La clave se guarda tal cual (login + backups cifrados) |
@@ -237,8 +237,8 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 |---|---|
 | `pendiente` | Algún equipo está pendiente (o no hay equipos) |
 | `no_arreglable` | Todos los equipos son `no_arreglable` y **queda dinero retenido** (falta devolverlo). No genera Venta |
-| `finalizada` | Todos los equipos son `no_arreglable` y **no queda dinero retenido** (nunca hubo seña o ya se devolvió). Termina sin Venta. No se bloquea: si se corrige un equipo, la orden vuelve a otro estado |
-| `lista` | Ningún equipo pendiente y no todos son no arreglables |
+| `finalizada` | Todos los equipos son `no_arreglable` y **no queda dinero retenido**. ✅ 18/11/2026: falta **devolverle el equipo al cliente**; al hacerlo se cierra con una Venta de $0 (entrega sin cargo) y pasa a `cerrada`. Si se corrige un equipo, la orden vuelve a otro estado |
+| `lista` | Ningún equipo pendiente y no todos son no arreglables. ✅ 18/11/2026: también si **todos** son no arreglables pero la orden **tiene productos** (el cliente se los lleva): se cobran y se cierra con una Venta de esos productos (antes la orden quedaba trabada) |
 | `cerrada` | Tiene una Venta. Retiro y venta son el mismo acto. Es el único estado que bloquea la orden |
 
 ### 4.3 Dinero (módulo 3)
@@ -305,7 +305,7 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 | 4 | **Activos en transacciones** | Método de pago, producto y reparación inactivos siguen apareciendo al cargar una línea o un pago (pantalla propia) |
 | 5 | **Cancelación por el cliente** | Se arrepiente antes de arreglar: nuevo estado de equipo "cancelado", parecido a no arreglable |
 | 6 | **Estados del equipo** | Se puede pasar de `arreglado` a `pendiente` mientras la orden esté abierta. Falta historial de estados (etapa 6) |
-| 7 | **Venta de $0** | Un equipo sin falla o una revisión gratis cierra con una Venta de $0. 📝 Decidir si queda |
+| 7 | **Venta de $0** | ✅ 18/11/2026: queda. Un equipo sin falla, una revisión gratis o un equipo sin arreglo devuelto cierran con una Venta de $0 (en el registro dice «sin cargo») |
 
 ### 5.3 Para la interfaz propia (etapa 7)
 
@@ -330,6 +330,7 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 | 19 | ❓ `Producto.codigo`, `Cliente.codigo`, datos de `Proveedor`, margen por categoría, teléfono (etiqueta) |
 | 20 | ❓ Blindar en la base las reglas de cantidad y precio |
 | 21 | Módulos 4 y 5: caja y movimientos, compras y proveedores |
+| 22 | **Estadísticas solo de productos** (pedido del dueño, 18/11/2026): ver aparte lo vendido en productos (cantidades, montos, margen, por categoría y por período), sin mezclar con las reparaciones. Los datos ya lo permiten: los productos están en `LineaProductoVenta` (ventas rápidas) y `LineaProductoOrden` (productos llevados en una orden que se cerró con Venta), cada línea con su precio de ese momento; el costo sale de `Producto.precio_compra` (hoy no se guarda el costo en la línea: ver #18). Hay que unir las dos tablas y contar solo las órdenes cerradas |
 
 ---
 

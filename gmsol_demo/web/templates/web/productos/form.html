@@ -27,8 +27,8 @@
 {% include "web/parciales/campo.html" with campo=form.precio_venta %}
 </div>
 <div class="acts">
-<button class="btn pri" type="submit">Guardar</button>
-{% if not producto.pk %}<button class="btn" type="submit" name="despues" value="otro">Guardar y cargar otro</button>{% endif %}
+<button class="btn pri" type="submit">{% if producto.pk %}Guardar cambios{% else %}Guardar producto{% endif %}</button>
+{% if not producto.pk %}<button class="btn" type="submit" name="despues" value="otro">Guardar y cargar otro producto</button>{% endif %}
 </div>
 </form>
 </section>

@@ -73,11 +73,37 @@
     });
   }
 
-  // ---------- Botón Imprimir (comprobante de orden o venta) ----------
+  // ---------- Imprimir ----------
+  // En la orden, "Imprimir ▾" abre un menú (popover) con dos opciones: data-imprimir="orden" o
+  // "comprobante". La opción elegida queda en <html data-imprimir="…"> y el CSS de impresión
+  // muestra solo esa parte. En la venta hay un solo botón (data-imprimir vacío: la página).
+  document.querySelectorAll("[data-imprimir], [data-menu-imprimir]").forEach(function (boton) { boton.hidden = false; });
   document.querySelectorAll("[data-imprimir]").forEach(function (boton) {
-    boton.hidden = false;
-    boton.addEventListener("click", function () { window.print(); });
+    boton.addEventListener("click", function () {
+      var menu = boton.closest("[popover]");
+      if (menu && menu.hidePopover) menu.hidePopover();
+      document.documentElement.dataset.imprimir = boton.dataset.imprimir || "pagina";
+      window.print();
+    });
   });
+  window.addEventListener("afterprint", function () { delete document.documentElement.dataset.imprimir; });
+  // El menú se ubica debajo del botón con CSS (position-area). Donde el navegador todavía no lo
+  // entiende (Firefox, por ejemplo), aparecía en cualquier lado: acá se lo ubica a mano.
+  var menuImprimir = document.getElementById("menu-imprimir");
+  if (menuImprimir && !(window.CSS && CSS.supports("position-area", "bottom span-left"))) {
+    var botonMenu = document.querySelector("[popovertarget='menu-imprimir']");
+    menuImprimir.addEventListener("toggle", function (e) {
+      if (e.newState !== "open" || !botonMenu) return;
+      var r = botonMenu.getBoundingClientRect();
+      menuImprimir.style.position = "fixed";
+      menuImprimir.style.top = r.bottom + "px";           // el CSS ya le da 6px de margen arriba
+      menuImprimir.style.left = Math.max(8, r.right - menuImprimir.offsetWidth) + "px";
+    });
+    // Ubicado a mano no acompaña al botón si se desliza la página: se cierra
+    window.addEventListener("scroll", function () {
+      if (menuImprimir.matches(":popover-open")) menuImprimir.hidePopover();
+    }, { passive: true });
+  }
 
   // ---------- Buscador de clientes (Nueva orden, Venta rápida) ----------
   // Lo que se escribe acá busca clientes (HTMX); no tiene que recalcular el
@@ -164,13 +190,23 @@
     campo.dataset.lapiz = "1";
     var etiqueta = campo.id && document.querySelector("label[for='" + campo.id + "']");
     var nombre = etiqueta ? etiqueta.textContent.replace(/,? fila.*$/, "") : "valor";
-    var caja = document.createElement("span");
+    // Todo el recuadro es un botón: se toca en cualquier parte (el número o el lápiz) para escribir
+    var caja = document.createElement("button");
+    caja.type = "button";
     caja.className = "por-defecto";
-    caja.innerHTML = '<span class="valor"></span><button type="button" class="lapiz">' +
-      '<svg aria-hidden="true"><use href="' + sprite + '#i-lapiz"/></svg><span class="oculto">Cambiar ' +
-      nombre.toLowerCase() + "</span></button>";
+    // Armado con textContent (y no innerHTML): el texto de la etiqueta nunca se interpreta como HTML
+    var oculto = document.createElement("span");
+    oculto.className = "oculto";
+    oculto.textContent = "Cambiar " + nombre.toLowerCase() + ": ";
+    var valor = document.createElement("span");
+    valor.className = "valor";
+    var lapiz = document.createElement("span");
+    lapiz.className = "lapiz";
+    lapiz.setAttribute("aria-hidden", "true");
+    lapiz.innerHTML = '<svg><use href="' + encodeURI(sprite) + '#i-lapiz"/></svg>';   // ruta propia, sin datos del usuario
+    caja.append(oculto, valor, lapiz);
     campo.after(caja);
-    caja.querySelector("button").addEventListener("click", function () {
+    caja.addEventListener("click", function () {
       campo.hidden = false;
       caja.hidden = true;
       if (campo.value === "" && caja.dataset.numero) campo.value = caja.dataset.numero;
@@ -242,6 +278,35 @@
     raiz.querySelectorAll("input[data-por-defecto]").forEach(prepararLapiz);
     raiz.querySelectorAll("[data-quitar-fila], [data-agregar-fila]").forEach(function (b) { b.hidden = false; });
   }
+
+  // Al elegir un producto, la cantidad se completa con 1 (casi siempre es 1; se puede cambiar)
+  document.addEventListener("change", function (e) {
+    if (!e.target.matches("select[data-con-precio]") || !e.target.value) return;
+    var cantidad = filaDe(e.target).querySelector("input[name$='cantidad_adquirida']");
+    if (cantidad && cantidad.value === "") {
+      cantidad.value = "1";
+      cantidad.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+
+  // Alta rápida de modelo o reparación: marca/categoría de la lista O escrita nueva, en el mismo lugar
+  document.addEventListener("click", function (e) {
+    var escribir = e.target.closest("[data-escribir-nuevo]");
+    var elegir = e.target.closest("[data-elegir-lista]");
+    if (!escribir && !elegir) return;
+    var form = (escribir || elegir).closest("form");
+    var deLista = form.querySelector("[data-elegir-padre]");
+    var nuevo = form.querySelector("[data-escribir-padre]");
+    deLista.hidden = !!escribir;
+    nuevo.hidden = !escribir;
+    if (escribir) {
+      deLista.querySelector("select").value = "";
+      nuevo.querySelector("input").focus();
+    } else {
+      nuevo.querySelector("input").value = "";
+      deLista.querySelector("select").focus();
+    }
+  });
 
   mejorar(document);
   document.querySelectorAll("form").forEach(recalcular);

@@ -31,7 +31,7 @@
 </div>
 {% include "web/parciales/campo.html" with campo=datos_form.direccion %}
 {% include "web/parciales/campo.html" with campo=datos_form.notas %}
-<button class="btn" type="submit">Guardar datos</button>
+<button class="btn" type="submit">Guardar datos del cliente</button>
 </form>
 </details>
 </section>
@@ -56,7 +56,7 @@
 <input type="hidden" name="accion" value="telefono">
 {% include "web/parciales/campo.html" with campo=telefono_form.numero clase="ancho" %}
 <label class="en-linea">{{ telefono_form.principal }} Principal</label>
-<button class="btn" type="submit">Agregar teléfono</button>
+<button class="btn" type="submit">Agregar este teléfono</button>
 </form>
 </section>
 
@@ -107,6 +107,8 @@
 {% if a_favor %}<div class="saldo-caja afavor">A favor: {{ a_favor|pesos }} (devolver)<small>En órdenes abiertas</small></div>{% endif %}
 {% if not debe and not a_favor %}<div class="saldo-caja ok">Sin saldos pendientes</div>{% endif %}
 </section>
+<form method="post" class="eliminar">{% csrf_token %}<button class="enlace peligro" type="submit" name="accion" value="eliminar_cliente" data-confirmar="¿Eliminar a {{ cliente.nombre }}? Solo se puede si no tiene órdenes ni compras." data-confirmar-si="Sí, eliminar el cliente">Eliminar este cliente</button>
+<small class="ayuda">Solo si no tiene órdenes ni compras.</small></form>
 </aside>
 </div>
 {% endblock %}

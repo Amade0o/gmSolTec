@@ -15,11 +15,11 @@ class ReglaDeNegocioError(Exception):
 def cerrar_orden(orden):
     if orden.cerrada:
         raise ReglaDeNegocioError("La orden ya está cerrada.")
-    if orden.estado == "finalizada":
-        raise ReglaDeNegocioError("La orden ya terminó sin venta (no arreglable).")
     if orden.estado == "no_arreglable":
-        raise ReglaDeNegocioError("Una orden no arreglable no genera venta: hay que devolver el dinero.")
-    if orden.estado != "lista":
+        raise ReglaDeNegocioError("No tiene arreglo y queda dinero del cliente: primero hay que devolverle el dinero.")
+    # "finalizada" (sin arreglo y sin dinero pendiente) también se cierra: se le devuelve el equipo
+    # al cliente y queda registrado como entrega sin cargo (venta de $0). Regla del 18/11/2026.
+    if orden.estado not in ("lista", "finalizada"):
         raise ReglaDeNegocioError("Todavía hay equipos pendientes.")
     # Si hay una devolución registrada sin hacer, después de cerrar ya no se podría marcar devuelta
     if orden.monto_a_devolver > 0:
@@ -109,6 +109,8 @@ def agregar_equipo(orden, equipo, lineas_reparacion):
 
 def agregar_reparacion(equipo, linea):
     _orden_abierta(equipo.orden_trabajo)
+    if linea.reparacion.es_revision and any(l.reparacion.es_revision for l in equipo.lineas_reparacion.all()):
+        raise ReglaDeNegocioError("«Revisión / diagnóstico» va una sola vez por equipo, y este ya la tiene.")
     linea.equipo = equipo
     linea.full_clean()
     linea.save()
@@ -269,3 +271,83 @@ def quitar_telefono(telefono):
         siguiente = cliente.telefonos.order_by("id").first()
         if siguiente:
             marcar_telefono_principal(siguiente)
+
+
+# ---------- Borrar lo cargado por error (como en el admin, con sus reglas) ----------
+# Solo en órdenes abiertas, y nunca algo que deje dinero sin registrar.
+
+def quitar_pago(pago):
+    """Un pago cargado por error (si el cliente se lleva la plata, eso es una devolución)."""
+    orden = pago.orden_trabajo
+    if orden is None:
+        raise ReglaDeNegocioError("Ese pago es de una venta: para sacarlo, anulá la venta.")
+    _orden_abierta(orden)
+    pagado_sin_este = sum(p.monto for p in orden.pagos.exclude(pk=pago.pk))
+    if sum(d.monto for d in orden.devoluciones.all()) > pagado_sin_este:
+        raise ReglaDeNegocioError("Hay devoluciones que salen de ese pago: anulá primero la devolución.")
+    pago.delete()
+
+
+def anular_devolucion(devolucion):
+    """Una devolución registrada por error, que todavía no se hizo. Si era de una reparación,
+    la reparación vuelve a cobrarse."""
+    _orden_abierta(devolucion.orden_trabajo)
+    if devolucion.devuelta:
+        raise ReglaDeNegocioError("Esa devolución ya se hizo (el dinero ya salió): no se puede anular.")
+    devolucion.delete()
+
+
+def quitar_equipo(equipo):
+    orden = equipo.orden_trabajo
+    _orden_abierta(orden)
+    if orden.equipos.count() <= 1:
+        raise ReglaDeNegocioError("La orden tiene que quedar con al menos un equipo. Si no va, eliminá la orden entera.")
+    if Devolucion.objects.filter(linea_reparacion__equipo=equipo).exists():
+        raise ReglaDeNegocioError("Ese equipo tiene una reparación devuelta: no se puede quitar.")
+    equipo.delete()             # sus reparaciones se borran con él
+
+
+def eliminar_orden(orden):
+    """Una orden cargada por error. Si tiene pagos o devoluciones, primero se quitan: así no se
+    pierde dinero registrado."""
+    _orden_abierta(orden)
+    if orden.pagos.exists() or orden.devoluciones.exists():
+        raise ReglaDeNegocioError("La orden tiene pagos o devoluciones: quitalos primero (así no se pierde plata registrada).")
+    orden.delete()              # equipos, reparaciones y productos se borran con ella
+
+
+@transaction.atomic
+def anular_venta_directa(venta):
+    """Una venta rápida cargada por error: se borra con sus productos y sus pagos."""
+    if venta.orden_trabajo_id:
+        raise ReglaDeNegocioError("La venta de una orden no se anula: es el cierre de la orden.")
+    venta.pagos.all().delete()
+    venta.lineas_producto.all().delete()
+    venta.delete()
+
+
+def eliminar_cliente(cliente):
+    try:
+        cliente.delete()        # sus teléfonos se borran con él
+    except ProtectedError:
+        raise ReglaDeNegocioError("Tiene órdenes o ventas: no se puede eliminar sin perder ese historial.")
+
+
+@transaction.atomic
+def devolver_saldo_a_favor(orden, metodo):
+    """Le devuelve al cliente todo lo que tiene a favor, con 'metodo': marca hechas las devoluciones
+    pendientes y, si pagó de más sin devolución registrada, la registra y la marca hecha.
+    Devuelve cuánto se devolvió en total."""
+    _orden_abierta(orden)
+    devuelto = Decimal("0.00")
+    for devolucion in orden.devoluciones.filter(fecha_devolucion__isnull=True):
+        marcar_devuelta(devolucion, metodo)
+        devuelto += devolucion.monto
+    orden = OrdenTrabajo.objects.get(pk=orden.pk)       # números al día
+    a_favor = -orden.monto_adeudado
+    if a_favor > 0:
+        marcar_devuelta(registrar_devolucion(orden, monto=a_favor, nota="Saldo a favor del cliente"), metodo)
+        devuelto += a_favor
+    if devuelto == 0:
+        raise ReglaDeNegocioError("No hay dinero para devolverle al cliente.")
+    return devuelto

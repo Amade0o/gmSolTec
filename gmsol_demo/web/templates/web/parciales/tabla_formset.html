@@ -11,7 +11,7 @@
 <template data-fila-vacia>{% include "web/parciales/fila_formset.html" with form=formset.empty_form n="__num__" quitable=True %}</template>
 <div class="acts formset-acciones">
 <button type="button" class="btn chico" data-agregar-fila hidden>+ Agregar {{ agregar|default:"otra fila" }}</button>
-{% for campo in formset.empty_form.visible_fields %}{% with alta=campo|alta_rapida %}{% if alta %}<button type="button" class="enlace mas" data-no-precargar hx-get="{% url 'web:alta_rapida' alta.0 %}?destino=formset-{{ formset.prefix }}" hx-target="#alta-rapida-cuerpo">+ {{ alta.1 }} (al catálogo)</button>{% endif %}{% endwith %}{% endfor %}
+{% for campo in formset.empty_form.visible_fields %}{% with alta=campo|alta_rapida %}{% if alta %}<button type="button" class="enlace mas" data-no-precargar hx-get="{% url 'web:alta_rapida' alta.0 %}?destino=formset-{{ formset.prefix }}" hx-target="#alta-rapida-cuerpo">+ {{ alta.1 }} (si no está en la lista)</button>{% endif %}{% endwith %}{% endfor %}
 </div>
 {% for campo in formset.empty_form.visible_fields %}{% if campo.help_text %}<small class="ayuda">{{ campo.label }}: {{ campo.help_text }}</small> {% endif %}{% endfor %}
 </div>

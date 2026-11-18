@@ -11,7 +11,11 @@
 </div>
 <div class="acts">
 {% include "web/parciales/pista.html" with o=orden %}
-<button type="button" class="btn" data-imprimir hidden><svg aria-hidden="true"><use href="{% estatico 'web/img/iconos.svg' %}#i-imprimir"/></svg>Imprimir</button>
+<button type="button" class="btn" popovertarget="menu-imprimir" data-menu-imprimir hidden><svg aria-hidden="true"><use href="{% estatico 'web/img/iconos.svg' %}#i-imprimir"/></svg>Imprimir ▾</button>
+<div id="menu-imprimir" class="menu-imprimir" popover>
+<button type="button" data-imprimir="orden">Imprimir la orden<small>Una hoja, para el taller</small></button>
+<button type="button" data-imprimir="comprobante">Imprimir comprobante para el cliente<small>Media hoja, con las condiciones</small></button>
+</div>
 </div>
 </div>
 
@@ -22,7 +26,7 @@
 {% with devueltas=orden.lineas_devueltas %}
 {% for equipo in orden.equipos.all %}
 <section class="panel">
-<h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
+<h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.tipo }}{% endif %}</span></h2>
 <dl class="datos">
 <div><dt>Problema</dt><dd>{{ equipo.problema|linebreaksbr }}</dd></div>
 <div><dt>Bloqueo</dt><dd>{{ equipo.get_tipo_bloqueo_display }}{% if equipo.clave_bloqueo %}<span class="no-imprimir"> · </span><b class="clave">{{ equipo.clave_bloqueo }}</b>{% endif %}</dd></div>
@@ -32,11 +36,7 @@
 {% if orden.cerrada %}
 <p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
 {% else %}
-<p class="solo-imprimir"><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
-<form method="post" class="segmento estados" aria-label="Estado del equipo {{ forloop.counter }}">{% csrf_token %}
-<input type="hidden" name="accion" value="estado"><input type="hidden" name="equipo" value="{{ equipo.id }}">
-{% for valor, nombre in estados_equipo %}<button type="submit" name="estado" value="{{ valor }}" aria-pressed="{% if equipo.estado == valor %}true{% else %}false{% endif %}"{% if equipo.estado == valor %} class="on"{% endif %}>{{ nombre }}</button>{% endfor %}
-</form>
+<p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span> <span class="sec no-imprimir">· se cambia en «Estado de la orden», a la derecha</span></p>
 {% endif %}
 
 <div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-equipo-{{ equipo.id }}"><table>
@@ -50,6 +50,7 @@
 {% endfor %}
 </tbody></table></div>
 {% if equipo.estado == 'no_arreglable' %}<small class="ayuda">No se cobra: el equipo no tiene arreglo.</small>{% endif %}
+{% if not orden.cerrada and orden.equipos.all|length > 1 %}<form method="post" class="no-imprimir">{% csrf_token %}<input type="hidden" name="accion" value="quitar_equipo"><input type="hidden" name="equipo" value="{{ equipo.id }}"><button class="enlace peligro" type="submit" data-confirmar="¿Quitar el equipo {{ forloop.counter }} de la orden, con sus reparaciones?" data-confirmar-si="Sí, quitar el equipo">Quitar este equipo de la orden</button></form>{% endif %}
 {% if devueltas %}<small class="ayuda">Las reparaciones devueltas quedan anotadas pero no se cobran.</small>{% endif %}
 
 {% if not orden.cerrada %}
@@ -79,7 +80,7 @@
 {% include "web/parciales/campo.html" with campo=equipo_rep_form.reparacion clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=equipo_rep_form.precio_vendido %}
 </div>
-<button class="btn" type="submit">Agregar equipo</button>
+<button class="btn pri" type="submit">Agregar este equipo a la orden</button>
 </form>
 </details>
 {% endif %}
@@ -98,12 +99,15 @@
 </tbody></table></div>
 {% else %}<p class="vacio">Sin productos.</p>{% endif %}
 {% if not orden.cerrada %}
-<form method="post" class="fila-campos agregar">{% csrf_token %}
+<form method="post" class="agregar-destacado" aria-labelledby="agregar-producto">{% csrf_token %}
 <input type="hidden" name="accion" value="producto">
+<p class="titulo-agregar" id="agregar-producto">+ Agregar un producto que se lleva</p>
+<div class="fila-campos">
 {% include "web/parciales/campo.html" with campo=producto_form.producto clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=producto_form.cantidad_adquirida %}
 {% include "web/parciales/campo.html" with campo=producto_form.precio_vendido %}
-<button class="btn" type="submit">Agregar producto</button>
+<button class="btn pri" type="submit">Agregar producto</button>
+</div>
 </form>
 {% endif %}
 </section>
@@ -113,42 +117,47 @@
 <h2 id="t-pagos">Pagos</h2>
 {% if orden.pagos.all %}
 <div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-pagos"><table>
-<thead><tr><th scope="col">Fecha</th><th scope="col">Método</th><th scope="col" class="der">Monto</th><th scope="col" class="der">Recargo</th><th scope="col" class="der">Cobrado</th></tr></thead>
+<thead><tr><th scope="col">Fecha</th><th scope="col">Método</th><th scope="col" class="der">Monto</th><th scope="col" class="der">Recargo</th><th scope="col" class="der">Cobrado</th><th scope="col"><span class="oculto">Acción</span></th></tr></thead>
 <tbody>
 {% for pago in orden.pagos.all %}
 <tr><td class="sec">{{ pago.fecha|date:"j M, H:i" }}</td><td>{{ pago.metodo_pago.nombre }}</td><td class="der">{{ pago.monto|pesos }}</td>
 <td class="der sec">{% if pago.recargo_porcentaje %}{{ pago.recargo_porcentaje|floatformat:"-2" }}% · {{ pago.recargo_monto|pesos }}{% else %}—{% endif %}</td>
-<td class="der">{{ pago.total_cobrado|pesos }}</td></tr>
+<td class="der">{{ pago.total_cobrado|pesos }}</td>
+<td class="der">{% if not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_pago"><input type="hidden" name="pago" value="{{ pago.id }}"><button class="enlace" type="submit" data-confirmar="¿Quitar el pago de {{ pago.monto|pesos }} ({{ pago.metodo_pago.nombre }})? Hacelo solo si se cargó por error. Si le devolvés la plata al cliente, eso es una devolución." data-confirmar-si="Sí, quitar el pago">Quitar<span class="oculto"> el pago de {{ pago.monto|pesos }}</span></button></form>{% endif %}</td></tr>
 {% endfor %}
 </tbody></table></div>
 {% else %}<p class="vacio">Sin pagos.</p>{% endif %}
 {% if not orden.cerrada %}
-<form method="post" class="fila-campos agregar">{% csrf_token %}
+<form method="post" class="agregar-destacado" aria-labelledby="agregar-pago">{% csrf_token %}
 <input type="hidden" name="accion" value="pago">
+<p class="titulo-agregar" id="agregar-pago">+ Registrar un pago del cliente</p>
 {% include "web/parciales/errores_form.html" with form=pago_form %}
+<div class="fila-campos">
 {% include "web/parciales/campo.html" with campo=pago_form.metodo_pago %}
 {% include "web/parciales/campo.html" with campo=pago_form.monto %}
 {% include "web/parciales/campo.html" with campo=pago_form.recargo_porcentaje %}
-<button class="btn" type="submit">Registrar pago</button>
+<button class="btn pri" type="submit">Registrar pago</button>
+</div>
 </form>
 {% endif %}
 </section>
 
 {# ---------- Devoluciones: acá solo se REGISTRA; se hacen en Devoluciones ---------- #}
 {% if orden.devoluciones.all or orden.monto_pagado > 0 and not orden.cerrada %}
-<section class="panel{% if not orden.devoluciones.all %} no-imprimir{% endif %}">
+<section class="panel panel-devoluciones">
 <h2 id="t-devoluciones">Devoluciones</h2>
 {% if orden.devoluciones.all %}
 <div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-devoluciones"><table>
-<thead><tr><th scope="col">Registrada</th><th scope="col">Detalle</th><th scope="col" class="der">Monto</th><th scope="col">Estado</th></tr></thead>
+<thead><tr><th scope="col">Registrada</th><th scope="col">Detalle</th><th scope="col" class="der">Monto</th><th scope="col">Estado</th><th scope="col"><span class="oculto">Acción</span></th></tr></thead>
 <tbody>
 {% for d in orden.devoluciones.all %}
 <tr><td class="sec">{{ d.fecha_registro|date:"j M" }}</td><td>{% if d.linea_reparacion %}{{ d.linea_reparacion.reparacion }}{% endif %}{% if d.nota %} <span class="sec">{{ d.nota }}</span>{% endif %}</td>
 <td class="der">{{ d.monto|pesos }}</td>
-<td>{% if d.devuelta %}<span class="estado ok">Devuelta · {{ d.metodo_pago.nombre }}</span>{% else %}<span class="estado bad">Falta devolver</span>{% endif %}</td></tr>
+<td>{% if d.devuelta %}<span class="estado ok">Devuelta · {{ d.metodo_pago.nombre }}</span>{% else %}<span class="estado bad">Falta devolver</span>{% endif %}</td>
+<td class="der">{% if not d.devuelta and not orden.cerrada %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="anular_devolucion"><input type="hidden" name="devolucion" value="{{ d.id }}"><button class="enlace" type="submit" data-confirmar="¿Anular esta devolución de {{ d.monto|pesos }}? Hacelo si se cargó por error.{% if d.linea_reparacion %} «{{ d.linea_reparacion.reparacion }}» vuelve a cobrarse.{% endif %}" data-confirmar-si="Sí, anular">Anular<span class="oculto"> la devolución de {{ d.monto|pesos }}</span></button></form>{% endif %}</td></tr>
 {% endfor %}
 </tbody></table></div>
-{% if orden.monto_a_devolver %}<p class="ayuda">Para marcarla como hecha, andá a <a href="{% url 'web:devoluciones' %}">Devoluciones</a>.</p>{% endif %}
+{% if orden.monto_a_devolver %}<p class="ayuda">Para marcarla como hecha, usá «Ya le devolví…» en el Estado de la orden (a la derecha).</p>{% endif %}
 {% endif %}
 {% if not orden.cerrada %}
 <form method="post" class="fila-campos agregar">{% csrf_token %}
@@ -157,7 +166,7 @@
 {% include "web/parciales/campo.html" with campo=devolucion_form.linea_reparacion clase="ancho" %}
 {% include "web/parciales/campo.html" with campo=devolucion_form.monto %}
 {% include "web/parciales/campo.html" with campo=devolucion_form.nota %}
-<button class="btn" type="submit">Registrar que hay que devolver</button>
+<button class="btn" type="submit">Anotar que hay que devolver (sin devolver todavía)</button>
 </form>
 {% endif %}
 </section>
@@ -179,13 +188,14 @@
 <div class="saldo-caja ok">Entregada<small><a href="{% url 'web:venta_detalle' orden.venta.id %}">Venta #{{ orden.venta.id }}</a> · {{ orden.venta.fecha|date:"j M, H:i" }}</small></div>
 {% else %}
 <div class="saldo-caja {{ orden|saldo_clase }}">{{ orden|saldo }}</div>
-{% if orden.estado == "lista" %}<a class="btn pri ancho" href="{% url 'web:orden_entregar' orden.id %}">Entregar equipo</a>{% endif %}
-{% if orden.estado == "pendiente" %}<p class="ayuda no-imprimir">Para entregar, marcá el resultado de cada equipo.</p>{% endif %}
-{% if orden.estado == "no_arreglable" %}<p class="ayuda no-imprimir">No tiene arreglo: registrá la devolución de la seña.</p>{% endif %}
-{% if orden.estado == "finalizada" %}<p class="ayuda">Terminó sin venta: no tuvo arreglo y no queda dinero del cliente.</p>{% endif %}
 {% endif %}
 </section>
+{% include "web/parciales/estado_orden.html" %}
+{% if not orden.cerrada %}
+<form method="post" class="eliminar no-imprimir">{% csrf_token %}<button class="enlace peligro" type="submit" name="accion" value="eliminar_orden" data-confirmar="¿Eliminar la orden #{{ orden.id }} entera? Solo se puede si no tiene pagos ni devoluciones." data-confirmar-si="Sí, eliminar la orden">Eliminar esta orden (cargada por error)</button></form>
+{% endif %}
 </aside>
 </div>
-<p class="solo-imprimir sec">GM Soluciones tecnológicas · Impreso el {% now "j/n/Y H:i" %}</p>
+<p class="solo-imprimir sec pie-impresion">GM Soluciones tecnológicas · Impreso el {% now "j/n/Y H:i" %}</p>
+{% include "web/parciales/comprobante_orden.html" %}
 {% endblock %}

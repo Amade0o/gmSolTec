@@ -38,7 +38,7 @@ def saldo_clase(orden):
 
 
 # Texto del botón "+ Nuevo" según el desplegable (ver forms.con_alta_rapida)
-NUEVO = {"categorias-producto": "Nueva categoría", "marcas": "Nueva marca", "modelos": "Nuevo modelo",
+NUEVO = {"tipos-equipo": "Nuevo tipo", "categorias-producto": "Nueva categoría", "marcas": "Nueva marca", "modelos": "Nuevo modelo",
          "categorias-reparacion": "Nueva categoría", "reparaciones": "Nueva reparación"}
 
 
@@ -61,11 +61,19 @@ def saldo_monto(pendiente):
 
 ESTADOS = {
     "pendiente": ("En revisión / reparación", "wip"),
-    "lista": ("Lista", "ok"),
+    "lista": ("Lista para entregar", "ok"),
     "no_arreglable": ("No arreglable", "bad"),
-    "finalizada": ("Finalizada", "ok"),
-    "cerrada": ("Cerrada", "ok"),
+    "finalizada": ("Sin arreglo: devolver el equipo", "bad"),
+    "cerrada": ("Entregada", "ok"),
 }
+
+
+@register.filter
+def para_devolver(orden):
+    """Todo lo que hay que devolverle al cliente (lo pagado de más y lo registrado sin hacer)."""
+    if orden.cerrada:
+        return 0
+    return max(-orden.monto_adeudado, orden.monto_a_devolver, 0)
 
 
 @register.filter
@@ -84,7 +92,7 @@ PASO_ACTUAL = {
     "pendiente": 1,
     "lista": 2,
     "no_arreglable": 2,     # se revisó y terminó ahí (en rojo)
-    "finalizada": 2,
+    "finalizada": 2,        # sin arreglo y sin dinero pendiente: falta devolverle el equipo
     "cerrada": 3,
 }
 
@@ -106,7 +114,7 @@ def pista(orden):
 
 @register.filter
 def equipos_texto(orden):
-    nombres = [e.modelo.nombre if e.modelo else e.get_tipo_display() for e in orden.equipos.all()]
+    nombres = [e.modelo.nombre if e.modelo else e.tipo.nombre for e in orden.equipos.all()]
     if not nombres:
         return "-"
     return nombres[0] if len(nombres) == 1 else f"{nombres[0]} + {len(nombres) - 1} más"
@@ -140,9 +148,21 @@ def telefono_principal(cliente):
 def venta_texto(venta):
     """Qué se vendió, en pocas palabras."""
     if venta.orden_trabajo_id:
-        return f"Orden #{venta.orden_trabajo_id} · {equipos_texto(venta.orden_trabajo)}"
-    lineas = list(venta.lineas_producto.all())
-    if not lineas:
-        return "-"
-    primera = f"{lineas[0].cantidad_adquirida}× {lineas[0].producto}"
-    return primera if len(lineas) == 1 else f"{primera} + {len(lineas) - 1} más"
+        orden = venta.orden_trabajo
+        partes = [f"Reparación: {equipos_texto(orden)}"]
+        productos = _productos_texto(orden.lineas_producto.all())
+        if productos:
+            partes.append(f"Productos: {productos}")
+        if not venta.total:
+            partes.append("sin cargo")
+        return " · ".join(partes)
+    return _productos_texto(venta.lineas_producto.all()) or "-"
+
+
+def _productos_texto(lineas):
+    """"2× Cable USB-C, 1× Funda" (hasta 3 y "+ N más")."""
+    lineas = list(lineas)
+    textos = [f"{l.cantidad_adquirida}× {l.producto}" for l in lineas[:3]]
+    if len(lineas) > 3:
+        textos.append(f"+ {len(lineas) - 3} más")
+    return ", ".join(textos)

@@ -7,13 +7,17 @@ menu: los grupos del menú lateral, con cuál está activo según la pantalla.
 _TRABAJO = [
     ("inicio", "web:inicio", "Inicio", "i-inicio", {"inicio"}),
     ("ordenes", "web:ordenes", "Órdenes de trabajo", "i-ordenes", {"ordenes", "orden_detalle", "orden_nueva", "orden_entregar"}),
-    ("ventas", "web:ventas", "Ventas", "i-ventas", {"ventas", "venta_detalle", "venta_rapida"}),
+    ("ventas", "web:ventas", "Registro de ventas", "i-ventas", {"ventas", "venta_detalle", "venta_rapida"}),
     ("devoluciones", "web:devoluciones", "Devoluciones", "i-devol", {"devoluciones"}),
 ]
 _REGISTROS = [
     ("clientes", "web:clientes", "Clientes", "i-clientes", {"clientes", "cliente_detalle", "cliente_nuevo"}),
     ("productos", "web:productos", "Productos", "i-productos", {"productos", "producto_detalle", "producto_nuevo"}),
-    ("catalogo", "web:catalogo_inicio", "Catálogo", "i-catalogo", {"catalogo", "catalogo_inicio", "catalogo_editar"}),
+]
+# "Configuración" (antes "Catálogo"): las listas que se eligen al cargar (tipos de equipo, marcas,
+# modelos, reparaciones, categorías, métodos de pago). Las direcciones siguen siendo /catalogo/.
+_AJUSTES = [
+    ("catalogo", "web:catalogo_inicio", "Configuración", "i-catalogo", {"catalogo", "catalogo_inicio", "catalogo_editar"}),
 ]
 PROXIMAMENTE = [
     ("Caja", "i-caja"), ("Compras y proveedores", "i-compras"),
@@ -36,4 +40,5 @@ def menu(request):
     return {"menu": [
         ("Trabajo", _items(_TRABAJO, pantalla)),
         ("Registros", _items(_REGISTROS, pantalla)),
+        ("Ajustes", _items(_AJUSTES, pantalla)),
     ], "proximamente": PROXIMAMENTE}

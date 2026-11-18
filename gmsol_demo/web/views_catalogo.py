@@ -18,11 +18,11 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from catalogo.models import CategoriaProducto, CategoriaReparacion, Marca, MetodoPago, ModeloEquipo, Reparacion
+from catalogo.models import CategoriaProducto, CategoriaReparacion, Marca, MetodoPago, ModeloEquipo, Reparacion, TipoEquipo
 
 from .forms import (
     CategoriaProductoForm, CategoriaReparacionForm, MarcaForm, MetodoPagoForm, ModeloEquipoForm, ModeloRapidoForm,
-    ReparacionForm, ReparacionRapidaForm,
+    ReparacionForm, ReparacionRapidaForm, TipoEquipoForm,
 )
 
 
@@ -30,41 +30,59 @@ def _recargo(m):
     return f"{m.recargo_porcentaje.normalize():f} %" if m.recargo_porcentaje else "—"
 
 
-# Cada pestaña: tabla, formulario, campo "activo", columnas (título, cómo se muestra) y búsqueda
+# Cada pestaña: grupo, título, nombre en singular (para los textos: "Agregar marca"), tabla,
+# formulario, campo "activo", columnas (título, cómo se muestra) y búsqueda.
 SECCIONES = {
-    "categorias-producto": {
-        "titulo": "Categorías de producto", "modelo": CategoriaProducto,
-        "form": CategoriaProductoForm, "activo": "activa",
-        "columnas": [], "buscar": ["nombre"],
+    "tipos-equipo": {
+        "grupo": "Equipos", "titulo": "Tipos de equipo", "singular": "tipo de equipo", "modelo": TipoEquipo,
+        "form": TipoEquipoForm, "activo": "activo", "columnas": [], "buscar": ["nombre"],
+        "ayuda": "Celular, Notebook, PC… Se elige al recibir un equipo y en cada modelo.",
     },
     "marcas": {
-        "titulo": "Marcas", "modelo": Marca, "form": MarcaForm, "activo": "activa",
-        "columnas": [], "buscar": ["nombre"],
-        "ayuda": "Se usan en los productos y en los modelos de equipo.",
+        "grupo": "Equipos", "titulo": "Marcas", "singular": "marca", "modelo": Marca, "form": MarcaForm,
+        "activo": "activa", "columnas": [], "buscar": ["nombre"],
+        "ayuda": "Se usan en los modelos de equipo y en los productos.",
     },
     "modelos": {
-        "titulo": "Modelos de equipo", "modelo": ModeloEquipo, "form": ModeloEquipoForm,
-        "activo": "activo", "relacion": "marca", "orden": ("marca__nombre", "nombre"),
-        "columnas": [("Marca", lambda m: m.marca.nombre), ("Tipo", lambda m: m.get_tipo_display())],
+        "grupo": "Equipos", "titulo": "Modelos de equipo", "singular": "modelo de equipo", "modelo": ModeloEquipo,
+        "form": ModeloEquipoForm, "activo": "activo", "relacion": ("marca", "tipo"), "orden": ("marca__nombre", "nombre"),
+        "columnas": [("Marca", lambda m: m.marca.nombre), ("Tipo", lambda m: m.tipo.nombre)],
         "buscar": ["nombre", "marca__nombre"],
-        "ayuda": "El modelo del equipo que se repara. La PC no lleva modelo.",
+        "ayuda": "El modelo del equipo que se repara (por ejemplo Samsung Galaxy A14). La PC puede ir sin modelo.",
     },
     "categorias-reparacion": {
-        "titulo": "Categorías de reparación", "modelo": CategoriaReparacion,
-        "form": CategoriaReparacionForm, "activo": "activo", "columnas": [], "buscar": ["nombre"],
+        "grupo": "Reparaciones", "titulo": "Categorías de reparación", "singular": "categoría de reparación",
+        "modelo": CategoriaReparacion, "form": CategoriaReparacionForm, "activo": "activo",
+        "columnas": [], "buscar": ["nombre"],
+        "ayuda": "Agrupan las reparaciones para las estadísticas (por ejemplo: Pantalla, Batería, Software).",
     },
     "reparaciones": {
-        "titulo": "Reparaciones", "modelo": Reparacion, "form": ReparacionForm,
-        "activo": "activo", "relacion": "categoria", "orden": ("categoria__nombre", "nombre"),
+        "grupo": "Reparaciones", "titulo": "Reparaciones", "singular": "reparación", "modelo": Reparacion,
+        "form": ReparacionForm, "activo": "activo", "relacion": "categoria", "orden": ("categoria__nombre", "nombre"),
         "columnas": [("Categoría", lambda r: r.categoria.nombre)], "buscar": ["nombre", "categoria__nombre"],
-        "ayuda": "El precio de cada reparación se pone en la orden, no acá.",
+        "ayuda": "Los tipos de reparación que se eligen en la orden. El precio no va acá: se pone en cada orden.",
+    },
+    "categorias-producto": {
+        "grupo": "Productos", "titulo": "Categorías de producto", "singular": "categoría de producto",
+        "modelo": CategoriaProducto, "form": CategoriaProductoForm, "activo": "activa",
+        "columnas": [], "buscar": ["nombre"],
+        "ayuda": "Cables, Cargadores, Fundas… Los productos se cargan en el menú Productos.",
     },
     "metodos-pago": {
-        "titulo": "Métodos de pago", "modelo": MetodoPago, "form": MetodoPagoForm,
-        "activo": "activo",
+        "grupo": "Pagos", "titulo": "Métodos de pago", "singular": "método de pago", "modelo": MetodoPago,
+        "form": MetodoPagoForm, "activo": "activo",
         "columnas": [("Cuenta", lambda m: m.get_cuenta_display()), ("Recargo", _recargo)], "buscar": ["nombre"],
+        "ayuda": "Efectivo, Débito, Crédito… El recargo se sugiere solo al cobrar y se puede cambiar en cada pago.",
     },
 }
+
+
+def _grupos():
+    """[(grupo, [(clave, título), …]), …] para las pestañas."""
+    grupos = {}
+    for clave, sec in SECCIONES.items():
+        grupos.setdefault(sec["grupo"], []).append((clave, sec["titulo"]))
+    return list(grupos.items())
 
 
 def _seccion(clave):
@@ -79,19 +97,20 @@ def _filas(sec, consulta):
 
 
 @login_required
-def catalogo(request, seccion="categorias-producto"):
+def catalogo(request, seccion="tipos-equipo"):
     sec = _seccion(seccion)
     form = sec["form"](request.POST or None, prefix="nuevo")
     if request.method == "POST" and form.is_valid():
         nuevo = form.save()
-        messages.success(request, f"Se agregó “{nuevo.nombre}”.")
+        messages.success(request, f"Se agregó {sec['singular']}: “{nuevo.nombre}”.")
         return redirect("web:catalogo", seccion=seccion)
 
     estado = request.GET.get("estado", "activos")
     q = request.GET.get("q", "").strip()
     consulta = sec["modelo"].objects.order_by(*sec.get("orden", ("nombre",)))
     if sec.get("relacion"):
-        consulta = consulta.select_related(sec["relacion"])
+        relacion = sec["relacion"]
+        consulta = consulta.select_related(*((relacion,) if isinstance(relacion, str) else relacion))
     if estado == "activos":
         consulta = consulta.filter(**{sec["activo"]: True})
     if q:
@@ -101,7 +120,7 @@ def catalogo(request, seccion="categorias-producto"):
         consulta = consulta.filter(filtro)
 
     return render(request, "web/catalogo/seccion.html", {
-        "sec": sec, "secciones": [(c, s["titulo"]) for c, s in SECCIONES.items()],
+        "sec": sec, "grupos": _grupos(),
         "form": form, "filas": _filas(sec, consulta), "estado": estado, "q": q,
     })
 
@@ -141,6 +160,7 @@ def catalogo_editar(request, seccion, numero):
 
 ALTA_RAPIDA = {
     # sección: (título del diálogo, formulario)
+    "tipos-equipo": ("Nuevo tipo de equipo", TipoEquipoForm),
     "categorias-producto": ("Nueva categoría de producto", CategoriaProductoForm),
     "marcas": ("Nueva marca", MarcaForm),
     "modelos": ("Nuevo modelo de equipo", ModeloRapidoForm),
@@ -183,7 +203,7 @@ def alta_rapida(request, seccion):
             if obj is None and valido:
                 obj = form.save()
             if obj is not None and not getattr(obj, SECCIONES[seccion]["activo"]):
-                form.add_error(None, f"«{_texto_opcion(seccion, obj)}» ya existe pero está desactivado: activalo en el Catálogo.")
+                form.add_error(None, f"«{_texto_opcion(seccion, obj)}» ya existe pero está desactivado: activalo en Configuración.")
                 obj = None
             if obj is not None:
                 respuesta = render(request, "web/catalogo/rapido_ok.html", {"obj": obj})
@@ -196,5 +216,6 @@ def alta_rapida(request, seccion):
         form = Formulario(prefix="rapido")
     return render(request, "web/catalogo/rapido.html", {
         "titulo": titulo, "form": form, "seccion": seccion, "destino": destino,
+        "boton": f"Agregar {SECCIONES[seccion]['singular']}",
         "ayuda": SECCIONES[seccion].get("ayuda", ""),
     })

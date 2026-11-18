@@ -1,0 +1,50 @@
+{% load formato %}{% comment %}Estado de la orden (debajo del resumen): cómo quedó cada equipo, con botones claros para
+marcarlo, y el siguiente paso (devolver dinero o entregar al cliente).{% endcomment %}
+<section class="panel estado-orden no-imprimir" aria-labelledby="t-estado">
+<h2 id="t-estado">Estado de la orden</h2>
+{% include "web/parciales/pista.html" with o=orden %}
+{% if orden.cerrada %}
+<p class="ayuda">Se entregó el {{ orden.venta.fecha|date:"j \d\e F, H:i" }} · <a href="{% url 'web:venta_detalle' orden.venta.id %}">ver la venta #{{ orden.venta.id }}</a>.</p>
+{% else %}
+{% with varios=orden.equipos.all|length %}
+{% for equipo in orden.equipos.all %}
+<div class="equipo-estado">
+<p class="equipo-estado-titulo">{% if varios > 1 %}Equipo {{ forloop.counter }} · {% endif %}{% if equipo.modelo %}{{ equipo.modelo.nombre }}{% else %}{{ equipo.tipo }}{% endif %}<span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
+<form method="post" class="botones-estado">{% csrf_token %}
+<input type="hidden" name="accion" value="estado"><input type="hidden" name="equipo" value="{{ equipo.id }}">
+{% if equipo.estado == "pendiente" %}
+<p class="ayuda">¿Cómo quedó después de revisarlo?</p>
+<button class="btn pri" type="submit" name="estado" value="arreglado">Ya está arreglado</button>
+<button class="btn" type="submit" name="estado" value="sin_falla">No tenía falla</button>
+<button class="btn" type="submit" name="estado" value="no_arreglable" data-confirmar="¿Marcar que no tiene arreglo? Sus reparaciones dejan de cobrarse y, si dejó seña, hay que devolvérsela." data-confirmar-si="Sí, no tiene arreglo">No tiene arreglo</button>
+{% else %}
+<button class="enlace" type="submit" name="estado" value="pendiente">Me equivoqué: volver a «en revisión»</button>
+{% endif %}
+</form>
+</div>
+{% endfor %}
+{% endwith %}
+<div class="proximo-paso">
+{% with devolver=orden|para_devolver %}
+{% if orden.estado == "pendiente" %}
+<p><b>Siguiente paso:</b> cuando termines con {% if orden.equipos.all|length > 1 %}cada equipo{% else %}el equipo{% endif %}, marcá cómo quedó.</p>
+{% elif devolver %}
+<p><b>Siguiente paso:</b> hay que devolverle <b>{{ devolver|pesos }}</b> al cliente{% if orden.estado == "lista" %} antes de entregar{% endif %}.</p>
+<p class="ayuda">Es el precio sin el recargo de la tarjeta: si pagó con tarjeta, el recargo se lo devuelve la plataforma de la tarjeta.</p>
+<form method="post" class="pila">{% csrf_token %}<input type="hidden" name="accion" value="devolver_saldo">
+<div class="campo"><label for="{{ metodo_devolucion.metodo_pago.id_for_label }}">¿Con qué se lo devolvés?</label>{{ metodo_devolucion.metodo_pago }}</div>
+<button class="btn pri ancho" type="submit" data-confirmar="¿Ya le devolviste {{ devolver|pesos }} al cliente?" data-confirmar-si="Sí, ya se lo devolví">Ya le devolví {{ devolver|pesos }}</button>
+</form>
+{% elif orden.estado == "lista" %}
+<p><b>Siguiente paso:</b> {% if orden.monto_adeudado > 0 %}cobrar el saldo y entregar{% else %}entregar el equipo{% endif %}.</p>
+<a class="btn pri ancho grande" href="{% url 'web:orden_entregar' orden.id %}">{% if orden.monto_adeudado > 0 %}Cobrar {{ orden.monto_adeudado|pesos }} y entregar{% else %}Entregar al cliente{% endif %} →</a>
+{% elif orden.estado == "finalizada" %}
+<p><b>Siguiente paso:</b> no tuvo arreglo y no queda dinero del cliente: devolvele el equipo.</p>
+<a class="btn pri ancho grande" href="{% url 'web:orden_entregar' orden.id %}">Devolver el equipo al cliente →</a>
+{% else %}
+<p>Revisá el resumen: {{ orden|saldo }}.</p>
+{% endif %}
+{% endwith %}
+</div>
+{% endif %}
+</section>

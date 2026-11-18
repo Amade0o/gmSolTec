@@ -55,7 +55,7 @@ class CatalogoTests(Base):
         self.assertEqual(ModeloEquipo.objects.get(pk=self.modelo.id).nombre, "Galaxy A15")
 
     def test_repetido_se_controla_aunque_la_marca_no_cambie(self):
-        ModeloEquipo.objects.create(nombre="Galaxy A15", marca=self.modelo.marca, tipo="celular")
+        ModeloEquipo.objects.create(nombre="Galaxy A15", marca=self.modelo.marca, tipo_id="celular")
         url = reverse("web:catalogo_editar", args=["modelos", self.modelo.id])
         r = self.client.post(url, {"marca": self.modelo.marca_id, "nombre": "Galaxy A15", "tipo": "celular"})
         self.assertEqual(r.status_code, 200)

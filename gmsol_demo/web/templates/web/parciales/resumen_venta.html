@@ -1,7 +1,9 @@
 {% load formato %}
 <dl class="cuentas">
-<div><dt>Total</dt><dd>{{ total|pesos }}</dd></div>
-<div><dt>Asignado a pagos</dt><dd>{{ asignado|pesos }}</dd></div>
+<div><dt>Total de los productos</dt><dd>{{ total|pesos }}</dd></div>
+{% for r in recargos %}<div class="sec"><dt>Recargo {{ r.metodo }} ({{ r.porcentaje|floatformat:"-2" }} %)</dt><dd>+ {{ r.monto|pesos }}</dd></div>
+{% endfor %}{% if recargos %}<div><dt><b>El cliente paga</b></dt><dd><b>{{ paga|pesos }}</b></dd></div>{% endif %}
+<div class="sec"><dt>Asignado a pagos</dt><dd>{{ asignado|pesos }}</dd></div>
 </dl>
 {% if varios_sin_monto %}
 <div class="saldo-caja debe">Hay más de un pago sin monto<small>Escribí el monto de todos menos uno: ese se lleva lo que falta.</small></div>
@@ -10,5 +12,5 @@
 {% elif falta < 0 %}
 <div class="saldo-caja afavor">Los pagos superan el total por {{ falta|pesos }}</div>
 {% else %}
-<div class="saldo-caja ok">Pagos completos</div>
+<div class="saldo-caja ok">Pagos completos{% if recargos %}<small>Cobrá {{ paga|pesos }} (incluye el recargo).</small>{% endif %}</div>
 {% endif %}

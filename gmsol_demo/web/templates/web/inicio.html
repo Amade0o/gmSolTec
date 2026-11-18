@@ -6,9 +6,10 @@
 <div class="fecha">{% now "l j \d\e F" %}</div>
 <h1>Inicio</h1>
 <div class="tiles">
-<div class="tile wip"><b>{{ en_revision }}</b><span>En revisión / reparación</span></div>
-<div class="tile ok"><b>{{ listas }}</b><span>Listas para entregar</span></div>
-<div class="tile bad"><b>{{ devoluciones }}</b><span>Devoluciones por hacer</span></div>
+{# Cada tarjeta lleva a su lista #}
+<a class="tile wip" href="{% url 'web:ordenes' %}?estado=pendiente"><b>{{ en_revision }}</b><span>En revisión / reparación</span></a>
+<a class="tile ok" href="{% url 'web:entregar' %}"><b>{{ listas }}</b><span>Listas para entregar</span></a>
+<a class="tile bad" href="{% url 'web:devoluciones' %}"><b>{{ devoluciones }}</b><span>Devoluciones por hacer</span></a>
 </div>
 <section class="panel">
 <h2 id="t-en-curso">Órdenes en curso</h2>

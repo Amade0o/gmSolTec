@@ -1,31 +1,32 @@
 {% extends "web/base.html" %}
-{# Catálogo: una pestaña por tabla, con la lista y el formulario para agregar #}
-{% block titulo %}{{ sec.titulo }} · Catálogo{% endblock %}
+{% comment %}Catálogo: las listas que se eligen en las órdenes y ventas, agrupadas (Equipos, Reparaciones, Productos, Pagos).
+Una pestaña por lista, con el formulario para agregar y la lista para editar.{% endcomment %}
+{% block titulo %}{{ sec.titulo }} · Configuración{% endblock %}
 {% block contenido %}
-<div class="head"><h1>Catálogo</h1></div>
+<div class="head"><div><h1>Configuración</h1><p class="sec">Las listas que se eligen al cargar órdenes y ventas: tipos de equipo, marcas, modelos, reparaciones, categorías y métodos de pago. Lo que agregues acá aparece en los desplegables. Los productos se cargan en el menú Productos.</p></div></div>
 
-<nav class="segmento secciones" aria-label="Tablas del catálogo">
-{% for clave, titulo in secciones %}<a href="{% url 'web:catalogo' clave %}"{% if clave == sec.clave %} aria-current="page"{% endif %}>{{ titulo }}</a>{% endfor %}
-</nav>
+<nav class="grupos-catalogo" aria-label="Listas de la configuración">
+{% for grupo, secciones in grupos %}<div class="grupo-catalogo"><span class="gt-catalogo">{{ grupo }}</span><div class="segmento secciones">{% for clave, titulo in secciones %}<a href="{% url 'web:catalogo' clave %}"{% if clave == sec.clave %} aria-current="page"{% endif %}>{{ titulo }}</a>{% endfor %}</div></div>
+{% endfor %}</nav>
 
 <section class="panel">
-<h2>Agregar</h2>
+<h2>Agregar {{ sec.singular }}</h2>
 {% if sec.ayuda %}<p class="ayuda">{{ sec.ayuda }}</p>{% endif %}
 <form method="post" class="fila-campos agregar" novalidate>{% csrf_token %}
 {% include "web/parciales/errores_form.html" %}
 {% for campo in form %}{% include "web/parciales/campo.html" with campo=campo %}{% endfor %}
-<button class="btn" type="submit">Agregar</button>
+<button class="btn pri" type="submit">Agregar {{ sec.singular }}</button>
 </form>
 </section>
 
 <section class="panel">
-<h2 id="t-seccion">{{ sec.titulo }}</h2>
+<h2 id="t-seccion">Lista de {{ sec.titulo|lower }}</h2>
 <search><form class="filtros" method="get">
 <nav class="segmento filtro" aria-label="Filtrar por estado">
-<a href="{% querystring estado='activos' %}"{% if estado == 'activos' %} aria-current="page"{% endif %}>Activos</a><a href="{% querystring estado='todos' %}"{% if estado == 'todos' %} aria-current="page"{% endif %}>Todos</a>
+<a href="{% querystring estado='activos' %}"{% if estado == 'activos' %} aria-current="page"{% endif %}>Solo activos</a><a href="{% querystring estado='todos' %}"{% if estado == 'todos' %} aria-current="page"{% endif %}>Activos y desactivados</a>
 </nav>
 <input type="hidden" name="estado" value="{{ estado }}">
-<input type="search" class="entrada" name="q" value="{{ q }}" placeholder="Buscar" aria-label="Buscar en {{ sec.titulo }}" spellcheck="false">
+<input type="search" class="entrada" name="q" value="{{ q }}" placeholder="Buscar en {{ sec.titulo|lower }}" aria-label="Buscar en {{ sec.titulo }}" spellcheck="false">
 </form></search>
 {% if filas %}
 <div class="tabla-tarjetas"><table aria-labelledby="t-seccion">
@@ -35,7 +36,7 @@
 <tr class="{% if not activo %}tachado{% endif %}">
 <td class="cli" data-label="Nombre"><a class="fila-link" href="{% url 'web:catalogo_editar' sec.clave obj.pk %}">{{ obj.nombre }}</a>{% if not activo %} <span class="sec">(desactivado)</span>{% endif %}</td>
 {% for titulo, v in valores %}<td data-label="{{ titulo }}">{{ v }}</td>{% endfor %}
-<td class="der"><a class="enlace" href="{% url 'web:catalogo_editar' sec.clave obj.pk %}" tabindex="-1">Editar<span class="oculto"> {{ obj.nombre }}</span></a></td>
+<td class="der"><a class="enlace" href="{% url 'web:catalogo_editar' sec.clave obj.pk %}" tabindex="-1">Editar o eliminar<span class="oculto"> {{ obj.nombre }}</span></a></td>
 </tr>
 {% endfor %}
 </tbody></table></div>

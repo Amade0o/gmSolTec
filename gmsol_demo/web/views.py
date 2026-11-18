@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, F, Max, ProtectedError, Q, Sum, Value
+from django.db.models import Case, Count, F, Max, ProtectedError, Q, Sum, Value, When
 from django.db.models.functions import Replace
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -38,8 +38,8 @@ from .forms import (
 )
 
 # Lo que hace falta para calcular estado, total y saldo sin una consulta por orden
-PREFETCH_ORDEN = ("equipos__modelo", "equipos__lineas_reparacion", "lineas_producto", "pagos", "devoluciones")
-EN_CURSO = ("pendiente", "lista", "no_arreglable")
+PREFETCH_ORDEN = ("equipos__modelo", "equipos__tipo", "equipos__lineas_reparacion", "lineas_producto", "pagos", "devoluciones")
+EN_CURSO = ("pendiente", "lista", "no_arreglable", "finalizada")      # finalizada: falta devolver el equipo
 
 
 def _mensajes_de(error):
@@ -52,6 +52,13 @@ def _mensajes_de(error):
 def _avisar_error(request, error):
     for texto in _mensajes_de(error):
         messages.error(request, texto)
+
+
+def _numero(valor):
+    """Un id que llega en el formulario: el número, o 0 si vino vacío o con letras (0 no existe → 404).
+    Sin esto, un valor como "abc" llegaba a la base y daba error 500."""
+    valor = str(valor or "").strip()
+    return int(valor) if valor.isdigit() else 0
 
 
 def _lineas(formset):
@@ -85,7 +92,7 @@ def inicio(request):
     contexto = {
         "ordenes": en_curso,
         "en_revision": sum(1 for o in en_curso if o.estado == "pendiente"),
-        "listas": sum(1 for o in en_curso if o.estado == "lista"),
+        "listas": sum(1 for o in en_curso if o.estado in ("lista", "finalizada")),
         "devoluciones": Devolucion.objects.filter(fecha_devolucion__isnull=True).count(),
     }
     return render(request, "web/inicio.html", contexto)
@@ -99,37 +106,55 @@ FILTROS = [
     ("lista", "Listas"),
     ("no_arreglable", "No arreglables"),
     ("cerrada", "Entregadas"),
-    ("finalizada", "Finalizadas sin venta"),
+    ("finalizada", "Sin arreglo, para devolver"),
     ("todas", "Todas"),
 ]
+
+
+def _numero_buscado(q):
+    """Si lo buscado es un número ("12" o "#12"), ese número; si no, None."""
+    numero = q.lstrip("#").strip()
+    return int(numero) if numero.isdigit() and len(numero) <= 9 else None
+
+
+def _abrir_directo(q, numero, existe, coincide_cliente):
+    """¿Se abre directo la orden/venta con ese número? Con "#" siempre (si existe). Sin "#" solo si
+    ningún cliente coincide: "1234" puede ser el final de un teléfono, y entonces se muestra la lista
+    (con la orden #1234 primera) en vez de saltar a una orden que quizás no era."""
+    return numero is not None and existe and (q.startswith("#") or not coincide_cliente)
 
 
 @login_required
 def ordenes(request):
     filtro = request.GET.get("estado", "curso")
     q = request.GET.get("q", "").strip()
+    numero = _numero_buscado(q)
 
-    # "#12" o "12": si existe esa orden, se abre directo
-    numero = q.lstrip("#")
-    if numero.isdigit() and len(numero) <= 6 and OrdenTrabajo.objects.filter(pk=int(numero)).exists():
-        return redirect("web:orden_detalle", numero=int(numero))
-
-    consulta = (OrdenTrabajo.objects.select_related("cliente", "venta")
-                .prefetch_related(*PREFETCH_ORDEN).order_by("-id"))
+    consulta = OrdenTrabajo.objects.select_related("cliente", "venta").order_by("-id")
     if q:
-        consulta = consulta.filter(
-            Q(cliente__nombre__icontains=q) | Q(cliente__telefonos__numero__icontains=q)).distinct()
+        por_cliente = Q(cliente__in=_buscar_clientes(q.lstrip("#") if numero is not None else q))
+        if _abrir_directo(q, numero, OrdenTrabajo.objects.filter(pk=numero or 0).exists(),
+                          numero is not None and OrdenTrabajo.objects.filter(por_cliente).exists()):
+            return redirect("web:orden_detalle", numero=numero)
+        if numero is not None:
+            # La orden con ese número va primera; después las de clientes con ese teléfono
+            consulta = (consulta.filter(por_cliente | Q(pk=numero))
+                        .order_by(Case(When(pk=numero, then=0), default=1), "-id"))
+        else:
+            consulta = consulta.filter(por_cliente)
     if filtro == "cerrada":
         consulta = consulta.filter(venta__isnull=False)
     elif filtro != "todas":
         consulta = consulta.filter(venta__isnull=True)
+    consulta = consulta.prefetch_related(*PREFETCH_ORDEN)
 
-    # El estado se calcula (no está en la base), por eso se filtra acá
-    lista = list(consulta)
-    if filtro == "curso":
-        lista = [o for o in lista if o.estado in EN_CURSO]
-    elif filtro in ("pendiente", "lista", "no_arreglable", "finalizada"):
-        lista = [o for o in lista if o.estado == filtro]
+    if filtro in ("cerrada", "todas"):
+        # Sin filtro por estado: la base devuelve solo las 50 de la página (las entregadas crecen sin fin)
+        lista = consulta
+    else:
+        # El estado se calcula (no está en la base), por eso se filtra acá. Son solo las abiertas.
+        lista = [o for o in consulta if o.estado in EN_CURSO] if filtro == "curso" else \
+                [o for o in consulta if o.estado == filtro]
 
     pagina = Paginator(lista, 50).get_page(request.GET.get("pagina"))
     return render(request, "web/ordenes/lista.html", {
@@ -212,7 +237,7 @@ def orden_nueva_resumen(request):
 def _orden_para_mostrar(numero):
     return get_object_or_404(
         OrdenTrabajo.objects.select_related("cliente", "venta").prefetch_related(
-            "equipos__modelo__marca", "equipos__lineas_reparacion__reparacion",
+            "equipos__modelo__marca", "equipos__tipo", "equipos__lineas_reparacion__reparacion",
             "lineas_producto__producto", "pagos__metodo_pago", "devoluciones__metodo_pago",
             "devoluciones__linea_reparacion__reparacion", "cliente__telefonos"),
         pk=numero)
@@ -239,17 +264,19 @@ def _hacer_accion(request, orden, accion, f):
     o None si el formulario tiene errores (se vuelven a mostrar)."""
     post = request.POST
     if accion == "estado":
-        equipo = get_object_or_404(EquipoRecibido, pk=post.get("equipo"), orden_trabajo=orden)
+        equipo = get_object_or_404(EquipoRecibido, pk=_numero(post.get("equipo")), orden_trabajo=orden)
         servicios.cambiar_estado_equipo(equipo, post.get("estado"))
-        return f"Equipo {equipo.id}: {equipo.get_estado_display()}."
+        numero = list(orden.equipos.order_by("id").values_list("id", flat=True)).index(equipo.id) + 1
+        nombre = f"Equipo {numero}" if orden.equipos.count() > 1 else "El equipo"
+        return f"{nombre} quedó como: {equipo.get_estado_display()}."
     if accion == "reparacion":
-        equipo = get_object_or_404(EquipoRecibido, pk=post.get("equipo"), orden_trabajo=orden)
+        equipo = get_object_or_404(EquipoRecibido, pk=_numero(post.get("equipo")), orden_trabajo=orden)
         if not f["reparacion_form"].is_valid():
             return None
         servicios.agregar_reparacion(equipo, f["reparacion_form"].save(commit=False))
         return "Reparación agregada."
     if accion == "quitar_reparacion":
-        linea = get_object_or_404(LineaReparacion, pk=post.get("linea"), equipo__orden_trabajo=orden)
+        linea = get_object_or_404(LineaReparacion, pk=_numero(post.get("linea")), equipo__orden_trabajo=orden)
         servicios.quitar_reparacion(linea)
         return "Reparación quitada."
     if accion == "equipo":
@@ -263,7 +290,7 @@ def _hacer_accion(request, orden, accion, f):
         servicios.agregar_producto(orden, f["producto_form"].save(commit=False))
         return "Producto agregado."
     if accion == "quitar_producto":
-        linea = get_object_or_404(LineaProductoOrden, pk=post.get("linea"), orden_trabajo=orden)
+        linea = get_object_or_404(LineaProductoOrden, pk=_numero(post.get("linea")), orden_trabajo=orden)
         servicios.quitar_producto(linea)
         return "Producto quitado."
     if accion == "pago":
@@ -272,6 +299,24 @@ def _hacer_accion(request, orden, accion, f):
         datos = f["pago_form"].cleaned_data
         servicios.agregar_pago(orden, datos["metodo_pago"], datos["monto"], datos["recargo_porcentaje"])
         return "Pago registrado."
+    if accion == "quitar_pago":
+        pago = get_object_or_404(Pago, pk=_numero(post.get("pago")), orden_trabajo=orden)
+        servicios.quitar_pago(pago)
+        return f"Se quitó el pago de {pesos(pago.monto)}."
+    if accion == "anular_devolucion":
+        devolucion = get_object_or_404(Devolucion, pk=_numero(post.get("devolucion")), orden_trabajo=orden)
+        servicios.anular_devolucion(devolucion)
+        return "Se anuló la devolución."
+    if accion == "quitar_equipo":
+        equipo = get_object_or_404(EquipoRecibido, pk=_numero(post.get("equipo")), orden_trabajo=orden)
+        servicios.quitar_equipo(equipo)
+        return "Se quitó el equipo de la orden."
+    if accion == "devolver_saldo":
+        metodo_form = MetodoForm(post, prefix="dv")
+        if not metodo_form.is_valid():
+            raise ReglaDeNegocioError("Elegí con qué le devolvés el dinero.")
+        devuelto = servicios.devolver_saldo_a_favor(orden, metodo_form.cleaned_data["metodo_pago"])
+        return f"Le devolviste {pesos(devuelto)} al cliente."
     if accion == "devolucion":
         if not f["devolucion_form"].is_valid():
             return None
@@ -288,6 +333,14 @@ def _hacer_accion(request, orden, accion, f):
 @login_required
 def orden_detalle(request, numero):
     f = None
+    if request.method == "POST" and request.POST.get("accion") == "eliminar_orden":
+        try:
+            servicios.eliminar_orden(get_object_or_404(OrdenTrabajo, pk=numero))
+        except ReglaDeNegocioError as error:
+            _avisar_error(request, error)
+            return redirect("web:orden_detalle", numero=numero)
+        messages.success(request, f"Se eliminó la orden #{numero}.")
+        return redirect("web:ordenes")
     if request.method == "POST":
         orden = get_object_or_404(OrdenTrabajo, pk=numero)
         accion = request.POST.get("accion")
@@ -308,10 +361,13 @@ def orden_detalle(request, numero):
     # Un formulario "Agregar reparación" por equipo. Mismo prefijo (lo que se envía no cambia),
     # pero cada uno con sus propios id: si no, las etiquetas del 2.º equipo apuntaban al 1.º.
     for equipo in orden.equipos.all():
+        ya_tiene_revision = any(l.reparacion.es_revision for l in equipo.lineas_reparacion.all())
         equipo.form_reparacion = (f["reparacion_form"] if equipo.id == f["reparacion_equipo"]
-                                  else LineaReparacionForm(prefix="rep", auto_id=f"id_eq{equipo.id}_%s"))
+                                  else LineaReparacionForm(prefix="rep", auto_id=f"id_eq{equipo.id}_%s",
+                                                           sin_revision=ya_tiene_revision))
     return render(request, "web/ordenes/detalle.html", {
         "orden": orden, "estados_equipo": EQUIPO_ORDEN_ESTADO_CHOICES, **f,
+        "metodo_devolucion": MetodoForm(prefix="dv"),
     })
 
 
@@ -321,17 +377,17 @@ def orden_detalle(request, numero):
 def entregar(request):
     """Órdenes listas para entregar (y búsqueda entre las abiertas)."""
     q = request.GET.get("q", "").strip()
-    consulta = (OrdenTrabajo.objects.filter(venta__isnull=True).select_related("cliente")
+    consulta = (OrdenTrabajo.objects.filter(venta__isnull=True).select_related("cliente", "venta")
                 .prefetch_related(*PREFETCH_ORDEN).order_by("-id"))
     if q:
-        numero = q.lstrip("#")
-        filtro = Q(cliente__nombre__icontains=q) | Q(cliente__telefonos__numero__icontains=q)
-        if numero.isdigit():
-            filtro |= Q(pk=int(numero))
-        consulta = consulta.filter(filtro).distinct()
+        numero = _numero_buscado(q)
+        filtro = Q(cliente__in=_buscar_clientes(q.lstrip("#") if numero is not None else q))
+        if numero is not None:
+            filtro |= Q(pk=numero)
+        consulta = consulta.filter(filtro)
         lista = [o for o in consulta if o.estado in EN_CURSO]
     else:
-        lista = [o for o in consulta if o.estado == "lista"]
+        lista = [o for o in consulta if o.estado in ("lista", "finalizada")]
     return render(request, "web/entregar.html", {"ordenes": lista, "q": q})
 
 
@@ -349,7 +405,10 @@ def orden_entregar(request, numero):
         except (ValidationError, ReglaDeNegocioError) as error:
             _avisar_error(request, error)
         else:
-            messages.success(request, f"Orden #{orden.id} entregada. Venta #{venta.id} registrada.")
+            if venta.total:
+                messages.success(request, f"Orden #{orden.id} entregada. Venta #{venta.id} registrada.")
+            else:
+                messages.success(request, f"Orden #{orden.id} cerrada: se le devolvió el equipo al cliente, sin cargo.")
             return redirect("web:orden_detalle", numero=orden.id)
     return render(request, "web/ordenes/entregar.html", {"orden": _orden_para_mostrar(numero), "form": form})
 
@@ -400,7 +459,7 @@ def venta_rapida(request):
             except (ValidationError, ReglaDeNegocioError) as error:
                 _avisar_error(request, error)
             else:
-                messages.success(request, f"Venta #{venta.id} registrada.")
+                messages.success(request, f"Venta #{venta.id} registrada. Está en el Registro de ventas.")
                 return redirect("web:venta_rapida")
     return render(request, "web/ventas/rapida.html", {
         **f, "oc": _opciones_cliente("cliente", elegido=cliente_elegido.pk if cliente_elegido else None),
@@ -412,18 +471,23 @@ def venta_rapida(request):
 def venta_rapida_resumen(request):
     f = _formularios_venta(request.POST)
     total = _total_lineas(f["productos"])
-    asignado, sin_monto = 0, 0
-    for form in f["pagos"].forms:
-        if form.is_valid() and form.cleaned_data:
-            if form.cleaned_data.get("monto"):
-                asignado += form.cleaned_data["monto"]
-            elif form.cleaned_data.get("metodo_pago"):
-                sin_monto += 1
+    pagos = [form.cleaned_data for form in f["pagos"].forms
+             if form.is_valid() and form.cleaned_data and form.cleaned_data.get("metodo_pago")]
+    escrito = sum(p["monto"] for p in pagos if p.get("monto"))
+    sin_monto = [p for p in pagos if not p.get("monto")]
     # Igual que al guardar: un pago con el monto vacío se lleva lo que falta
-    if sin_monto == 1 and total > asignado:
-        asignado = total
+    recargos = []
+    for p in pagos:
+        monto = p.get("monto") or (total - escrito if len(sin_monto) == 1 else 0)
+        porcentaje = p["recargo_porcentaje"] if p.get("recargo_porcentaje") is not None else p["metodo_pago"].recargo_porcentaje
+        if monto > 0 and porcentaje:
+            recargo = Pago(monto=monto, recargo_porcentaje=porcentaje).recargo_monto     # misma cuenta que el pago
+            recargos.append({"metodo": p["metodo_pago"].nombre, "porcentaje": porcentaje, "monto": recargo})
+    asignado = total if len(sin_monto) == 1 and total > escrito else escrito
+    total_recargos = sum((r["monto"] for r in recargos), 0)
     return render(request, "web/parciales/resumen_venta.html", {
-        "total": total, "asignado": asignado, "falta": total - asignado, "varios_sin_monto": sin_monto > 1,
+        "total": total, "asignado": asignado, "falta": total - asignado, "varios_sin_monto": len(sin_monto) > 1,
+        "recargos": recargos, "paga": total + total_recargos,
     })
 
 
@@ -458,7 +522,7 @@ def reparaciones_para_devolver(request):
 @login_required
 def devoluciones(request):
     if request.method == "POST" and request.POST.get("accion") == "devolver_reparacion":
-        linea = LineaReparacion.objects.filter(pk=request.POST.get("linea") or 0).select_related("equipo", "reparacion").first()
+        linea = LineaReparacion.objects.filter(pk=_numero(request.POST.get("linea")) or 0).select_related("equipo", "reparacion").first()
         metodo_form = MetodoForm(request.POST, prefix="dr")
         metodo = metodo_form.cleaned_data["metodo_pago"] if metodo_form.is_valid() else None
         if linea is None:
@@ -478,8 +542,18 @@ def devoluciones(request):
                 return redirect("web:devoluciones")
         return redirect(f"{reverse('web:devoluciones')}?orden={request.POST.get('orden', '')}#devolver-reparacion")
 
+    if request.method == "POST" and request.POST.get("accion") == "anular":
+        devolucion = get_object_or_404(Devolucion, pk=_numero(request.POST.get("devolucion")))
+        try:
+            servicios.anular_devolucion(devolucion)
+        except ReglaDeNegocioError as error:
+            _avisar_error(request, error)
+        else:
+            messages.success(request, f"Se anuló la devolución de la orden #{devolucion.orden_trabajo_id}.")
+        return redirect("web:devoluciones")
+
     if request.method == "POST":
-        devolucion = get_object_or_404(Devolucion, pk=request.POST.get("devolucion"))
+        devolucion = get_object_or_404(Devolucion, pk=_numero(request.POST.get("devolucion")))
         form = MetodoForm(request.POST, prefix=f"d{devolucion.id}")
         if form.is_valid():
             try:
@@ -499,8 +573,9 @@ def devoluciones(request):
               .select_related("orden_trabajo__cliente", "metodo_pago").order_by("-fecha_devolucion")[:20])
 
     # Órdenes abiertas con plata a favor del cliente que todavía no tiene devolución registrada
-    abiertas = (OrdenTrabajo.objects.filter(venta__isnull=True).select_related("cliente")
-                .prefetch_related(*PREFETCH_ORDEN).order_by("-id"))
+    # (sin pagos no puede haber plata a favor: esas ni se cargan)
+    abiertas = (OrdenTrabajo.objects.filter(venta__isnull=True, pagos__isnull=False).distinct()
+                .select_related("cliente", "venta").prefetch_related(*PREFETCH_ORDEN).order_by("-id"))
     sin_registrar = []
     for orden in abiertas:
         falta_registrar = -orden.monto_adeudado - orden.monto_a_devolver
@@ -537,9 +612,14 @@ def _desde(periodo):
 
 
 def _buscar_clientes(q):
-    """Clientes por nombre, teléfono o email (sin repetidos, para usar con __in)."""
-    return Cliente.objects.filter(
-        Q(nombre__icontains=q) | Q(telefonos__numero__icontains=q) | Q(email__icontains=q)).values("pk")
+    """Clientes por nombre, teléfono o email (sin repetidos, para usar con __in).
+    El teléfono se compara solo con los dígitos: "3511234" encuentra "351-123 4"."""
+    filtro = Q(nombre__icontains=q) | Q(telefonos__numero__icontains=q) | Q(email__icontains=q)
+    digitos = "".join(ch for ch in q if ch.isdigit())
+    if len(digitos) >= 3:
+        filtro |= Q(pk__in=Telefono.objects.annotate(digitos=_solo_digitos("numero"))
+                    .filter(digitos__contains=digitos).values("cliente_id"))
+    return Cliente.objects.filter(filtro).values("pk")
 
 
 # ---------- Elegir cliente (Nueva orden y Venta rápida) ----------
@@ -609,27 +689,63 @@ def ventas(request):
     periodo = request.GET.get("periodo", "mes")
     q = request.GET.get("q", "").strip()
 
-    # "#12" o "12": si existe esa venta, se abre directo
-    numero = q.lstrip("#")
-    if numero.isdigit() and len(numero) <= 6 and Venta.objects.filter(pk=int(numero)).exists():
-        return redirect("web:venta_detalle", numero=int(numero))
-
+    numero = _numero_buscado(q)
     consulta = Venta.objects.all()
     desde = _desde(periodo)
     if desde:
         consulta = consulta.filter(fecha__gte=desde)
+    orden_lista = ("-id",)
     if q:
-        consulta = consulta.filter(cliente__in=_buscar_clientes(q))
+        por_cliente = Q(cliente__in=_buscar_clientes(q.lstrip("#") if numero is not None else q))
+        # Igual que en órdenes: "#12" abre la venta; "12" solo si ningún cliente coincide
+        if _abrir_directo(q, numero, Venta.objects.filter(pk=numero or 0).exists(),
+                          numero is not None and Venta.objects.filter(por_cliente).exists()):
+            return redirect("web:venta_detalle", numero=numero)
+        if numero is not None:
+            consulta = consulta.filter(por_cliente | Q(pk=numero))
+            orden_lista = (Case(When(pk=numero, then=0), default=1), "-id")
+        else:
+            consulta = consulta.filter(por_cliente)
     totales = consulta.aggregate(total=Sum("total"), cantidad=Count("id"))
 
     lista = (consulta.select_related("cliente", "orden_trabajo")
-             .prefetch_related("lineas_producto__producto", "orden_trabajo__equipos__modelo")
-             .order_by("-id"))
+             .prefetch_related("lineas_producto__producto", "orden_trabajo__equipos__modelo", "orden_trabajo__equipos__tipo",
+                               "orden_trabajo__lineas_producto__producto", "pagos__metodo_pago", "orden_trabajo__pagos__metodo_pago",
+                               "orden_trabajo__devoluciones__metodo_pago")
+             .order_by(*orden_lista))
     pagina = Paginator(lista, 50).get_page(request.GET.get("pagina"))
+    for venta in pagina:
+        venta.cobro = _cobro_de(venta)
     return render(request, "web/ventas/lista.html", {
         "pagina": pagina, "periodos": PERIODOS, "periodo": periodo, "q": q,
-        "total": totales["total"] or 0, "cantidad": totales["cantidad"],
+        "total": totales["total"] or 0, "cantidad": totales["cantidad"], **_cobros_del_periodo(consulta),
     })
+
+
+def _cobro_de(venta):
+    """Con qué se cobró una venta y cuánto entró con recargo (en una orden: sus pagos menos lo devuelto)."""
+    orden = venta.orden_trabajo if venta.orden_trabajo_id else None
+    pagos = list(orden.pagos.all() if orden else venta.pagos.all())
+    devuelto = sum((d.monto for d in orden.devoluciones.all() if d.devuelta), 0) if orden else 0
+    metodos = list(dict.fromkeys(p.metodo_pago.nombre for p in pagos))
+    cobrado = sum((p.total_cobrado for p in pagos), 0) - devuelto
+    return {"metodos": metodos, "cobrado": cobrado, "con_recargo": cobrado != venta.total}
+
+
+def _cobros_del_periodo(ventas):
+    """Totales del registro: cobrado con recargos y cuánto entró por cada cuenta (efectivo / digital)."""
+    pagos = (Pago.objects.filter(Q(venta__in=ventas) | Q(orden_trabajo__venta__in=ventas))
+             .select_related("metodo_pago").only("monto", "recargo_porcentaje", "metodo_pago__cuenta"))
+    devueltas = Devolucion.objects.filter(orden_trabajo__venta__in=ventas, fecha_devolucion__isnull=False).select_related("metodo_pago")
+    por_cuenta = {"efectivo": 0, "digital": 0}
+    cobrado = 0
+    for pago in pagos:
+        cobrado += pago.total_cobrado
+        por_cuenta[pago.metodo_pago.cuenta] = por_cuenta.get(pago.metodo_pago.cuenta, 0) + pago.total_cobrado
+    for devolucion in devueltas:
+        cobrado -= devolucion.monto
+        por_cuenta[devolucion.metodo_pago.cuenta] = por_cuenta.get(devolucion.metodo_pago.cuenta, 0) - devolucion.monto
+    return {"cobrado": cobrado, "efectivo": por_cuenta["efectivo"], "digital": por_cuenta["digital"]}
 
 
 @login_required
@@ -638,6 +754,14 @@ def venta_detalle(request, numero):
         Venta.objects.select_related("cliente", "orden_trabajo").prefetch_related(
             "lineas_producto__producto", "pagos__metodo_pago", "cliente__telefonos"),
         pk=numero)
+    if request.method == "POST" and request.POST.get("accion") == "anular_venta":
+        try:
+            servicios.anular_venta_directa(venta)
+        except ReglaDeNegocioError as error:
+            _avisar_error(request, error)
+            return redirect("web:venta_detalle", numero=numero)
+        messages.success(request, f"Se anuló la venta #{numero}.")
+        return redirect("web:ventas")
     orden = _orden_para_mostrar(venta.orden_trabajo_id) if venta.orden_trabajo_id else None
     pagos = orden.pagos.all() if orden else venta.pagos.all()
     return render(request, "web/ventas/detalle.html", {
@@ -693,7 +817,7 @@ def _accion_cliente(request, cliente, accion, f):
         servicios.agregar_telefono(cliente, datos["numero"], datos["principal"])
         return "Teléfono agregado."
     if accion in ("principal", "quitar_telefono"):
-        telefono = get_object_or_404(Telefono, pk=post.get("telefono"), cliente=cliente)
+        telefono = get_object_or_404(Telefono, pk=_numero(post.get("telefono")), cliente=cliente)
         if accion == "principal":
             servicios.marcar_telefono_principal(telefono)
             return f"{telefono.numero} es ahora el teléfono principal."
@@ -705,6 +829,14 @@ def _accion_cliente(request, cliente, accion, f):
 @login_required
 def cliente_detalle(request, numero):
     cliente = get_object_or_404(Cliente, pk=numero)
+    if request.method == "POST" and request.POST.get("accion") == "eliminar_cliente":
+        try:
+            servicios.eliminar_cliente(cliente)
+        except ReglaDeNegocioError as error:
+            _avisar_error(request, error)
+            return redirect("web:cliente_detalle", numero=numero)
+        messages.success(request, f"Se eliminó el cliente {cliente.nombre}.")
+        return redirect("web:clientes")
     accion = request.POST.get("accion") if request.method == "POST" else None
     datos = request.POST if accion else None
     f = {

@@ -19,7 +19,7 @@ class ModeloReporteTests(Base):
         """Equipo 1 (1000, se arregla) y equipo 2 (600, no se arregla). Seña 1600."""
         orden = self.crear_orden(D("1000"))
         eq1 = orden.equipos.first()
-        eq2 = EquipoRecibido.objects.create(orden_trabajo=orden, tipo="celular", problema="x")
+        eq2 = EquipoRecibido.objects.create(orden_trabajo=orden, tipo_id="celular", problema="x")
         linea2 = LineaReparacion.objects.create(equipo=eq2, reparacion=self.reparacion, precio_vendido=D("600"))
         pago = self.pagar(orden, "1600")
         eq1.estado, eq2.estado = "arreglado", "no_arreglable"
@@ -50,11 +50,11 @@ class ModeloReporteTests(Base):
     def test_equipo_nuevo_empieza_en_revision(self):
         orden = OrdenTrabajo.objects.create(cliente=self.cliente)
         for estado in ("arreglado", "sin_falla", "no_arreglable"):
-            e = EquipoRecibido(orden_trabajo=orden, tipo="celular", problema="x", estado=estado)
+            e = EquipoRecibido(orden_trabajo=orden, tipo_id="celular", problema="x", estado=estado)
             with self.assertRaises(ValidationError) as ctx:
                 e.full_clean()
             self.assertIn("estado", ctx.exception.message_dict)
-        EquipoRecibido(orden_trabajo=orden, tipo="celular", problema="x").full_clean()
+        EquipoRecibido(orden_trabajo=orden, tipo_id="celular", problema="x").full_clean()
 
     def test_equipo_guardado_puede_cambiar_de_estado(self):
         orden = self.crear_orden()
@@ -64,7 +64,7 @@ class ModeloReporteTests(Base):
 
     def test_bloqueo_por_defecto_es_ninguno(self):
         orden = OrdenTrabajo.objects.create(cliente=self.cliente)
-        self.assertEqual(EquipoRecibido(orden_trabajo=orden, tipo="celular", problema="x").tipo_bloqueo, "ninguno")
+        self.assertEqual(EquipoRecibido(orden_trabajo=orden, tipo_id="celular", problema="x").tipo_bloqueo, "ninguno")
 
     def test_etiqueta_del_estado_pendiente(self):
         e = self.crear_orden().equipos.first()
@@ -146,7 +146,7 @@ class AdminReporteTests(Base):
         d.update({"equipos-TOTAL_FORMS": str(len(equipos)), "equipos-INITIAL_FORMS": str(len(equipos)),
                   "equipos-MIN_NUM_FORMS": "0", "equipos-MAX_NUM_FORMS": "1000"})
         for i, e in enumerate(equipos):
-            d.update({f"equipos-{i}-id": e.pk, f"equipos-{i}-orden_trabajo": orden.pk, f"equipos-{i}-tipo": e.tipo,
+            d.update({f"equipos-{i}-id": e.pk, f"equipos-{i}-orden_trabajo": orden.pk, f"equipos-{i}-tipo": e.tipo_id,
                       f"equipos-{i}-problema": e.problema, f"equipos-{i}-tipo_bloqueo": e.tipo_bloqueo,
                       f"equipos-{i}-clave_bloqueo": "", f"equipos-{i}-accesorios_dejados": "",
                       f"equipos-{i}-estado": (equipos_estado or {}).get(e.pk, e.estado)})
@@ -173,7 +173,7 @@ class AdminReporteTests(Base):
 
     def orden_mixta(self):
         orden = self.crear_orden(D("1000"))
-        eq2 = EquipoRecibido.objects.create(orden_trabajo=orden, tipo="celular", problema="x")
+        eq2 = EquipoRecibido.objects.create(orden_trabajo=orden, tipo_id="celular", problema="x")
         linea2 = LineaReparacion.objects.create(equipo=eq2, reparacion=self.reparacion, precio_vendido=D("600"))
         self.pagar(orden, "1600")
         return orden, eq2, linea2

@@ -17,7 +17,7 @@
 <thead><tr><th scope="col">Detalle</th><th scope="col" class="der">Importe</th></tr></thead>
 <tbody>
 {% with devueltas=orden.lineas_devueltas %}{% for equipo in orden.equipos.all %}{% for linea in equipo.lineas_reparacion.all %}
-<tr class="{% if equipo.estado == 'no_arreglable' or linea.id in devueltas %}tachado{% endif %}"><td>{% if equipo.modelo %}{{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %} · {{ linea.reparacion }}{% if linea.id in devueltas %} <span class="estado bad">Devuelta</span>{% endif %}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
+<tr class="{% if equipo.estado == 'no_arreglable' or linea.id in devueltas %}tachado{% endif %}"><td>{% if equipo.modelo %}{{ equipo.modelo.nombre }}{% else %}{{ equipo.tipo }}{% endif %} · {{ linea.reparacion }}{% if linea.id in devueltas %} <span class="estado bad">Devuelta</span>{% endif %}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
 {% endfor %}{% endfor %}{% endwith %}
 {% for linea in orden.lineas_producto.all %}
 <tr><td>{{ linea.cantidad_adquirida }} × {{ linea.producto }}</td><td class="der">{{ linea.subtotal|pesos }}</td></tr>
@@ -35,20 +35,26 @@
 <div><dt>Ya pagó</dt><dd>{{ orden.monto_pagado|pesos }}</dd></div>
 </dl>
 <div class="saldo-caja {{ orden|saldo_clase }}">{{ orden|saldo }}</div>
-{% if orden.estado != "lista" %}
+{% with devolver=orden|para_devolver %}{% if orden.estado != "lista" and orden.estado != "finalizada" %}
 <p class="ayuda">Esta orden todavía no se puede entregar: {{ orden|estado_texto|lower }}.</p>
+{% elif devolver %}
+<p class="ayuda">Antes de entregar hay que devolverle <b>{{ devolver|pesos }}</b> al cliente.</p>
+<a class="btn pri ancho" href="{% url 'web:orden_detalle' orden.id %}#t-estado">Ir a la orden para devolverlo</a>
 {% else %}
 <form method="post">{% csrf_token %}
 {% include "web/parciales/errores_form.html" with form=form %}
 {% if orden.monto_adeudado > 0 %}
 {% include "web/parciales/campo.html" with campo=form.metodo_pago %}
 {% include "web/parciales/campo.html" with campo=form.recargo_porcentaje %}
-<button class="btn pri ancho" type="submit">Cobrar {{ orden.monto_adeudado|pesos }} y entregar</button>
+<button class="btn pri ancho" type="submit">Cobrar {{ orden.monto_adeudado|pesos }}, entregar y cerrar la orden</button>
+{% elif orden.estado == "finalizada" %}
+<p class="ayuda">No tuvo arreglo: se le devuelve el equipo sin cobrar nada.</p>
+<button class="btn pri ancho" type="submit">Devolver el equipo y cerrar la orden</button>
 {% else %}
-<button class="btn pri ancho" type="submit">Entregar</button>
+<button class="btn pri ancho" type="submit">Entregar al cliente y cerrar la orden</button>
 {% endif %}
 </form>
-{% endif %}
+{% endif %}{% endwith %}
 </section>
 </aside>
 </div>

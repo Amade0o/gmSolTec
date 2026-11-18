@@ -11,7 +11,7 @@ from django.urls import reverse
 
 from catalogo.models import (
     CategoriaProducto, CategoriaReparacion, Cliente, EquipoRecibido, Marca, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
-    ModeloEquipo, Pago, Producto, Reparacion,
+    ModeloEquipo, Pago, Producto, Reparacion, TipoEquipo,
 )
 
 
@@ -142,7 +142,9 @@ class EquipoForm(forms.ModelForm):
         self.fields["modelo"].label_from_instance = lambda m: f"{m.marca} {m.nombre}"
         self.fields["modelo"].empty_label = "Sin modelo (PC u otro)"
         con_alta_rapida(self.fields["modelo"], "modelos")
-        self.fields["tipo"].choices = [("", "Elegí el tipo…")] + [c for c in self.fields["tipo"].choices if c[0]]
+        self.fields["tipo"].queryset = TipoEquipo.objects.filter(activo=True)
+        self.fields["tipo"].empty_label = "Elegí el tipo…"
+        con_alta_rapida(self.fields["tipo"], "tipos-equipo")
         # "Ninguno" primero: es el valor por defecto
         self.fields["tipo_bloqueo"].choices = [("ninguno", "Ninguno"), ("pin", "PIN"), ("patron", "Patrón"), ("contrasena", "Contraseña")]
 
@@ -163,14 +165,21 @@ class EquipoForm(forms.ModelForm):
 # ---------- Líneas: primero qué se hace o se vende, después el precio ----------
 
 class LineaReparacionForm(forms.ModelForm):
+    """Una reparación. «Revisión / diagnóstico» va una sola vez por equipo: solo en la primera fila
+    (las filas 2, 3… y la fila vacía que se copia no la ofrecen) o si el equipo todavía no la tiene."""
     class Meta:
         model = LineaReparacion
         fields = ["reparacion", "precio_vendido"]
         labels = {"reparacion": "Reparación", "precio_vendido": "Precio"}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, sin_revision=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["reparacion"].queryset = Reparacion.objects.filter(activo=True).order_by("categoria__nombre", "nombre")
+        reparaciones = Reparacion.objects.filter(activo=True).order_by("categoria__nombre", "nombre")
+        if sin_revision is None:        # en una lista de filas: solo la primera la ofrece
+            sin_revision = bool(re.search(r"-(\d+|__prefix__)$", self.prefix or "")) and not self.prefix.endswith("-0")
+        if sin_revision:
+            reparaciones = reparaciones.exclude(nombre__iexact=Reparacion.NOMBRE_REVISION)
+        self.fields["reparacion"].queryset = reparaciones
         self.fields["reparacion"].empty_label = "Elegí la reparación…"
         con_alta_rapida(self.fields["reparacion"], "reparaciones")
 
@@ -225,7 +234,15 @@ class PagoForm(forms.ModelForm):
 # Formsets: varias filas del mismo formulario. Se muestra UNA fila; "+ Agregar otra" suma filas
 # (app.js copia la fila vacía). Las filas vacías se ignoran.
 # La primera reparación es obligatoria (min_num=1): viene cargada con "Revisión / diagnóstico".
-ReparacionesFormSet = forms.formset_factory(LineaReparacionForm, extra=0, min_num=1, validate_min=True)
+class _ReparacionesBase(forms.BaseFormSet):
+    def clean(self):
+        super().clean()
+        revisiones = [f for f in self.forms if f.cleaned_data.get("reparacion") and f.cleaned_data["reparacion"].es_revision]
+        if len(revisiones) > 1:
+            raise forms.ValidationError("«Revisión / diagnóstico» va una sola vez.")
+
+
+ReparacionesFormSet = forms.formset_factory(LineaReparacionForm, formset=_ReparacionesBase, extra=0, min_num=1, validate_min=True)
 ProductosFormSet = forms.formset_factory(LineaProductoForm, extra=1)
 ProductosVentaFormSet = forms.formset_factory(LineaProductoVentaForm, extra=0, min_num=1, validate_min=True)
 
@@ -263,7 +280,8 @@ class MetodoForm(forms.Form):
 class PagoVentaForm(forms.Form):
     """Como PagoForm, pero el monto puede quedar vacío: se completa con lo que falta."""
     metodo_pago = ElegirMetodo(queryset=metodos_activos(), label="Método")
-    monto = forms.DecimalField(max_digits=10, decimal_places=2, required=False, label="Monto",
+    # Vacío = lo que falta; si se escribe, como en Pago.monto: al menos $ 0,01 (nunca negativo)
+    monto = forms.DecimalField(max_digits=10, decimal_places=2, required=False, label="Monto", min_value=Decimal("0.01"),
                                widget=forms.NumberInput(attrs={"data-por-defecto": "resto"}))
     recargo_porcentaje = forms.DecimalField(max_digits=5, decimal_places=2, required=False, min_value=0,
                                             label="Recargo %", widget=forms.NumberInput(attrs={"placeholder": "El del método", "data-por-defecto": "recargo"}))
@@ -327,11 +345,12 @@ class ConDesactivablesForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._excluir_sin_cambios = True
         for campo, (vacio, activos) in self.campos_desactivables.items():
-            modelo = self._meta.model._meta.get_field(campo).related_model
+            relacion = self._meta.model._meta.get_field(campo)
+            modelo = relacion.related_model
             opciones = modelo.objects.filter(**activos)
-            actual = getattr(self.instance, f"{campo}_id", None)
-            if actual:
-                opciones = opciones | modelo.objects.filter(pk=actual)
+            actual = getattr(self.instance, relacion.attname, None)
+            if actual:     # el valor que ya tiene (por id, o por clave en los tipos de equipo)
+                opciones = opciones | modelo.objects.filter(**{relacion.target_field.attname: actual})
             self.fields[campo].queryset = opciones.order_by("nombre")
             self.fields[campo].empty_label = vacio
             self.fields[campo].limit_choices_to = None
@@ -393,7 +412,7 @@ class MarcaForm(forms.ModelForm):
 
 
 class ModeloEquipoForm(ConDesactivablesForm):
-    campos_desactivables = {"marca": ("Elegí la marca…", {"activa": True})}
+    campos_desactivables = {"marca": ("Elegí la marca…", {"activa": True}), "tipo": ("Elegí el tipo…", {"activo": True})}
 
     class Meta:
         model = ModeloEquipo
@@ -401,8 +420,15 @@ class ModeloEquipoForm(ConDesactivablesForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["tipo"].choices = [("", "Elegí el tipo…")] + [c for c in self.fields["tipo"].choices if c[0]]
         con_alta_rapida(self.fields["marca"], "marcas")
+        con_alta_rapida(self.fields["tipo"], "tipos-equipo")
+
+
+class TipoEquipoForm(forms.ModelForm):
+    class Meta:
+        model = TipoEquipo
+        fields = ["nombre"]
+        help_texts = {"nombre": "Por ejemplo: Tablet, Consola, Smartwatch."}
 
 
 class CategoriaReparacionForm(forms.ModelForm):
@@ -452,13 +478,13 @@ class _ConPadreNuevo:
 
 
 class ModeloRapidoForm(_ConPadreNuevo, ModeloEquipoForm):
-    campo_padre, modelo_padre = "marca", Marca
-    nuevo_padre = forms.CharField(max_length=60, required=False, label="o una marca nueva")
+    campo_padre, modelo_padre, texto_nuevo = "marca", Marca, "Escribir una marca nueva"
+    nuevo_padre = forms.CharField(max_length=60, required=False, label="Marca nueva")
 
 
 class ReparacionRapidaForm(_ConPadreNuevo, ReparacionForm):
-    campo_padre, modelo_padre = "categoria", CategoriaReparacion
-    nuevo_padre = forms.CharField(max_length=60, required=False, label="o una categoría nueva")
+    campo_padre, modelo_padre, texto_nuevo = "categoria", CategoriaReparacion, "Escribir una categoría nueva"
+    nuevo_padre = forms.CharField(max_length=60, required=False, label="Categoría nueva")
 
 
 class MetodoPagoForm(forms.ModelForm):

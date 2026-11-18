@@ -1,0 +1,3 @@
+
+# Archivos estáticos copiados al publicar (collectstatic)
+staticfiles/

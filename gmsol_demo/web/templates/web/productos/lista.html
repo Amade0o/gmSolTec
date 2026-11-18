@@ -18,7 +18,7 @@
 {% for c in categorias %}<option value="{{ c.id }}"{% if c.id == categoria %} selected{% endif %}>{{ c.nombre }}{% if not c.activa %} (desactivada){% endif %}</option>{% endfor %}
 </select>
 <input type="search" class="entrada" name="q" value="{{ q }}" placeholder="Nombre o marca" aria-label="Buscar por nombre o marca" spellcheck="false">
-<button class="btn" type="submit">Filtrar</button>
+<button class="btn" type="submit">Buscar productos</button>
 </form></search>
 
 <section class="panel">

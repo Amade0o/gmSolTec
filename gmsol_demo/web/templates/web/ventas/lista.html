@@ -1,11 +1,12 @@
 {% extends "web/base.html" %}
-{# Lista de ventas por período, con total #}
+{% comment %}Registro de ventas: todas las ventas (rápidas y entregas de órdenes) por período, con qué se cobró
+y cuánto entró con recargo. Arriba, los totales del período por cuenta (efectivo / digital).{% endcomment %}
 {% load formato %}
-{% block titulo %}Ventas{% endblock %}
+{% block titulo %}Registro de ventas{% endblock %}
 {% block contenido %}
 <div class="head">
-<h1>Ventas</h1>
-<a class="btn" href="{% url 'web:venta_rapida' %}">Venta rápida</a>
+<div><h1>Registro de ventas</h1><p class="sec">Las ventas rápidas y las entregas de órdenes, con lo que se cobró.</p></div>
+<a class="btn pri" href="{% url 'web:venta_rapida' %}">Nueva venta rápida</a>
 </div>
 
 <search><form class="filtros" method="get">
@@ -16,28 +17,35 @@
 <input type="search" class="entrada" name="q" value="{{ q }}" placeholder="N° de venta, cliente o teléfono" aria-label="Buscar venta por número, cliente o teléfono" spellcheck="false">
 </form></search>
 
-<div class="tiles">
+<div class="tiles tiles-registro">
 <div class="tile"><b>{{ cantidad }}</b><span>{% if cantidad == 1 %}Venta{% else %}Ventas{% endif %}</span></div>
 <div class="tile"><b>{{ total|pesos }}</b><span>Total vendido</span></div>
+<div class="tile"><b>{{ cobrado|pesos }}</b><span>Cobrado (con recargos)</span></div>
+<div class="tile"><b>{{ efectivo|pesos }}</b><span>Entró en efectivo</span></div>
+<div class="tile"><b>{{ digital|pesos }}</b><span>Entró en digital</span></div>
 </div>
 
 <section class="panel">
 {% if pagina.object_list %}
 <div class="tabla-tarjetas"><table>
-<caption class="oculto">Ventas</caption>
-<thead><tr><th scope="col">N°</th><th scope="col">Fecha</th><th scope="col">Cliente</th><th scope="col">Detalle</th><th scope="col" class="der">Total</th></tr></thead>
+<caption class="oculto">Registro de ventas</caption>
+<thead><tr><th scope="col">N°</th><th scope="col">Fecha</th><th scope="col">Tipo</th><th scope="col">Cliente</th><th scope="col">Qué se vendió</th><th scope="col">Cobrado con</th><th scope="col" class="der">Total</th><th scope="col" class="der">Cobrado</th></tr></thead>
 <tbody>
 {% for v in pagina %}
 <tr>
 <td class="num" data-label="N°"><a href="{% url 'web:venta_detalle' v.id %}"><b>#{{ v.id }}</b></a></td>
 <td class="sec" data-label="Fecha">{{ v.fecha|date:"j M, H:i" }}</td>
+<td data-label="Tipo">{% if v.orden_trabajo_id %}<a class="tipo-venta orden" href="{% url 'web:orden_detalle' v.orden_trabajo_id %}">Orden #{{ v.orden_trabajo_id }}</a>{% else %}<span class="tipo-venta rapida">Venta rápida</span>{% endif %}</td>
 <td class="cli" data-label="Cliente">{% if v.cliente %}<a class="fila-link" href="{% url 'web:cliente_detalle' v.cliente_id %}">{{ v.cliente }}</a>{% else %}<span class="sec">Sin cliente</span>{% endif %}</td>
-<td data-label="Detalle">{{ v|venta_texto }}</td>
+<td data-label="Qué se vendió">{{ v|venta_texto }}</td>
+<td data-label="Cobrado con">{{ v.cobro.metodos|join:", "|default:"—" }}</td>
 <td class="der" data-label="Total"><b>{{ v.total|pesos }}</b></td>
+<td class="der{% if not v.cobro.con_recargo %} sec{% endif %}" data-label="Cobrado">{{ v.cobro.cobrado|pesos }}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>
 {% include "web/parciales/paginas.html" %}
+<p class="ayuda">«Cobrado» incluye el recargo de la tarjeta. En las entregas de órdenes incluye la seña y descuenta lo devuelto.</p>
 {% else %}
 <p class="vacio">No hay ventas{% if q %} que coincidan con “{{ q }}”{% endif %} en este período.</p>
 {% endif %}

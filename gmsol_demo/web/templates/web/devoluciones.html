@@ -7,7 +7,7 @@
 
 <section class="panel" id="devolver-reparacion">
 <h2>Devolver una reparación</h2>
-<p class="ayuda">Si el cliente ya no quiere una reparación o no se pudo hacer: deja de cobrarse, queda anotada como devuelta en la orden y se le devuelve lo que pagó de más.</p>
+<p class="ayuda">Si el cliente ya no quiere una reparación o no se pudo hacer: deja de cobrarse, queda anotada como devuelta en la orden y se le devuelve lo que pagó de más. Es el precio sin el recargo de la tarjeta: si pagó con tarjeta, el recargo se lo devuelve la plataforma de la tarjeta.</p>
 <form method="post">{% csrf_token %}
 <input type="hidden" name="accion" value="devolver_reparacion">
 <div class="campo campo-corto">
@@ -32,7 +32,8 @@
 <td class="cli">{{ d.orden_trabajo.cliente }}</td>
 <td>{% if d.linea_reparacion %}{{ d.linea_reparacion.reparacion }}{% endif %}{% if d.nota %} <span class="sec">{{ d.nota }}</span>{% endif %}<br><span class="sec">Registrada el {{ d.fecha_registro|date:"j M" }}</span></td>
 <td class="der"><b>{{ d.monto|pesos }}</b></td>
-<td><form method="post" class="en-linea">{% csrf_token %}<input type="hidden" name="devolucion" value="{{ d.id }}"><label class="oculto" for="{{ form.metodo_pago.id_for_label }}">Método con que se devolvió lo de la orden #{{ d.orden_trabajo_id }}</label>{{ form.metodo_pago }}<button class="btn" type="submit">Marcar devuelta</button></form></td>
+<td><form method="post" class="en-linea">{% csrf_token %}<input type="hidden" name="devolucion" value="{{ d.id }}"><label class="oculto" for="{{ form.metodo_pago.id_for_label }}">Método con que se devolvió lo de la orden #{{ d.orden_trabajo_id }}</label>{{ form.metodo_pago }}<button class="btn" type="submit">Marcar como devuelta</button></form>
+<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="anular"><input type="hidden" name="devolucion" value="{{ d.id }}"><button class="enlace peligro" type="submit" data-confirmar="¿Anular esta devolución de {{ d.monto|pesos }} (orden #{{ d.orden_trabajo_id }})? Hacelo si se cargó por error." data-confirmar-si="Sí, anular">Anular (cargada por error)</button></form></td>
 </tr>
 {% endfor %}
 </tbody></table></div>

@@ -1,10 +1,27 @@
-{# Alta rápida (diálogo): marca, categoría, modelo o reparación sin salir de la pantalla #}
+{% comment %}Alta rápida (diálogo): tipo, marca, categoría, modelo o reparación sin salir de la pantalla.
+En modelo y reparación, la marca o categoría se elige de la lista o, con "+ Escribir una … nueva", se escribe
+en el mismo lugar (app.js cambia una por otra).{% endcomment %}
 <form hx-post="{% url 'web:alta_rapida' seccion %}" hx-target="#alta-rapida-cuerpo" novalidate>{% csrf_token %}
 <input type="hidden" name="destino" value="{{ destino }}">
 <h2 id="alta-rapida-titulo">{{ titulo }}</h2>
 {% if ayuda %}<p class="ayuda">{{ ayuda }}</p>{% endif %}
 {% include "web/parciales/errores_form.html" %}
-{% for campo in form %}{% include "web/parciales/campo.html" with campo=campo %}{% endfor %}
-<p class="ayuda">Queda en el Catálogo y elegido en la pantalla.</p>
-<div class="acts"><button type="button" class="btn" data-cerrar-dialogo>Cancelar</button><button type="submit" class="btn pri">Agregar</button></div>
+{% for campo in form %}
+{% if campo.name == form.campo_padre %}
+{% with nuevo=form.nuevo_padre %}
+<div class="campo{% if campo.errors %} con-error{% endif %}" data-elegir-padre{% if nuevo.value %} hidden{% endif %}>
+<div class="etiqueta-fila"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label><button type="button" class="enlace mas" data-escribir-nuevo>+ {{ form.texto_nuevo }}</button></div>
+{{ campo }}{% for e in campo.errors %}<small class="error">{{ e }}</small>{% endfor %}
+</div>
+<div class="campo{% if nuevo.errors %} con-error{% endif %}" data-escribir-padre{% if not nuevo.value %} hidden{% endif %}>
+<div class="etiqueta-fila"><label for="{{ nuevo.id_for_label }}">{{ nuevo.label }}</label><button type="button" class="enlace mas" data-elegir-lista>Elegir de la lista</button></div>
+{{ nuevo }}{% for e in nuevo.errors %}<small class="error">{{ e }}</small>{% endfor %}
+</div>
+{% endwith %}
+{% elif campo.name != "nuevo_padre" %}
+{% include "web/parciales/campo.html" with campo=campo %}
+{% endif %}
+{% endfor %}
+<p class="ayuda">Queda guardado en Configuración y elegido en la pantalla.</p>
+<div class="acts"><button type="button" class="btn" data-cerrar-dialogo>Cancelar</button><button type="submit" class="btn pri">{{ boton }}</button></div>
 </form>

@@ -2,7 +2,7 @@
 {# Venta rápida de mostrador (resumen en vivo) #}
 {% block titulo %}Venta rápida{% endblock %}
 {% block contenido %}
-<div class="head"><h1>Venta rápida <span class="sub">Productos sin orden de trabajo</span></h1></div>
+<div class="head"><h1>Venta rápida <span class="sub">Productos sin orden de trabajo</span></h1><a class="btn" href="{% url 'web:ventas' %}">Ver el registro de ventas</a></div>
 
 {% comment %} hx-*: cada vez que se cambia un campo, el servidor recalcula el resumen de la derecha.
    hx-sync="this:replace": si llega un cambio nuevo, se descarta el cálculo anterior (nunca queda un total viejo). {% endcomment %}

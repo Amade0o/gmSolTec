@@ -30,7 +30,7 @@ class DevolucionesTests(Base):
     def test_lo_que_no_se_arregla_no_se_cobra(self):
         orden = self.crear_orden(D("1000"))
         equipo2 = EquipoRecibido.objects.create(
-            orden_trabajo=orden, tipo="celular", problema="x", tipo_bloqueo="ninguno", estado="no_arreglable")
+            orden_trabajo=orden, tipo_id="celular", problema="x", tipo_bloqueo="ninguno", estado="no_arreglable")
         LineaReparacion.objects.create(equipo=equipo2, reparacion=self.reparacion, precio_vendido=D("600"))
         self.assertEqual(orden.total, D("1000"))        # la línea del equipo no arreglable no cuenta
 
@@ -111,7 +111,7 @@ class DevolucionesTests(Base):
     def test_orden_mixta_se_cierra_despues_de_devolver(self):
         orden = self.crear_orden(D("1000"))                         # equipo 1: se arregla, 1000
         equipo2 = EquipoRecibido.objects.create(
-            orden_trabajo=orden, tipo="celular", problema="x", tipo_bloqueo="ninguno", estado="no_arreglable")
+            orden_trabajo=orden, tipo_id="celular", problema="x", tipo_bloqueo="ninguno", estado="no_arreglable")
         LineaReparacion.objects.create(equipo=equipo2, reparacion=self.reparacion, precio_vendido=D("600"))
         orden.equipos.exclude(pk=equipo2.pk).update(estado="arreglado")
         self.pagar(orden, "1600")                                   # la seña cubría los dos equipos
@@ -132,10 +132,11 @@ class DevolucionesTests(Base):
         with self.assertRaises(ReglaDeNegocioError) as ctx:
             cerrar_orden(con_sena)
         self.assertIn("devolver", str(ctx.exception))
+        # Regla del 18/11/2026: sin arreglo y sin dinero pendiente, se cierra devolviendo el equipo
         sin_sena = self.orden_no_arreglable(sena=None)
-        with self.assertRaises(ReglaDeNegocioError) as ctx:
-            cerrar_orden(sin_sena)
-        self.assertIn("terminó sin venta", str(ctx.exception))
+        venta = cerrar_orden(sin_sena)
+        self.assertEqual(venta.total, D("0"))
+        self.assertEqual(sin_sena.estado, "cerrada")
 
     def test_no_cierra_con_una_devolucion_sin_hacer(self):
         """Regresión: con saldo 0 y una devolución pendiente, la orden se cerraba

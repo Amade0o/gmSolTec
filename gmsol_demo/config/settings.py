@@ -28,13 +28,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# Clave interna de seguridad para el proyecto, se debe mantener en secreto en producción.
-SECRET_KEY = 'django-insecure-qb+0%5l!31+y01s=5cuy1oa4eze&c4@r%9*4^@k@rn2*-9tr!@'
+# Modo, clave y dominios salen de variables de entorno. Sin definir nada (como en la PC
+# de desarrollo) todo queda igual que antes: DEBUG activo, clave de prueba, solo localhost.
+# Para publicar el sitio se definen, por ejemplo:
+#   GMSOL_DEBUG=0  GMSOL_SECRET_KEY=<clave larga al azar>  GMSOL_HOSTS=gmsol.com.ar,www.gmsol.com.ar
+# (una clave nueva: python -c "from django.core.management.utils import get_random_secret_key as k; print(k())")
+DEBUG = os.environ.get("GMSOL_DEBUG", "1") == "1"
 
-# SECURITY WARNING: no correr con debug activado en producción!
-DEBUG = True
+# Clave interna de seguridad: en producción es obligatorio darla por variable de entorno.
+SECRET_KEY = os.environ.get("GMSOL_SECRET_KEY") or (
+    'django-insecure-qb+0%5l!31+y01s=5cuy1oa4eze&c4@r%9*4^@k@rn2*-9tr!@' if DEBUG else None)
+if not SECRET_KEY:
+    raise RuntimeError("Falta GMSOL_SECRET_KEY: sin DEBUG no se usa la clave de prueba.")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("GMSOL_HOSTS", "").split(",") if h.strip()]
+
+if not DEBUG:
+    # Solo por HTTPS: las cookies de sesión y de CSRF no viajan sin cifrar
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.environ.get("GMSOL_SSL_REDIRECT", "1") == "1"
 
 
 # Application definition
@@ -133,6 +146,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 # Ruta para archivos estaticos de CSS, javascript, imagenes, etc
 STATIC_URL = 'static/'
+# Adonde copia los archivos `manage.py collectstatic` al publicar (sin DEBUG, Django no los sirve)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Email

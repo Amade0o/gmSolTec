@@ -45,7 +45,7 @@ def crear_orden(nombre_cliente="Juan"):
 def crear_equipo(orden, estado="pendiente", tipo="celular", modelo=None):
     return EquipoRecibido.objects.create(
         orden_trabajo=orden,
-        tipo=tipo,
+        tipo_id=tipo,
         modelo=modelo,
         problema="no carga",
         tipo_bloqueo="ninguno",
@@ -126,12 +126,12 @@ class EquipoRecibidoTests(TestCase):
         for tipo in ("celular", "notebook", "pc"):
             with self.subTest(tipo=tipo):
                 crear_equipo(self.orden, tipo=tipo).full_clean()
-        with self.assertRaises(ValidationError):
-            crear_equipo(self.orden, tipo="tablet").full_clean()
+        with self.assertRaises(ValidationError):      # "tablet" no está en TipoEquipo
+            EquipoRecibido(orden_trabajo=self.orden, tipo_id="tablet", problema="x").full_clean()
 
     def test_el_estado_arranca_pendiente(self):
         equipo = EquipoRecibido.objects.create(
-            orden_trabajo=self.orden, tipo="celular", problema="no carga", tipo_bloqueo="pin"
+            orden_trabajo=self.orden, tipo_id="celular", problema="no carga", tipo_bloqueo="pin"
         )
         self.assertEqual(equipo.estado, "pendiente")
 
@@ -179,7 +179,7 @@ class EquipoRecibidoTests(TestCase):
 
     def test_no_se_puede_borrar_un_modelo_con_equipos(self):
         marca = Marca.objects.create(nombre="Samsung")
-        modelo = ModeloEquipo.objects.create(nombre="A22", marca=marca, tipo="celular")
+        modelo = ModeloEquipo.objects.create(nombre="A22", marca=marca, tipo_id="celular")
         crear_equipo(self.orden, modelo=modelo)
         with self.assertRaises(ProtectedError):
             modelo.delete()

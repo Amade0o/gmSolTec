@@ -44,12 +44,15 @@
     /* Campos: borde con 3:1 de contraste sobre blanco y sobre el panel */
     --campo-fondo:#fff;
     --campo-borde:#9E845B;
+    /* Borde de lo que se toca (botones secundarios, buscador, filtros, tarjetas de cliente):
+       3:1 sobre el panel, el fondo y el hover. Antes usaban --line (1,35:1) y se perdían. */
+    --control-borde:#958369;
     /* Estados: fondo, texto, borde y punto (hexágono) */
     --ok-fondo:#DFF0DF;--ok-tinta:#1E5B2B;--ok-borde:#BBD9BE;--ok-punto:#3E8E52;
     --wip-fondo:#FCEBC8;--wip-tinta:#6B4A00;--wip-borde:#EBD4A0;--wip-punto:#D69A1B;
     --bad-fondo:#F8DAD5;--bad-tinta:#8A2A1C;--bad-borde:#EDBDB4;--bad-punto:#C4503C;
     /* Pista de progreso: paso sin hacer */
-    --pista-vacia:#CDBFA8;
+    --pista-vacia:#958369;     /* 3:1 sobre el panel (antes #CDBFA8, 1,75:1: no se veía) */
     /* Letras */
     --font:"Figtree","Segoe UI",sans-serif;
     --cond:"Barlow Condensed","Arial Narrow",sans-serif;   /* números grandes, fecha y títulos del menú */
@@ -100,7 +103,7 @@
   /* ---------- Cuerpo: menú lateral + contenido ---------- */
   .body{display:flex;flex:1}
   .side{width:14.75rem;flex:none;background:var(--side);padding:22px 16px;display:flex;flex-direction:column;gap:16px}
-  .main{flex:1;min-width:0;padding:28px 36px;display:flex;flex-direction:column;gap:22px}
+  .main{--hueco:22px;flex:1;min-width:0;padding:28px 36px;display:flex;flex-direction:column;gap:var(--hueco)}
   .main:focus{outline:none}           /* recibe el foco del enlace "Saltar al contenido" */
 
   /* ---------- Encabezado de cada pantalla ---------- */
@@ -110,7 +113,9 @@
   /* ---------- Pantallas de edición: pasos a la izquierda, resumen a la derecha ---------- */
   .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
   .pasos{display:flex;flex-direction:column;gap:18px;min-width:0}
-  .lateral{position:sticky;top:16px;display:flex;flex-direction:column;gap:18px}
+  .lateral{position:sticky;top:16px;display:flex;flex-direction:column;gap:18px;
+    /* si el resumen es más alto que la pantalla, se desliza adentro: el botón final siempre se alcanza */
+    max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 
   @media (max-width:53.75em){
     .strip{padding:10px 14px}
@@ -128,7 +133,7 @@
         var(--side)}
     .main{padding:18px}
     .cols{grid-template-columns:1fr}
-    .lateral{position:static}
+    .lateral{position:static;max-height:none;overflow:visible}
   }
 }
 
@@ -159,7 +164,7 @@
   }
 
   /* ---------- Buscador de la franja ---------- */
-  .search{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:0 12px;min-height:2.5rem;min-width:21.25rem;color:var(--muted)}
+  .search{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--control-borde);border-radius:9px;padding:0 12px;min-height:2.5rem;min-width:21.25rem;color:var(--muted)}
   .search input{border:0;background:transparent;min-height:0;height:100%;padding:0;border-radius:0;flex:1}
   .search input:focus-visible{outline:none}
   .search:focus-within{outline:3px solid var(--focus);outline-offset:2px}
@@ -168,7 +173,7 @@
   /* ---------- Botones ---------- */
   .acts{display:flex;flex-wrap:wrap;gap:10px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:2.5rem;padding:.25rem 16px;border-radius:9px;
-    font:600 .90625rem var(--font);text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+    font:600 .90625rem var(--font);text-decoration:none;border:1px solid var(--control-borde);background:var(--surface);color:var(--ink);cursor:pointer}
   .btn:hover{background:var(--hover)}
   .btn:active{translate:0 1px}
   .btn.pri{background:var(--cta);border-color:var(--cta);color:var(--ctatxt)}
@@ -188,10 +193,10 @@
   h2 .sub{font-size:.84375rem}
   .ayuda{display:block;font-size:.8125rem;color:var(--muted);margin:0}
   .vacio{color:var(--muted);padding:6px 2px;margin:0}
-  .fecha{font-family:var(--cond);font-size:.875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:-18px}
+  .fecha{font-family:var(--cond);font-size:.875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:calc(4px - var(--hueco))}
 
   /* ---------- Migas: Órdenes › #12 ---------- */
-  .migas{font-size:.84375rem;color:var(--muted);margin-bottom:-14px}
+  .migas{font-size:.84375rem;color:var(--muted);margin-bottom:calc(8px - var(--hueco))}
   .migas ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
   .migas li+li::before{content:"/" / "";margin-inline-end:6px;color:var(--muted)}
 
@@ -210,7 +215,7 @@
 
   /* ---------- Tablas ---------- */
   table{width:100%;border-collapse:collapse;font-size:.90625rem;font-variant-numeric:tabular-nums}
-  th{text-align:start;font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap}
+  th{text-align:start;font-size:.8125rem;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap}
   td{padding:12px;border-bottom:1px solid var(--line)}
   tr:last-child td{border-bottom:0}
   tbody tr:hover{background:var(--hover)}
@@ -218,6 +223,7 @@
   td.num a{text-decoration:none}
   td.cli{font-weight:600}
   :is(th,td).der{text-align:end}
+  td.der{white-space:nowrap}          /* los montos ($ 15.000) no se cortan en dos renglones */
   td:is(.afavor,.perdida){color:var(--bad-tinta);font-weight:600}
   td a.fila-link{color:var(--ink);text-decoration:none}
   td a.fila-link:hover{text-decoration:underline}
@@ -239,7 +245,7 @@
     .tabla-tarjetas tr{border:1px solid var(--line);border-radius:10px;padding:6px 12px;margin-block-end:8px;background:var(--surface)}
     .tabla-tarjetas tr:last-child{margin-block-end:0}
     .tabla-tarjetas td{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:5px 0;border:0;text-align:end}
-    .tabla-tarjetas td::before{content:attr(data-label);flex:none;text-align:start;font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+    .tabla-tarjetas td::before{content:attr(data-label);flex:none;text-align:start;font-size:.8125rem;color:var(--muted);font-weight:600}
     .tabla-tarjetas td:not([data-label])::before{content:none}
     .tabla-tarjetas td:not([data-label]){justify-content:flex-end}
     .tabla-tarjetas form.en-linea{flex-wrap:wrap;justify-content:flex-end}
@@ -270,6 +276,16 @@
   .tile b{font-family:var(--cond);font-size:2.75rem;font-weight:700;line-height:.95;font-variant-numeric:tabular-nums}
   .tile span{display:flex;align-items:center;gap:8px;font-weight:500;font-size:.875rem;color:var(--muted)}
   .tile:is(.ok,.wip,.bad) span::before{content:"";width:10px;height:11px;flex:none;clip-path:var(--hex);background:var(--punto)}
+  /* Registro de ventas: de dónde viene cada venta */
+  .tipo-venta{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.8125rem;font-weight:600;white-space:nowrap;text-decoration:none;border:1px solid}
+  .tipo-venta.orden{background:var(--wip-fondo);color:var(--wip-tinta);border-color:var(--wip-borde)}
+  .tipo-venta.rapida{background:var(--surface);color:var(--ink);border-color:var(--line)}
+  .tiles-registro{grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr))}
+  .tiles-registro .tile b{font-size:2rem}
+  /* En Inicio cada tarjeta lleva a su lista */
+  a.tile{color:var(--ink);text-decoration:none}
+  a.tile:hover{border-color:var(--control-borde);background:var(--hover)}
+  a.tile:hover span{color:var(--ink)}
   .tile.wip{--punto:var(--wip-punto)}.tile.ok{--punto:var(--ok-punto)}.tile.bad{--punto:var(--bad-punto)}
   @media (max-width:53.75em){
     .tiles{gap:8px}
@@ -354,7 +370,7 @@
   label.en-linea{display:flex;gap:8px;align-items:center;min-height:2.5rem}
 
   /* ---------- Control segmentado (filtros, tipo de bloqueo, estado del equipo) ---------- */
-  .segmento{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--hover);border:1px solid var(--line);border-radius:10px}
+  .segmento{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--hover);border:1px solid var(--control-borde);border-radius:10px}
   .segmento.estados,.campo .segmento{align-self:flex-start}
   .segmento :is(a,button,label){border:0;background:none;font:500 .875rem var(--font);color:var(--ink);padding:7px 12px;border-radius:7px;text-decoration:none;cursor:pointer;white-space:nowrap}
   .segmento :is(a,button,label):hover{background:rgba(58,48,43,.07)}
@@ -371,7 +387,7 @@
 
   /* ---------- Datos y cuentas ---------- */
   dl.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 20px;margin:0}
-  dl.datos dt{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  dl.datos dt{font-size:.8125rem;color:var(--muted);font-weight:600}
   dl.datos dd{margin:2px 0 0;overflow-wrap:anywhere}
   b.clave{font-family:var(--mono);font-weight:500;background:var(--hover);padding:1px 6px;border-radius:5px}
   dl.cuentas{margin:0;display:flex;flex-direction:column;gap:8px}
@@ -419,11 +435,15 @@
   .panel:has(input[name$="-modo"][value="nuevo"]:checked) .cliente-existente,
   .panel:has(input[name$="-modo"][value="existente"]:checked) .cliente-nuevo{display:none}
   .cliente-nuevo{display:flex;flex-direction:column;gap:10px}
+  /* Aviso de cliente parecido: cada uno es una tarjeta con su botón, bien a la vista */
+  .parecidos{border:2px solid var(--wip-punto);border-radius:10px;background:var(--wip-fondo);padding:12px 14px;color:var(--wip-tinta)}
   .parecidos p{margin:0}
-  .parecidos ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-  .parecidos li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:500}
-  .opcion{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:2.75rem;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:pointer}
-  .opcion:hover{border-color:var(--campo-borde)}
+  .parecidos ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .parecidos li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    background:var(--surface);border:1px solid var(--campo-borde);border-radius:9px;padding:8px 10px;color:var(--ink)}
+  .parecidos li small{display:block;color:var(--muted)}
+  .opcion{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:2.75rem;border:1px solid var(--control-borde);border-radius:9px;background:#fff;cursor:pointer}
+  .opcion:hover{border-color:var(--focus)}
   .opcion:has(:checked){border-color:var(--focus);background:var(--hover);box-shadow:inset 0 0 0 1px var(--focus)}
   .opcion:has(:focus-visible){outline:3px solid var(--focus);outline-offset:1px}
   .opcion input:focus-visible{outline:none}
@@ -436,8 +456,24 @@
     background:var(--hover);border:1px solid var(--line);border-left:4px solid var(--cta)}
   .titulo-agregar{margin:0;font-weight:700;color:var(--focus)}
 
+  /* ---------- Orden: Estado de la orden (debajo del resumen) ---------- */
+  .estado-orden{gap:12px}
+  .equipo-estado{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+  .equipo-estado-titulo{margin:0;font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+  .botones-estado{display:flex;flex-direction:column;gap:6px}
+  .botones-estado .btn{width:100%}
+  .botones-estado .ayuda{margin-bottom:2px}
+  .proximo-paso{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:10px;background:var(--hover);border:1px solid var(--line)}
+  .proximo-paso p{margin:0}
+  .proximo-paso form{display:flex;flex-direction:column;gap:10px}
+  .btn.grande{min-height:3rem;font-size:1rem}
+
   /* ---------- Devoluciones: devolver una reparación ---------- */
   .dr-lineas,.lista-reparaciones{display:flex;flex-direction:column;gap:10px}
+  /* Catálogo: pestañas agrupadas (Equipos, Reparaciones, Productos, Pagos) */
+  .grupos-catalogo{display:flex;flex-wrap:wrap;gap:12px 20px}
+  .grupo-catalogo{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .gt-catalogo{font-family:var(--cond);font-size:.8125rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--muted)}
   .campo-corto{max-width:14rem}
 
   /* ---------- Listas de filas: "+ Agregar otra" y "Quitar" ---------- */
@@ -447,12 +483,14 @@
   .tabla-form td.quitar:empty{padding:0}
 
   /* Precio de lista / lo que falta: se ve el número con un lápiz para cambiarlo */
-  .por-defecto{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:2.5rem;padding:2px 2px 2px 11px;
-    border:1px dashed var(--campo-borde);border-radius:9px;background:var(--surface);font-weight:600;font-variant-numeric:tabular-nums}
+  .por-defecto{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:2.5rem;padding:2px 2px 2px 11px;width:100%;
+    border:1px dashed var(--campo-borde);border-radius:9px;background:var(--surface);font:inherit;font-weight:600;color:var(--ink);
+    font-variant-numeric:tabular-nums;cursor:pointer;text-align:start}
+  .por-defecto:hover{border-style:solid;background:#fff}
   .por-defecto[hidden]{display:none}
   .por-defecto .valor{white-space:nowrap}
   .lapiz{display:inline-grid;place-items:center;width:2.25rem;height:2.25rem;border:0;border-radius:7px;background:none;color:var(--focus);cursor:pointer;flex:none}
-  .lapiz:hover{background:var(--hover)}
+  .por-defecto:hover .lapiz{background:var(--hover)}
   .lapiz svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 }
 
@@ -486,6 +524,16 @@
   }
 
   /* ---------- Impresión: comprobante de la orden o de la venta ---------- */
+  /* Menú de Imprimir (orden): dos opciones debajo del botón */
+  .menu-imprimir{margin:0;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);
+    box-shadow:0 10px 30px rgba(43,36,32,.18);inset:auto;position-area:bottom span-left;margin-top:6px;min-width:17rem}
+  .menu-imprimir:popover-open{display:flex;flex-direction:column;gap:2px}
+  .menu-imprimir button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:start;border:0;background:none;
+    padding:9px 12px;border-radius:8px;font:600 .90625rem var(--font);color:var(--ink);cursor:pointer}
+  .menu-imprimir button:hover{background:var(--hover)}
+  .menu-imprimir small{font-weight:500;font-size:.78125rem;color:var(--muted)}
+  .comprobante{display:none}
+
   @media print{
     @page{margin:12mm}
     html,body,.app{background:#fff}
@@ -494,11 +542,42 @@
     .strip>:not(.logo),.side,.saltar,.avisos,dialog,form,details,.acts,.btn,.migas,.agregar,.no-imprimir,b.clave{display:none!important}
     .body,.main,.cols{display:block;padding:0}
     .main>*+*,.pasos>*+*{margin-top:6mm}
-    .lateral{position:static;margin-top:6mm}
+    .lateral{position:static;margin-top:6mm;max-height:none;overflow:visible}
     .panel{border:1px solid #bbb;break-inside:avoid;padding:4mm 5mm}
     .solo-imprimir{display:block}
     a{color:inherit;text-decoration:none}
     tbody tr:hover{background:none}
     .tabla-tarjetas thead th{position:static}
+    .menu-imprimir{display:none!important}
+
+    /* Imprimir la orden: una sola hoja, compacta, sin devoluciones */
+    html[data-imprimir="orden"] .app{font-size:9pt}
+    html[data-imprimir="orden"] .strip{padding-bottom:3mm}
+    html[data-imprimir="orden"] .strip .logo img{height:28px}
+    html[data-imprimir="orden"] h1{font-size:14pt}
+    html[data-imprimir="orden"] :is(.panel-devoluciones,.comprobante,.equipo-estado,.proximo-paso){display:none!important}
+    html[data-imprimir="orden"] .cols{display:grid;grid-template-columns:1fr 52mm;gap:4mm;align-items:start}
+    html[data-imprimir="orden"] :is(.main>*+*,.pasos>*+*){margin-top:3mm}
+    html[data-imprimir="orden"] .lateral{margin-top:0}
+    html[data-imprimir="orden"] .panel{padding:2.5mm 3.5mm;gap:2mm;border-radius:2mm}
+    html[data-imprimir="orden"] :is(td,th){padding:1mm 1.5mm}
+    html[data-imprimir="orden"] .saldo-caja{padding:2mm;font-size:10pt}
+    html[data-imprimir="orden"] .ayuda{font-size:7.5pt}
+    html[data-imprimir="orden"] :is(.pasos,.lateral){break-inside:avoid}
+
+    /* Imprimir el comprobante: solo la media hoja para el cliente */
+    html[data-imprimir="comprobante"] :is(.strip,.main>:not(.comprobante)){display:none!important}
+    html[data-imprimir="comprobante"] .comprobante{display:block!important;font-size:9pt;line-height:1.35;max-height:135mm;overflow:hidden;
+      border:1px solid #999;border-radius:2mm;padding:4mm 5mm}
+    .comprobante p{margin:1.5mm 0}
+    .comprobante-cabeza{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-bottom:1px solid #bbb;padding-bottom:2mm}
+    .comprobante-cabeza img{height:12mm;width:auto}
+    .comprobante-cabeza div{text-align:end}
+    .comprobante-equipos{margin:1.5mm 0;padding-left:4mm}
+    .comprobante-condiciones{margin-top:2mm;font-size:8pt}
+    .comprobante-condiciones ol{margin:1mm 0 0;padding-left:4mm}
+    .comprobante-firmas{display:flex;gap:10mm;margin-top:10mm}
+    .comprobante-firmas span{flex:1;border-top:1px solid #333;padding-top:1mm;font-size:8pt;text-align:center}
+    .comprobante-pie{text-align:center;font-size:7.5pt;color:#666}
   }
 }

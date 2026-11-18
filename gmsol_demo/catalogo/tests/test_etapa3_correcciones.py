@@ -29,7 +29,7 @@ class Base(TestCase):
     def crear_orden(self, precio=D("1000"), cant_producto=0):
         orden = OrdenTrabajo.objects.create(cliente=self.cliente)
         equipo = EquipoRecibido.objects.create(
-            orden_trabajo=orden, tipo="celular", problema="No carga", tipo_bloqueo="ninguno")
+            orden_trabajo=orden, tipo_id="celular", problema="No carga", tipo_bloqueo="ninguno")
         LineaReparacion.objects.create(equipo=equipo, reparacion=self.reparacion, precio_vendido=precio)
         if cant_producto:
             LineaProductoOrden.objects.create(
@@ -131,10 +131,10 @@ class ModeloTests(Base):
 
     def test_unicos_por_pareja(self):
         m1, m2 = Marca.objects.create(nombre="M1"), Marca.objects.create(nombre="M2")
-        ModeloEquipo.objects.create(nombre="X", marca=m1, tipo="celular")
-        ModeloEquipo.objects.create(nombre="X", marca=m2, tipo="celular")   # otra marca: ok
+        ModeloEquipo.objects.create(nombre="X", marca=m1, tipo_id="celular")
+        ModeloEquipo.objects.create(nombre="X", marca=m2, tipo_id="celular")   # otra marca: ok
         with self.assertRaises(IntegrityError), transaction.atomic():
-            ModeloEquipo.objects.create(nombre="X", marca=m1, tipo="celular")
+            ModeloEquipo.objects.create(nombre="X", marca=m1, tipo_id="celular")
         c2 = CategoriaReparacion.objects.create(nombre="Otra")
         Reparacion.objects.create(nombre="Modulo", categoria=c2)            # otra categoría: ok
         with self.assertRaises(IntegrityError), transaction.atomic():
@@ -153,7 +153,7 @@ class ModeloTests(Base):
 
     def test_ninguno_con_clave_invalido(self):
         orden = OrdenTrabajo.objects.create(cliente=self.cliente)
-        e = EquipoRecibido(orden_trabajo=orden, tipo="celular", problema="x",
+        e = EquipoRecibido(orden_trabajo=orden, tipo_id="celular", problema="x",
                            tipo_bloqueo="ninguno", clave_bloqueo="1234")
         with self.assertRaises(ValidationError) as ctx:
             e.full_clean()

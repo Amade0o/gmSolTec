@@ -19,7 +19,7 @@
 {# ---------- Lo que se cobró de la orden ---------- #}
 {% for equipo in orden.equipos.all %}
 <section class="panel">
-<h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.get_tipo_display }}{% endif %}</span></h2>
+<h2 id="t-equipo-{{ equipo.id }}">Equipo {{ forloop.counter }} <span class="sub">{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.tipo }}{% endif %}</span></h2>
 <p><span class="estado {{ equipo|estado_equipo_clase }}">{{ equipo.get_estado_display }}</span></p>
 <div class="tabla-scroll" tabindex="0" role="region" aria-labelledby="t-equipo-{{ equipo.id }}"><table>
 <thead><tr><th scope="col">Reparación</th><th scope="col" class="der">Precio</th></tr></thead>
@@ -76,6 +76,7 @@
 <div class="saldo-caja ok">Pagada</div>
 {% if orden %}<a class="btn ancho" href="{% url 'web:orden_detalle' orden.id %}">Ver la orden #{{ orden.id }}</a>{% endif %}
 </section>
+{% if not orden %}<form method="post" class="eliminar no-imprimir">{% csrf_token %}<button class="enlace peligro" type="submit" name="accion" value="anular_venta" data-confirmar="¿Anular la venta #{{ venta.id }}? Se borran sus productos y sus pagos. Hacelo solo si se cargó por error." data-confirmar-si="Sí, anular la venta">Anular esta venta (cargada por error)</button></form>{% endif %}
 </aside>
 </div>
 <p class="solo-imprimir sec">GM Soluciones tecnológicas · Impreso el {% now "j/n/Y H:i" %}</p>

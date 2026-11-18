@@ -34,7 +34,7 @@ class BaseConPagos(TestCase):
         """Orden con 1 equipo y 1 reparación. Si cantidad_producto > 0, suma el cable a 250 c/u."""
         orden = OrdenTrabajo.objects.create(cliente=self.cliente)
         equipo = EquipoRecibido.objects.create(
-            orden_trabajo=orden, tipo="celular", problema="No carga", tipo_bloqueo="ninguno")
+            orden_trabajo=orden, tipo_id="celular", problema="No carga", tipo_bloqueo="ninguno")
         LineaReparacion.objects.create(
             equipo=equipo, reparacion=self.reparacion, precio_vendido=precio_reparacion)
         if cantidad_producto:

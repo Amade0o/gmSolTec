@@ -84,7 +84,7 @@ class ActivoPorDefectoTests(TestCase):
             "CategoriaProducto": CategoriaProducto.objects.create(nombre="Cables").activa,
             "Marca": marca.activa,
             "Producto": crear_producto().activo,
-            "ModeloEquipo": ModeloEquipo.objects.create(nombre="A22", marca=marca, tipo="celular").activo,
+            "ModeloEquipo": ModeloEquipo.objects.create(nombre="A22", marca=marca, tipo_id="celular").activo,
             "CategoriaReparacion": categoria_rep.activo,
             "Reparacion": Reparacion.objects.create(nombre="Cambio de módulo", categoria=categoria_rep).activo,
         }
@@ -132,19 +132,24 @@ class ModeloEquipoTests(TestCase):
     def test_celular_y_notebook_son_tipos_validos(self):
         for tipo in ("celular", "notebook"):
             with self.subTest(tipo=tipo):
-                ModeloEquipo(nombre="X", marca=self.marca, tipo=tipo).full_clean()
+                ModeloEquipo(nombre="X", marca=self.marca, tipo_id=tipo).full_clean()
 
-    def test_pc_no_es_un_tipo_valido_para_un_modelo(self):
+    def test_tipo_desactivado_no_sirve_para_un_modelo(self):
+        # Desde el 18/11/2026 los tipos están en una tabla (TipoEquipo): uno desactivado no se elige
+        from catalogo.models import TipoEquipo
+        TipoEquipo.objects.filter(clave="pc").update(activo=False)
         with self.assertRaises(ValidationError):
-            ModeloEquipo(nombre="Optiplex", marca=self.marca, tipo="pc").full_clean()
+            ModeloEquipo(nombre="Optiplex", marca=self.marca, tipo_id="pc").full_clean()
+        with self.assertRaises(ValidationError):
+            ModeloEquipo(nombre="Optiplex", marca=self.marca, tipo_id="no-existe").full_clean()
 
     def test_no_se_puede_borrar_una_marca_con_modelos(self):
-        ModeloEquipo.objects.create(nombre="A22", marca=self.marca, tipo="celular")
+        ModeloEquipo.objects.create(nombre="A22", marca=self.marca, tipo_id="celular")
         with self.assertRaises(ProtectedError):
             self.marca.delete()
 
     def test_str_incluye_la_marca_y_el_nombre(self):
-        modelo = ModeloEquipo.objects.create(nombre="A22 5G", marca=self.marca, tipo="celular")
+        modelo = ModeloEquipo.objects.create(nombre="A22 5G", marca=self.marca, tipo_id="celular")
         self.assertIn("A22 5G", str(modelo))
         self.assertIn("Samsung", str(modelo))
 
@@ -183,7 +188,7 @@ class AdminCatalogoTests(TestCase):
         crear_producto(marca=marca)
         cliente = Cliente.objects.create(nombre="Juan")
         Telefono.objects.create(cliente=cliente, numero="3584000001")
-        ModeloEquipo.objects.create(nombre="A22", marca=marca, tipo="celular")
+        ModeloEquipo.objects.create(nombre="A22", marca=marca, tipo_id="celular")
         categoria = CategoriaReparacion.objects.create(nombre="Módulo")
         Reparacion.objects.create(nombre="Módulo OLED", categoria=categoria)
 

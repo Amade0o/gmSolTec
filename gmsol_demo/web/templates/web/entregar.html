@@ -6,7 +6,7 @@
 <div class="head"><h1>Entregar equipo</h1></div>
 <search><form class="filtros" method="get">
 <input type="search" class="entrada" name="q" value="{{ q }}" placeholder="N° de orden, cliente o teléfono" aria-label="Buscar la orden" spellcheck="false" autofocus>
-<button class="btn" type="submit">Buscar</button>
+<button class="btn" type="submit">Buscar orden</button>
 {% if q %}<a class="enlace" href="{% url 'web:entregar' %}">Ver las listas</a>{% endif %}
 </form></search>
 <section class="panel">
@@ -22,7 +22,7 @@
 <td data-label="Equipo">{{ o|equipos_texto }}</td>
 <td data-label="Estado">{% include "web/parciales/pista.html" %}</td>
 <td class="der{% if o.monto_adeudado < 0 %} afavor{% endif %}" data-label="Saldo">{{ o|saldo }}</td>
-<td class="der">{% if o.estado == "lista" %}<a class="btn" href="{% url 'web:orden_entregar' o.id %}">Entregar<span class="oculto"> la orden #{{ o.id }}</span></a>{% endif %}</td>
+<td class="der">{% if o.estado == "lista" or o.estado == "finalizada" %}<a class="btn pri" href="{% url 'web:orden_entregar' o.id %}">Entregar al cliente<span class="oculto"> la orden #{{ o.id }}</span></a>{% endif %}</td>
 </tr>
 {% endfor %}
 </tbody></table></div>

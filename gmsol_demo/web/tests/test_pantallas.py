@@ -236,7 +236,7 @@ class EntregarTests(Base):
     def test_cobra_el_saldo_y_entrega(self):
         o = self.orden("1000", estado="arreglado", pagado="400")
         url = reverse("web:orden_entregar", args=[o.id])
-        self.assertContains(self.client.get(url), "Cobrar $ 600 y entregar")
+        self.assertContains(self.client.get(url), "Cobrar $ 600, entregar y cerrar la orden")
         r = self.client.post(url, {"metodo_pago": self.efectivo.id, "recargo_porcentaje": ""})
         self.assertRedirects(r, reverse("web:orden_detalle", args=[o.id]))
         self.assertTrue(Venta.objects.filter(orden_trabajo=o).exists())
@@ -346,7 +346,7 @@ class ElegirClienteTests(Base):
         self.juan.telefonos.create(numero="3584 111-111", principal=True)
         url = reverse("web:clientes_parecidos")
         self.assertContains(self.client.get(url, {"cli-nuevo_telefono": "3584111111"}), "Juan Pérez")
-        self.assertContains(self.client.get(url, {"cli-nuevo_nombre": "juan pérez"}), "Usar este")
+        self.assertContains(self.client.get(url, {"cli-nuevo_nombre": "juan pérez"}), "Usar este cliente")
         self.assertNotContains(self.client.get(url, {"cli-nuevo_nombre": "Otra Persona"}), "Usar este")
 
 
@@ -355,7 +355,7 @@ class DevolucionesTests(Base):
         o = self.orden("1000", pagado="400", estado="no_arreglable")
         d = Devolucion.objects.create(orden_trabajo=o, monto=D("400"))
         r = self.client.get(reverse("web:devoluciones"))
-        self.assertContains(r, "Marcar devuelta")
+        self.assertContains(r, "Marcar como devuelta")
         r = self.client.post(reverse("web:devoluciones"), {"devolucion": d.id, f"d{d.id}-metodo_pago": self.efectivo.id})
         self.assertRedirects(r, reverse("web:devoluciones"))
         self.assertTrue(Devolucion.objects.get(pk=d.id).devuelta)

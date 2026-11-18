@@ -22,7 +22,7 @@ class AltaRapidaTests(Base):
     def test_los_desplegables_tienen_el_boton(self):
         r = self.client.get(reverse("web:orden_nueva"))
         self.assertContains(r, "+ Nuevo modelo")
-        self.assertContains(r, "+ Nueva reparación (al catálogo)")
+        self.assertContains(r, "+ Nueva reparación (si no está en la lista)")
         r = self.client.get(reverse("web:producto_nuevo"))
         self.assertContains(r, "+ Nueva categoría")
         self.assertContains(r, "+ Nueva marca")
@@ -133,7 +133,7 @@ class DevolverReparacionTests(Base):
         self.client.post(reverse("web:devoluciones"), {
             "accion": "devolver_reparacion", "orden": o.id, "linea": self.bateria.id, "dr-metodo_pago": ""})
         self.assertFalse(Devolucion.objects.get().devuelta)
-        self.assertContains(self.client.get(reverse("web:devoluciones")), "Marcar devuelta")
+        self.assertContains(self.client.get(reverse("web:devoluciones")), "Marcar como devuelta")
 
     def test_sin_dinero_de_mas_avisa(self):
         o = self.orden("15000", pagado="10000")

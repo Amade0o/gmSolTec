@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from .models import Devolucion, CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta
+from .models import Devolucion, CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta, TipoEquipo
 from .servicios import cerrar_orden, ReglaDeNegocioError
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
@@ -142,6 +142,12 @@ class CategoriaProductoAdmin(admin.ModelAdmin):
     list_display = ("nombre", "activa")
 
 
+@admin.register(TipoEquipo)
+class TipoEquipoAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "clave", "activo")
+    list_filter = ("activo",)
+
+
 @admin.register(Marca)
 class MarcaAdmin(admin.ModelAdmin):
     list_display = ("nombre", "activa")
@@ -169,7 +175,7 @@ class ClienteAdmin(admin.ModelAdmin):
 @admin.register(ModeloEquipo)
 class ModeloEquipoAdmin(admin.ModelAdmin):
     list_display = ("nombre", "marca", "tipo", "activo")
-    search_fields = ("nombre", "marca__nombre", "tipo")
+    search_fields = ("nombre", "marca__nombre", "tipo__nombre")
 
 @admin.register(CategoriaReparacion)
 class CategoriaReparacionAdmin(admin.ModelAdmin):

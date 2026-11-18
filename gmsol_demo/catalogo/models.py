@@ -7,21 +7,12 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.utils.text import slugify
 from django.db import models
 from django.utils import timezone
 
-#Tipos de equipos que se pueden recibir en una orden de trabajo
-EQUIPO_RECIBIDO_ORDEN_CHOICES= [
-    ('celular', 'Celular'),
-    ('notebook', 'Notebook'),
-    ('pc','PC')
-]
-
-# Tipos de equipo que registramos en la base de datos
-MODELO_EQUIPO_TIPO_CHOICES = [
-    ('celular', 'Celular'),
-    ('notebook', 'Notebook')
-]
+# Los tipos de equipo (Celular, Notebook, PC…) ya no son una lista fija: están en la tabla
+# TipoEquipo y el dueño los agrega desde el Catálogo (pedido del 18/11/2026).
 
 # Estados del equipo dentro de la orden, estos tambien seran estados de la orden
 EQUIPO_ORDEN_ESTADO_CHOICES = [
@@ -49,6 +40,31 @@ BLOQUEO_CHOICES = [
 class CategoriaProducto(models.Model):
     nombre = models.CharField(max_length=60, unique=True)
     activa = models.BooleanField(default=True)  # no se borra: se desactiva
+
+    def __str__(self):
+        return self.nombre
+
+
+class TipoEquipo(models.Model):
+    """Celular, Notebook, PC, Tablet… Lo carga el dueño en el Catálogo.
+    'clave' es lo que se guarda en los equipos y modelos ("celular"): no cambia aunque cambie el nombre."""
+    clave = models.SlugField(max_length=20, unique=True, editable=False)
+    nombre = models.CharField(max_length=40, unique=True)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name = "tipo de equipo"
+        verbose_name_plural = "tipos de equipo"
+
+    def save(self, *args, **kwargs):
+        if not self.clave:
+            base = slugify(self.nombre)[:16] or "tipo"
+            clave, n = base, 2
+            while TipoEquipo.objects.filter(clave=clave).exists():
+                clave, n = f"{base}-{n}", n + 1
+            self.clave = clave
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nombre
@@ -113,7 +129,8 @@ class ModeloEquipo(models.Model):
     nombre = models.CharField(max_length=60)
     marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="modelos",
                               limit_choices_to={"activa": True})
-    tipo = models.CharField(max_length=20, choices= MODELO_EQUIPO_TIPO_CHOICES)
+    tipo = models.ForeignKey(TipoEquipo, to_field="clave", db_column="tipo", on_delete=models.PROTECT,
+                             related_name="modelos", limit_choices_to={"activo": True})
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -146,6 +163,13 @@ class Reparacion(models.Model):
             models.UniqueConstraint(fields=["categoria", "nombre"], name="reparacion_unica_por_categoria")
         ]
 
+    NOMBRE_REVISION = "Revisión / diagnóstico"
+
+    @property
+    def es_revision(self):
+        """La revisión va una sola vez por equipo (es la primera línea de todo equipo)."""
+        return self.nombre.casefold() == self.NOMBRE_REVISION.casefold()
+
     def __str__(self):
         return self.nombre
 
@@ -168,6 +192,10 @@ class OrdenTrabajo(models.Model):
             return 'pendiente'
 
         if all(equipo.estado == 'no_arreglable' for equipo in equipos):
+            # Ningún equipo tuvo arreglo, pero se lleva productos: se cobran y se entregan con una venta
+            # (caso borde del cable ya entregado; regla del 18/11/2026)
+            if self.total > 0:
+                return 'lista'
             # Si no queda dinero retenido (nunca hubo seña o ya se devolvió), terminó sin venta
             if self.monto_retenido == 0:
                 return 'finalizada'
@@ -387,7 +415,8 @@ class Devolucion(models.Model):
 
 class EquipoRecibido(models.Model):
     orden_trabajo = models.ForeignKey(OrdenTrabajo, on_delete=models.CASCADE, related_name="equipos")
-    tipo = models.CharField(max_length=20, choices=EQUIPO_RECIBIDO_ORDEN_CHOICES)
+    tipo = models.ForeignKey(TipoEquipo, to_field="clave", db_column="tipo", on_delete=models.PROTECT,
+                             related_name="equipos")
     modelo = models.ForeignKey(ModeloEquipo, on_delete=models.PROTECT, related_name="equipos", blank = True, null = True)
     problema = models.TextField(max_length=500) 
     tipo_bloqueo = models.CharField(max_length=20, choices=BLOQUEO_CHOICES, default='ninguno')

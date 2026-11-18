@@ -23,14 +23,14 @@ class DatosBase(TestCase):
         self.efectivo = MetodoPago.objects.create(nombre="Efectivo", cuenta="efectivo")
         self.juan = Cliente.objects.create(nombre="Juan Pérez")
         marca = Marca.objects.create(nombre="Samsung")
-        self.modelo = ModeloEquipo.objects.create(nombre="Galaxy A14", marca=marca, tipo="celular")
+        self.modelo = ModeloEquipo.objects.create(nombre="Galaxy A14", marca=marca, tipo_id="celular")
         self.reparacion = Reparacion.objects.create(
             nombre="Módulo OLED", categoria=CategoriaReparacion.objects.create(nombre="Módulo"))
 
     def orden(self, precio="1000", estado="pendiente", pagado=None, modelo=True):
         o = OrdenTrabajo.objects.create(cliente=self.juan)
         e = EquipoRecibido.objects.create(
-            orden_trabajo=o, tipo="celular", problema="x", modelo=self.modelo if modelo else None)
+            orden_trabajo=o, tipo_id="celular", problema="x", modelo=self.modelo if modelo else None)
         LineaReparacion.objects.create(equipo=e, reparacion=self.reparacion, precio_vendido=D(precio))
         if pagado:
             Pago.objects.create(orden_trabajo=o, metodo_pago=self.efectivo, monto=D(pagado))
@@ -111,14 +111,15 @@ class InicioTests(DatosBase):
         self.assertContains(r, "A favor: $ 10.000 (devolver)")
         self.assertEqual(r.context["devoluciones"], 1)
 
-    def test_no_aparecen_las_cerradas_ni_las_finalizadas(self):
+    def test_no_aparecen_las_cerradas(self):
         cerrada = self.orden("1000", estado="arreglado", pagado="1000")
         cerrar_orden(cerrada)
-        finalizada = self.orden("1000", estado="no_arreglable")        # sin seña
         r = self.client.get(reverse("web:inicio"))
         self.assertNotContains(r, f"#{cerrada.id}<")
-        self.assertNotContains(r, f"#{finalizada.id}<")
         self.assertContains(r, "No hay órdenes en curso.")
+        # Sin arreglo y sin seña sigue en curso hasta devolverle el equipo (regla del 18/11/2026)
+        finalizada = self.orden("1000", estado="no_arreglable")
+        self.assertContains(self.client.get(reverse("web:inicio")), f"#{finalizada.id}<")
 
     def test_devolucion_ya_hecha_no_cuenta(self):
         o = self.orden("1000", pagado="400", estado="no_arreglable")
@@ -127,7 +128,7 @@ class InicioTests(DatosBase):
 
     def test_equipo_sin_modelo_y_varios_equipos(self):
         o = self.orden("1000", modelo=False)
-        EquipoRecibido.objects.create(orden_trabajo=o, tipo="pc", problema="y")
+        EquipoRecibido.objects.create(orden_trabajo=o, tipo_id="pc", problema="y")
         r = self.client.get(reverse("web:inicio"))
         self.assertContains(r, "Celular + 1 más")
 

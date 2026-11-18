@@ -1,0 +1,26 @@
+{% load formato static %}{% comment %}Comprobante para el cliente (se imprime con "Imprimir comprobante"): media hoja con los datos
+de la orden y condiciones. Las condiciones son un TEXTO DE EJEMPLO para la demo: el contrato real se redacta después.
+No lleva la clave de bloqueo.{% endcomment %}
+<section class="comprobante" aria-hidden="true">
+<header class="comprobante-cabeza">
+<img src="{% static 'web/img/logo.webp' %}" width="261" height="128" alt="">
+<div><b>Comprobante de recepción</b><br>Orden <b>#{{ orden.id }}</b> · {{ orden.fecha_recepcion|date:"j/n/Y H:i" }}</div>
+</header>
+<p><b>Cliente:</b> {{ orden.cliente }}{% for t in orden.cliente.telefonos.all %}{% if forloop.first %} · Tel. {{ t.numero }}{% endif %}{% endfor %}</p>
+<ul class="comprobante-equipos">
+{% for equipo in orden.equipos.all %}<li><b>{% if equipo.modelo %}{{ equipo.modelo.marca }} {{ equipo.modelo.nombre }}{% else %}{{ equipo.tipo }}{% endif %}</b> — {{ equipo.problema|truncatechars:90 }}{% if equipo.accesorios_dejados %} · Deja: {{ equipo.accesorios_dejados|truncatechars:60 }}{% endif %}</li>
+{% endfor %}</ul>
+<p><b>Presupuesto:</b> {{ orden.total|pesos }} · <b>Pagó:</b> {{ orden.monto_pagado|pesos }} · <b>Saldo:</b> {{ orden|saldo }}</p>
+<div class="comprobante-condiciones">
+<b>Condiciones</b> <span class="sec">(texto de ejemplo)</span>
+<ol>
+<li>Para retirar el equipo hay que presentar este comprobante.</li>
+<li>Pasados 30 días desde que se avisa que el equipo está listo, el comercio no se hace responsable por el equipo.</li>
+<li>El comercio no se responsabiliza por la información guardada en el equipo: se recomienda hacer una copia de seguridad.</li>
+<li>El presupuesto puede cambiar si al revisar el equipo aparecen otras fallas; cualquier cambio se consulta antes.</li>
+<li>La garantía cubre solo la reparación realizada, no golpes, humedad ni otras fallas.</li>
+</ol>
+</div>
+<div class="comprobante-firmas"><span>Firma del cliente</span><span>Aclaración</span></div>
+<p class="comprobante-pie">GM Soluciones tecnológicas</p>
+</section>

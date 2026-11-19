@@ -1,6 +1,6 @@
 # GMSol — Stack y arquitectura (v3)
 
-> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [BPMN_nuevo.md](BPMN_nuevo.md).
+> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md).
 > **Estado:** etapa de planificación. Proyecto **real, para producción**, sin fecha límite.
 > **Leyenda:** ✅ definido · 🟡 propuesto (falta confirmar)
 

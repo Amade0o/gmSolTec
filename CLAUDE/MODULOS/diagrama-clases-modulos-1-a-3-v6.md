@@ -1,6 +1,6 @@
 # GMSol — Diagrama de clases (v6, módulos 1 a 3 hasta las devoluciones)
 
-> **Uso:** documento autosuficiente para cargar como contexto. **Reemplaza** a la v5 y a `diagrama-clases-modulo1y2-orden.md` (v4). Complementa a `GMSol-modelo-BPMN-taller-v2.md`, `GMSol-stack-y-arquitectura.md` y `0_Plan.md`.
+> **Uso:** documento autosuficiente para cargar como contexto. **Reemplaza** a la v5 y a `diagrama-clases-modulo1y2-orden.md` (v4). Complementa a `BPMN Y MODELO/BPMN.md`, `DISEÑO/stack_tecnologico.md` y `0_Plan.md`.
 > **Estado:** módulos 1 (catálogo) y 2 (orden de trabajo) cerrados. Módulo 3 (pagos y ventas): `MetodoPago`, `Pago`, `Venta`, líneas de venta directa, dinero retenido y **devoluciones** (Fase 5) hechos y con tests. Pruebas manuales en el admin hechas; faltan los fiados y los pagos pendientes de acreditar (Fases 3 y 4, después de la beta). Faltan los módulos 4 y 5 (caja y movimientos, compras).
 > **Código:** las clases del diagrama están en `catalogo/models.py`, salvo `Producto.codigo`, `Proveedor`, `Configuracion`.
 > **Vocabulario:** **Venta** = registro interno que cierra una transacción e impacta stock y caja (antes "factura"). **Comprobante ARCA** = documento legal, es otra cosa (etapa 8).

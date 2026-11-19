@@ -1,6 +1,6 @@
 # GMSol — Etapa 7: interfaz propia (diseño técnico v1)
 
-> **Uso:** documento corto para cargar como contexto. Complementa a `guia-de-diseno-gmsol.md` (cómo se ve) y a `GMSol-stack-y-arquitectura.md` (stack).
+> **Uso:** documento corto para cargar como contexto. Complementa a `../BPMN Y MODELO/guia-de-diseno-gmsol.md` (cómo se ve) y a `stack_tecnologico.md` (stack).
 > **Estado:** pasos **7.0 a 7.8 hechos** (16/11/2026): login, Inicio, lista de órdenes, nueva orden, detalle, entregar, venta rápida, devoluciones, ventas, clientes, productos y catálogo, con el diseño **v2** ("H2 + pista de progreso", ver `guia-de-diseno-gmsol.md`). Falta: pantallas de caja y stock (etapa 4).
 > **Leyenda:** ✅ decidido · 💡 propuesta (falta confirmar)
 
@@ -22,7 +22,7 @@ La interfaz que va a usar el dueño todos los días, en la PC del local y, de a 
 | 4 | ✅ **HTMX para lo dinámico** | El resumen de la orden (total, saldo) se recalcula **en el servidor** al cambiar un campo, con la misma lógica de recargos y totales del sistema. Evita duplicar reglas en JavaScript |
 | 5 | ✅ **JavaScript propio solo para el patrón de bloqueo** | La grilla de 9 puntos que guarda `1-5-9-6` (`static/web/js/patron.js`). Sin JS la clave se escribe a mano |
 | 6 | ✅ **HTMX en un archivo local** | Se descarga una vez a `static/`, sin depender de internet para funcionar |
-| 7 | ✅ **Tipografía por enlace a Google Fonts al principio** | Figtree, Barlow Condensed e IBM Plex Mono. En la etapa 12 (instalación) se pasan a archivos locales |
+| 7 | ✅ **Tipografía en archivos locales** | Figtree, Barlow Condensed e IBM Plex Mono, en `static/web/fuentes/` (`@font-face` en `gmsol.css`). Funciona sin internet |
 | 10 | ✅ **Pista de progreso** | El estado de la orden se dibuja como pista de circuito (Recibida → Revisión → Lista → Entregada). Se calcula con el filtro `pista` de `formato.py`; no hay datos nuevos |
 | 8 | ✅ **Login simple de Django**, un solo usuario | |
 | 9 | ✅ **Todas las pantallas requieren login** | |
@@ -101,7 +101,7 @@ gmsol_demo/
 
 | Paso | Qué se hace |
 |---|---|
-| **7.0** ✅ | App `web`, plantilla base (franja y menú), `gmsol.css` con las variables de la guía, login, logo e **Inicio**. Rediseño v2 (`gmsol-v2.css`, fecha del día, pista de progreso) |
+| **7.0** ✅ | App `web`, plantilla base (franja y menú), `gmsol.css` con las variables de la guía, login, logo e **Inicio**. Rediseño v2 (fecha del día, pista de progreso; hoy todo está en `gmsol.css`) |
 | **7.1** ✅ | Lista de órdenes: filtros por estado, búsqueda por cliente o teléfono (el teléfono se compara solo con los dígitos), `#12` abre la orden. `12` sin numeral también la abre si ningún cliente tiene un teléfono que coincida; si coincide alguno, muestra la lista con la orden #12 primera (18/11/2026) |
 | **7.2** ✅ | **Nueva orden** (el servicio `crear_orden`, el formulario, el resumen con HTMX y el patrón de bloqueo) |
 | **7.3** ✅ | Detalle de orden: estados, reparaciones, productos, pagos, registrar devoluciones |
@@ -127,15 +127,15 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 | # | Tema |
 |---|---|
 | 1 | Confirmar las decisiones 💡 de la sección 2 |
-| 2 | Tipografía en archivos locales (etapa 12) |
-| 3 | Búsqueda de cliente dentro de "Nueva orden": hoy es un desplegable con nombre y teléfono. Con muchos clientes conviene un buscador |
+| 2 | ~~Tipografía en archivos locales~~ ✅ ya están en `static/web/fuentes/` |
+| 3 | ~~Búsqueda de cliente dentro de "Nueva orden"~~ ✅ la lista se filtra al escribir y carga de a 40 (17/11) |
 | 4 | "Guardar e imprimir" (etapa 10) |
 | 5 | La tarjeta "Devoluciones por hacer" cuenta solo devoluciones **registradas**; una orden con saldo a favor sin devolución registrada no suma. Decidir si debe contar también esas |
 | 6 | Columna "días en el taller" con aviso de 30 días (se probó en la propuesta K). Falta definir si los 30 días cuentan desde que se deja el equipo o desde que se avisa que está listo |
-| 8 | Corregir un pago mal cargado: hoy solo desde el admin |
+| 8 | Corregir un pago mal cargado: se puede **quitar** en una orden abierta (`quitar_pago`, 18/11); editarlo o tocarlo en una orden cerrada sigue siendo desde el admin |
 | 11 | Productos, modelos y reparaciones con una categoría o marca desactivada se pueden seguir editando sin cambiarla (`ConDesactivablesForm`); elegir una desactivada no se permite |
 | 12 | Nueva orden busca la reparación "Revisión / diagnóstico" por nombre. Si se renombra o desactiva en el Catálogo, la primera fila viene vacía |
-| 10 | Ventas: no hay forma de anular una venta mal hecha (hoy solo desde el admin) |
+| 10 | Ventas: la venta rápida se puede anular (`anular_venta_directa`, 18/11); la venta que cerró una orden, solo desde el admin |
 | 7 | Texto del saldo: la guía dice "A favor del cliente: $X (se debe devolver)"; la pantalla muestra "A favor: $ X (devolver)". Unificar |
 
 

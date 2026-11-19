@@ -1,6 +1,6 @@
 # GMSol — Diagrama de clases, Módulo 1: Catálogo (v1)
 
-> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [Decisiones_diseño_extra.md](../Decisiones_diseño_extra.md), [BPMN_nuevo.md](../BPMN_nuevo.md) y [stack_tecnologico.md](../stack_tecnologico.md).
+> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [casos_puntuales_diseño.md](../DISEÑO/casos_puntuales_diseño.md), [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md) y [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md).
 > **Estado:** módulo 1 cerrado por el desarrollador. Falta el detalle del teléfono (ver §6).
 > **Leyenda:** ✅ decisión del desarrollador · 💡 propuesta (falta confirmar) · ❓ pendiente
 

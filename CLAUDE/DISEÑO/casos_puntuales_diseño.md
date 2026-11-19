@@ -1,6 +1,6 @@
 # GMSol — Decisiones para el diagrama de clases (v1)
 
-> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [BPMN_nuevo.md](BPMN_nuevo.md) y [stack_tecnologico.md](stack_tecnologico.md).
+> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md) y [stack_tecnologico.md](stack_tecnologico.md).
 > **Qué es:** cada decisión responde una pregunta concreta hecha al empezar el modelado de clases.
 > **Leyenda:** ✅ decisión del desarrollador · 💡 implicación de diseño propuesta (falta confirmar) · ❓ pendiente
 

@@ -1,7 +1,7 @@
 # GMSol — Guía de diseño de la interfaz (v2)
 
 > **Uso:** documento corto para cargar como contexto antes de hacer cualquier pantalla.
-> **v2 (16/11/2026):** propuesta **"H2 + pista de progreso"**. Mantiene los colores y la distribución de la v1 (propuesta F), pero la v1 se veía "de juguete" (todo muy redondeado, menú flotante, pastillas de color, todo en negrita). La v2 es más sobria y toma la identidad del logo: **hexágono** y **pistas de circuito**. Implementada en `web/static/web/css/gmsol-v2.css`, que se carga encima de `gmsol.css` (sacándola se vuelve a la v1).
+> **v2 (16/11/2026):** propuesta **"H2 + pista de progreso"**. Mantiene los colores y la distribución de la v1 (propuesta F), pero la v1 se veía "de juguete" (todo muy redondeado, menú flotante, pastillas de color, todo en negrita). La v2 es más sobria y toma la identidad del logo: **hexágono** y **pistas de circuito**. Implementada en `web/static/web/css/gmsol.css` (al principio era un `gmsol-v2.css` aparte; hoy está todo en un archivo).
 > **Estilo en una frase:** cálido, serio y legible. Papel crema, tinta oscura, naranja de marca usado con criterio. Redondeado, sin ángulos duros ni efectos.
 > **Prioridad del desarrollador:** minimalista, nada genérico ni que parezca hecho con IA.
 

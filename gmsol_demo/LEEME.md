@@ -45,7 +45,8 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Abrir <http://127.0.0.1:8000/admin/> e ingresar con el usuario creado.
+Abrir <http://127.0.0.1:8000/> (la interfaz del local) e ingresar con el usuario creado.
+El admin queda en <http://127.0.0.1:8000/admin/> para correcciones puntuales.
 Detener el servidor con `Ctrl+C`.
 
 Cuando se cambien modelos, crear y aplicar migraciones con:
@@ -92,6 +93,8 @@ python manage.py test catalogo.tests.test_etapa3_pagos
 python manage.py test catalogo.tests.test_etapa3_devoluciones
 python manage.py test catalogo.tests.test_etapa3_venta_directa
 python manage.py test catalogo.tests.test_etapa3_reporte_manual
+python manage.py test catalogo.tests.test_etapa7_servicios
+python manage.py test web          # todas las pantallas
 ```
 
 Ejemplo de un único test:

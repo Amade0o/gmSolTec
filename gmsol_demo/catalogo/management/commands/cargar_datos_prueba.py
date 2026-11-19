@@ -22,7 +22,7 @@ class Command(BaseCommand):
         ]
         for nombre, marca, tipo in modelos:
             ModeloEquipo.objects.get_or_create(
-                nombre=nombre, marca=marcas[marca], defaults={"tipo": tipo})
+                nombre=nombre, marca=marcas[marca], defaults={"tipo_id": tipo})
 
         # Categorías y productos
         categorias = {n: CategoriaProducto.objects.get_or_create(nombre=n)[0]

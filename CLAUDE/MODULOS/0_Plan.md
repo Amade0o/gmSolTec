@@ -23,12 +23,12 @@
 
 | Hito | # | Etapa | Qué incluye | Estado |
 |---|---|---|---|---|
-| Demo | 0 | Requisitos y análisis | Consigna, BPMN, stack | ✅ |
+| Demo | 0 | Requisitos y análisis | Consigna, BPMN, stack (Django, SQLite, Windows) | ✅ |
 | | 1 | Catálogo | Clientes y teléfonos, productos, marcas, modelos, reparaciones | ✅ |
 | | 2 | Orden de trabajo | Orden, equipos, líneas de reparación y de producto, estado calculado | ✅ |
 | | 3 | Pagos y ventas | Métodos de pago y recargos, pagos parciales, ventas, devoluciones | ✅ |
-| | 7 | Pantallas propias | Pasos 7.0 a 7.8 (ver `DISEÑO/etapa-7-interfaz.md`). Faltan caja y stock | 🔄 |
-| Beta | 4 | **Caja y movimientos** 👈 | Cuentas efectivo / digital, movimientos de caja y de stock, retiros del dueño, todo en una transacción con la venta. Stock disponible = físico − reservado. Antes de empezar: mirar `Registro.xlsx` y lo que surja de la demo | ⬜ |
+| | 7 | Pantallas propias | Pasos 7.0 a 7.8 (ver [etapa-7-interfaz.md](../DISEÑO/etapa-7-interfaz.md)). Faltan caja y stock | 🔄 |
+| Beta | 4 | **Caja y movimientos** 👈 | Cuentas efectivo / digital, movimientos de caja y de stock, retiros del dueño, todo en una transacción con la venta. Stock disponible = físico − reservado. Antes de empezar: mirar [Registro.xlsx](../NOTAS_PERSONALES/Registro.xlsx), [notas_respecto_a_pagos.txt](../NOTAS_PERSONALES/notas_respecto_a_pagos.txt) y lo que surja de la demo | ⬜ |
 | | 7 | Pantallas de caja y stock | Junto con la etapa 4 | ⬜ |
 | | 10 | Impresión | Ya imprime la orden y el comprobante desde el navegador. Falta: texto real de las condiciones, "Guardar e imprimir", probar en su impresora | 🔄 |
 | | 11 | Datos iniciales y migración | Su catálogo, precios y stock inicial desde los Excel (script de importación) | ⬜ |
@@ -69,7 +69,7 @@
 
 ## 4. Cómo se le entrega al cliente (Windows)
 
-Todo gratis, en su PC, sin internet salvo para los backups. El dueño solo ve un acceso directo que abre el navegador.
+Todo gratis, en su PC, sin depender de internet. Detalle técnico en [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md) §9. El dueño solo ve un acceso directo que abre el navegador.
 
 | Pieza | Herramienta | Detalle |
 |---|---|---|
@@ -80,20 +80,28 @@ Todo gratis, en su PC, sin internet salvo para los backups. El dueño solo ve un
 | Archivos estáticos | **WhiteNoise** + `collectstatic` | Sin DEBUG, Django no los sirve. Las tipografías ya son locales |
 | Arranque | **Programador de tareas de Windows**: al iniciar sesión corre `iniciar.bat`, sin ventana | Más un **acceso directo "GMSol"** en el escritorio que abre `http://localhost:8000` |
 | Configuración | Variables de entorno: `GMSOL_DEBUG=0`, `GMSOL_SECRET_KEY`, `GMSOL_HOSTS=localhost,127.0.0.1`, `GMSOL_SSL_REDIRECT=0` | Hay que hacer configurable la cookie segura: sin HTTPS, entrar desde el celular por la red del local no andaría |
-| Base de datos | **Decidir antes de la beta:** MySQL (lo que dice el stack) o SQLite | Recomendado SQLite: un solo usuario, nada extra que instalar en Windows, el backup es copiar un archivo. MySQL solo si lo pide la cátedra o el plan B de Java |
-| Backups | Comando propio `respaldar`, todos los días con el Programador de tareas | Copia la base, la comprime y **cifra con 7-Zip (AES-256)**, la deja en la carpeta de **Google Drive para escritorio** (cuenta dedicada al negocio) y en un USB. Guarda 30 diarios y 12 mensuales. **Probar una restauración antes de la beta** |
+| Base de datos | **SQLite** ✅ (decidido el 21/11/2026) | Un solo usuario, nada extra que instalar en Windows, la base es un archivo. La misma que ya se usa en desarrollo |
+| Backups | Comando propio `respaldar`, todos los días con el Programador de tareas | Copia la base con la API de backup de SQLite, la comprime y **cifra con 7-Zip (AES-256)** y la guarda en un **USB o un segundo disco**. Guarda 30 diarios y 12 mensuales. **Probar una restauración antes de la beta**. Subirla a Google Drive: más adelante, si se quiere |
 | Actualizaciones | `actualizar.bat` | Hace un backup → `git pull` → instala dependencias → `migrate` → `collectstatic` → reinicia Waitress. Lo corrés vos |
 
 **Pasos para la instalación de la beta:**
-1. Crear la cuenta de Google del negocio e instalar Google Drive para escritorio.
-2. Instalar Python, Git y 7-Zip; clonar el repo; crear el `venv` e instalar `requirements.txt`.
-3. Definir las variables de entorno, correr `migrate`, `collectstatic` y `createsuperuser`.
-4. Importar sus Excel (etapa 11).
-5. Crear las tareas programadas (arranque y backup) y el acceso directo.
-6. Reiniciar la PC y comprobar que arranca sola, imprime y hace el backup.
-7. Hacer una restauración de prueba desde Drive.
+1. Instalar Python, Git y 7-Zip; clonar el repo; crear el `venv` e instalar `requirements.txt`.
+2. Definir las variables de entorno, correr `migrate`, `collectstatic` y `createsuperuser`.
+3. Importar sus Excel (etapa 11).
+4. Crear las tareas programadas (arranque y backup) y el acceso directo.
+5. Reiniciar la PC y comprobar que arranca sola, imprime y hace el backup.
+6. Hacer una restauración de prueba desde el USB.
 
 **Para la versión final:** renombrar `gmsol_demo` y quitar "demo" de la interfaz, cambiar el texto de ejemplo de las condiciones por el real y dejar escrito (en una hoja impresa) qué hacer si la PC se rompe.
+
+---
+
+## Documentos
+
+- Diseño: [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md) · [etapa-7-interfaz.md](../DISEÑO/etapa-7-interfaz.md) · [casos_puntuales_diseño.md](../DISEÑO/casos_puntuales_diseño.md)
+- Modelo: [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md) · [notas_extra_bpmn.md](../BPMN%20Y%20MODELO/notas_extra_bpmn.md) · [guia-de-diseno-gmsol.md](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md)
+- Clases: [v6 (vigente)](diagrama-clases-modulos-1-a-3-v6.md) · [v5](diagrama-clases-modulos-1-a-3-v5.md) · [v4](diagrama-clases-modulo1y2-orden.md) · [catálogo](diagrama-clases-modulo1-catalogo.md)
+- Notas del dueño: [consigna.md](../NOTAS_PERSONALES/consigna.md)
 
 ---
 

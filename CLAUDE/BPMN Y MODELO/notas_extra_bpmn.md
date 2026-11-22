@@ -1,6 +1,6 @@
 GMSol — Notas abiertas sobre el modelo BPMN
 
-Complementa a BPMN.md. Acá van cosas que se discutieron pero no son planeación a futuro (eso ya está en tu archivo aparte) sino detalles del modelo actual que quedaron sin decisión final o que conviene tener presentes.
+Complementa a [BPMN.md](BPMN.md). Acá van cosas que se discutieron pero no son planeación a futuro (eso ya está en tu archivo aparte) sino detalles del modelo actual que quedaron sin decisión final o que conviene tener presentes.
 
 1. "Acordar método de pago" repetido: ¿Call Activity o subproceso propio?
 

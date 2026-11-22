@@ -1,7 +1,7 @@
 # GMSol — Etapa 7: interfaz propia (diseño técnico v1)
 
-> **Uso:** documento corto para cargar como contexto. Complementa a `../BPMN Y MODELO/guia-de-diseno-gmsol.md` (cómo se ve) y a `stack_tecnologico.md` (stack).
-> **Estado:** pasos **7.0 a 7.8 hechos** (16/11/2026): login, Inicio, lista de órdenes, nueva orden, detalle, entregar, venta rápida, devoluciones, ventas, clientes, productos y catálogo, con el diseño **v2** ("H2 + pista de progreso", ver `guia-de-diseno-gmsol.md`). Falta: pantallas de caja y stock (etapa 4).
+> **Uso:** documento corto para cargar como contexto. Complementa a [guia-de-diseno-gmsol.md](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md) (cómo se ve), [stack_tecnologico.md](stack_tecnologico.md) (stack), el [diagrama de clases v6](../MODULOS/diagrama-clases-modulos-1-a-3-v6.md) y el [plan](../MODULOS/0_Plan.md).
+> **Estado:** pasos **7.0 a 7.8 hechos** (16/11/2026): login, Inicio, lista de órdenes, nueva orden, detalle, entregar, venta rápida, devoluciones, ventas, clientes, productos y catálogo, con el diseño **v2** ("H2 + pista de progreso", ver la [guía de diseño](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md)). Falta: pantallas de caja y stock (etapa 4).
 > **Leyenda:** ✅ decidido · 💡 propuesta (falta confirmar)
 
 ---
@@ -18,7 +18,7 @@ La interfaz que va a usar el dueño todos los días, en la PC del local y, de a 
 |---|---|---|
 | 1 | ✅ **App nueva `web`** | Vistas, plantillas y archivos estáticos. `catalogo` sigue siendo solo modelos, servicios y admin |
 | 2 | ✅ **Las vistas no tienen reglas de negocio** | Llaman a funciones de `catalogo/servicios.py` (`cerrar_orden`, `vender_directo` y las nuevas). Así las reglas están en un solo lugar |
-| 3 | ✅ **CSS propio** | Sin Bootstrap ni Tailwind. Los valores de la guía van como variables CSS: un solo `gmsol.css` en capas (`@layer`), con tamaños en `rem` (ver la sección 8 de la guía de diseño) |
+| 3 | ✅ **CSS propio** | Sin Bootstrap ni Tailwind. Los valores de la guía van como variables CSS: un solo `gmsol.css` en capas (`@layer`), con tamaños en `rem` (ver la sección 8 de la [guía de diseño](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md)) |
 | 4 | ✅ **HTMX para lo dinámico** | El resumen de la orden (total, saldo) se recalcula **en el servidor** al cambiar un campo, con la misma lógica de recargos y totales del sistema. Evita duplicar reglas en JavaScript |
 | 5 | ✅ **JavaScript propio solo para el patrón de bloqueo** | La grilla de 9 puntos que guarda `1-5-9-6` (`static/web/js/patron.js`). Sin JS la clave se escribe a mano |
 | 6 | ✅ **HTMX en un archivo local** | Se descarga una vez a `static/`, sin depender de internet para funcionar |
@@ -149,7 +149,7 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 - **Listas de filas:** una sola fila; "+ Agregar otra" y "Quitar" (app.js). Cantidad vacía = 1; una fila sin producto se ignora.
 - **Precio de lista, lo que falta pagar y recargo del método** se muestran con un lápiz para cambiarlos (vacío = automático, misma cuenta que el servidor).
 - **Saldo "Sin precio todavía"** en órdenes abiertas sin nada cobrable ni pagado (antes decía "Saldado").
-- **Devolver una reparación** desde Devoluciones (o el botón "Devolver" de la orden): ver la regla en `diagrama-clases-modulos-1-a-3-v6.md` §4.5.
+- **Devolver una reparación** desde Devoluciones (o el botón "Devolver" de la orden): ver la regla en [diagrama-clases-modulos-1-a-3-v6.md](../MODULOS/diagrama-clases-modulos-1-a-3-v6.md) §4.5.
 - **"Agregar reparación"** destacado dentro de cada equipo.
 - Las plantillas no usan `{# #}` de varias líneas (se imprime como texto): hay un test que lo controla.
 
@@ -162,7 +162,7 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 - **Catálogo agrupado** (Equipos · Reparaciones · Productos · Pagos) y **textos explícitos en todos los botones** ("Agregar marca", "Guardar cliente", "Entregar al cliente y cerrar la orden"…).
 - Alta rápida de modelo/reparación: la marca o categoría nueva se escribe en el mismo lugar con "+ Escribir una … nueva".
 - Al elegir un producto, la cantidad se completa con 1. "Registrar un pago" y "Agregar un producto" van en recuadros de color como "Agregar reparación".
-- Orden con todos los equipos no arreglables **y productos**: queda "Lista para entregar" (ver diagrama v6 §4.2).
+- Orden con todos los equipos no arreglables **y productos**: queda "Lista para entregar" (ver [diagrama v6](../MODULOS/diagrama-clases-modulos-1-a-3-v6.md) §4.2).
 - **Equipo sin arreglo:** después de devolver la seña (si hubo), "Devolver el equipo al cliente" cierra la orden con una venta de $0 (`cerrar_orden` acepta `finalizada`). Esas órdenes siguen "en curso" y aparecen en Entregar hasta devolver el equipo.
 - **Venta rápida:** el resumen muestra el recargo de cada método y "El cliente paga $X".
 - **Registro de ventas** (antes "Ventas"): con qué se cobró cada venta, cuánto entró con recargo y los totales del período por cuenta (efectivo / digital).
@@ -175,4 +175,4 @@ Una sola plantilla para todo. Por debajo de 860 px el menú pasa a una barra hor
 - Las devoluciones son del precio **sin recargo**: el recargo de la tarjeta lo devuelve la plataforma (se aclara en pantalla).
 - "Catálogo" pasa a llamarse **Configuración** (grupo "Ajustes" del menú). Las direcciones siguen en `/catalogo/`.
 - **Imprimir** en la orden abre dos opciones: *la orden* (una hoja, sin devoluciones) y *el comprobante para el cliente* (media hoja con condiciones; el texto de las condiciones es de ejemplo hasta tener el contrato).
-- Pendiente para estadísticas: ver solo productos (diagrama v6, §5.4 #22).
+- Pendiente para estadísticas: ver solo productos ([diagrama v6](../MODULOS/diagrama-clases-modulos-1-a-3-v6.md), §5.4 #22).

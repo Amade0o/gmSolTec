@@ -1,6 +1,6 @@
 # GMSol — Diagrama de clases (v5, módulos 1 a 3 hasta la Venta)
 
-> **Uso:** documento autosuficiente para cargar como contexto. **Reemplaza** a `diagrama-clases-modulo1y2-orden.md` (v4). Complementa a `BPMN Y MODELO/BPMN.md`, `DISEÑO/stack_tecnologico.md` y `0_Plan.md`.
+> **Uso:** documento autosuficiente para cargar como contexto. **Reemplaza** a [diagrama-clases-modulo1y2-orden.md](diagrama-clases-modulo1y2-orden.md) (v4). Complementa a [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md), [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md) y [0_Plan.md](0_Plan.md). **Reemplazado** por la [v6](diagrama-clases-modulos-1-a-3-v6.md).
 > **Estado:** módulos 1 (catálogo) y 2 (orden de trabajo) cerrados. Módulo 3 (pagos y ventas): `MetodoPago`, `Pago`, `Venta`, líneas de venta directa y dinero retenido hechos y con tests (Fase 2, pasos 1 a 4). Falta el cierre de orden (paso 5) y la venta directa (paso 5b). Pruebas manuales en el admin en curso. Faltan los módulos 4 y 5 (caja y movimientos, compras).
 > **Código:** las clases del diagrama están en `catalogo/models.py`, salvo `Producto.codigo`, `Proveedor`, `Configuracion`.
 > **Vocabulario:** **Venta** = registro interno que cierra una transacción e impacta stock y caja (antes "factura"). **Comprobante ARCA** = documento legal, es otra cosa (etapa 8).
@@ -267,7 +267,7 @@ Todas las relaciones se dibujan en ambos sentidos y no se dibujan las derivables
 
 | # | Tema |
 |---|---|
-| 1 | Seguir con los bloques 1 a 11 del `checklist-pruebas-admin.md` sobre el admin corregido (sin ficticios: sin falla, no arreglable, casos de `Casos`) |
+| 1 | Seguir con los bloques 1 a 11 del `checklist-pruebas-admin.md` (ya no existe) sobre el admin corregido (sin ficticios: sin falla, no arreglable, casos de `Casos`) |
 | 2 | Paso 5b (después de las pruebas): venta directa con `LineaProductoVenta` y `Pago` en una sola transacción |
 
 ### 5.3 Pendientes surgidos al probar el admin

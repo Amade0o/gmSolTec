@@ -1,8 +1,8 @@
-# GMSol — Stack y arquitectura (v3)
+# GMSol — Stack y arquitectura (v4)
 
-> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md).
-> **Estado:** etapa de planificación. Proyecto **real, para producción**, sin fecha límite.
-> **Leyenda:** ✅ definido · 🟡 propuesto (falta confirmar)
+> **Uso:** documento autosuficiente para cargar como contexto. Complementa a [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md), [0_Plan.md](../MODULOS/0_Plan.md) (etapas y entrega al cliente) y [etapa-7-interfaz.md](etapa-7-interfaz.md) (pantallas).
+> **Estado (21/11/2026):** en construcción. Etapas 1 a 3 y casi toda la 7 hechas. Proyecto **real, para producción**, sin fecha límite.
+> **Leyenda:** ✅ definido · 🟡 propuesto (falta confirmar) · ⏭️ más adelante
 
 ---
 
@@ -10,14 +10,14 @@
 
 | Tema | Decisión | Estado |
 |---|---|---|
-| Lenguaje y framework | **Python + Django** (plan B: Java, ver §3.2) | ✅ |
-| Base de datos | **MySQL** (InnoDB) | ✅ |
-| Tipo de app | Web, usada desde la PC del local | 🟡 |
-| Arquitectura | Monolito en capas, reglas del negocio separadas | 🟡 |
-| Control de estado | Máquina de estados solo para la Orden de trabajo | 🟡 |
-| Pantallas | Plantillas de Django + HTMX + Bootstrap/Tailwind | 🟡 |
-| Servidor / web | **Local, en la PC del negocio** (Django + MySQL gratuitos). Vercel descartado (ver §9) | ✅ |
-| Backups | **Google Drive gratuito (15 GB)** + copia local (ver §9.5) | ✅ |
+| Lenguaje y framework | **Python + Django** | ✅ |
+| Base de datos | **SQLite**, también en producción (ver §6) | ✅ |
+| Tipo de app | Web, usada desde el navegador de la PC del local | ✅ |
+| Arquitectura | Monolito en capas; las reglas del negocio en `catalogo/servicios.py` | ✅ |
+| Estado de la orden | Se **calcula** a partir del estado de cada equipo (ver §5) | ✅ |
+| Pantallas | Plantillas de Django + HTMX + **CSS propio** (sin Bootstrap ni Tailwind) | ✅ |
+| Servidor | **Local, en la PC del negocio con Windows**, con Waitress. Vercel descartado (ver §9) | ✅ |
+| Backups | **Copia local cifrada** (USB o segundo disco). Subirla a Google Drive: ⏭️ más adelante, si se quiere | ✅ |
 | Costo | **$0**: todo el stack es gratuito | ✅ |
 | Usuarios | Uno solo (por ahora), con login | ✅ |
 
@@ -27,16 +27,16 @@
 
 | Dato | Valor |
 |---|---|
-| Equipo del dueño | Usa principalmente **PC** y tiene **impresora** |
+| Equipo del dueño | Usa principalmente una **PC con Windows** y tiene **impresora** |
 | Internet en el local | Estable |
 | Empleados | Ninguno por ahora |
 | Régimen fiscal | **Monotributista** (por lo general se emite **Factura C**) |
 | Datos existentes | Varias planillas Excel (precios, stock, compras, registros). Migrarlas es **deseable, no obligatorio** |
 | Firma del cliente | **En papel** |
-| Recargos por método de pago | Precargados y fijos; **al registrar la venta siempre se pregunta** si se quiere cambiarlos |
-| Estética de la interfaz | No es prioridad |
+| Recargos por método de pago | Precargados y fijos; **al registrar la venta siempre se puede cambiarlos** |
+| Estética de la interfaz | Para el dueño no es prioridad; para el desarrollador sí: minimalista y nada genérico (ver la [guía de diseño](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md)) |
 | Presupuesto | **$0**: todo debe ser gratuito, sin pagar hosting |
-| Respaldo de datos | Quiere usar un **Google Drive gratuito de 15 GB** |
+| Respaldo de datos | Local por ahora. Google Drive gratuito (15 GB) ⏭️ más adelante |
 
 ---
 
@@ -45,31 +45,23 @@
 ### 3.1 Elección: Python + Django
 
 Por qué:
-- El sistema tiene muchas **altas** (productos, clientes, proveedores, dispositivos). El **panel de admin de Django** resuelve gran parte casi sin programar.
+- El sistema tiene muchas **altas** (productos, clientes, proveedores, dispositivos). El **admin de Django** sirvió al principio y hoy queda para correcciones puntuales.
 - Menos piezas nuevas que aprender que con TypeScript.
 - Leer y migrar los Excel es sencillo.
-- Generar el PDF de la orden para imprimir es sencillo.
+- La orden se **imprime desde el navegador** (una hoja para el taller y media hoja para el cliente): no hace falta una librería de PDF.
 - Hay bastante material en español sobre facturación con ARCA/AFIP en Python.
-- Un solo usuario, en PC, con internet estable: no hace falta una interfaz muy dinámica.
 
 Alternativa descartada: TypeScript (Node + NestJS + React). Hay que armar casi todo a mano y llevar dos proyectos.
 
-### 3.2 🔁 Plan B: pasar a Java (Spring Boot) si Django no convence
+### 3.2 Plan B: Java (Spring Boot) — descartado por ahora
 
-El desarrollador **domina Java**. Se acordó probar Django y, si no se siente cómodo, **migrar a Java** más adelante.
-
-Para que ese cambio sea barato, desde el inicio se sigue esto:
+El desarrollador **domina Java** y se acordó que, si Django no convencía, se migraba. **Se siguió con Django**: el sistema ya está construido y con tests. Las reglas que se fijaron para que una migración fuera barata siguen valiendo como buena práctica:
 
 | Regla | Para qué |
 |---|---|
-| Reglas del negocio en **clases propias**, sin depender de Django | Se traducen a Java casi uno a uno |
-| **MySQL** como fuente de verdad, con un esquema claro | La BD no cambia al migrar |
+| Reglas del negocio en **funciones propias** (`servicios.py`), no en las vistas | Las pantallas no deciden nada; las reglas están en un solo lugar |
+| **Esquema claro**, definido en los modelos y las migraciones de Django | La base se entiende sin leer el código |
 | Lógica de estados y flujos **documentada en `.md`** | Sirve de especificación en cualquier lenguaje |
-| Usar lo mínimo de "magia" específica de Django en el dominio | Menos cosas que reescribir |
-
-**Qué se perdería al migrar:** el panel de admin gratuito. En Java habría que armar las pantallas de altas a mano.
-
-**Cuándo decidir:** conviene evaluar después de implementar las primeras entidades (productos, clientes, órdenes) y ver cómo se siente.
 
 ---
 
@@ -78,111 +70,105 @@ Para que ese cambio sea barato, desde el inicio se sigue esto:
 Monolito en 3 capas:
 
 ```
-Pantallas  →  Reglas del negocio (dominio)  →  Base de datos
+Pantallas (app web)  →  Reglas del negocio (catalogo/servicios.py)  →  Base de datos (modelos)
 ```
 
-Las reglas (estados, recargos, registrar ventas, mover caja y stock) viven en la capa del medio. Patrones previstos:
+Las reglas (estados, recargos, registrar ventas, mover caja y stock) viven en la capa del medio. Patrones previstos para la etapa 6 (después de la versión final):
 
-| Patrón | Dónde se usa |
+| Patrón | Dónde se usaría |
 |---|---|
-| **State** | Estados de la Orden de trabajo |
+| **State** | Transiciones de estado de los equipos de la orden |
 | **Strategy** | Métodos de pago y cálculo de recargos |
-| **Repository** | Acceso a datos, aislando el dominio del ORM |
 
 ---
 
 ## 5. Control de flujo y estado
 
-- **No se usa un motor BPMN.** El BPMN es guía de diseño y se traduce a una máquina de estados.
+- **No se usa un motor BPMN.** El BPMN es guía de diseño.
 - El sistema **no modela la charla con el cliente** (presupuestar, negociar, aceptar). Solo **registra resultados**.
-- La **venta directa no tiene estados**: es una única transacción (venta + stock + caja).
+- La **venta directa no tiene estados**: es una única transacción.
 - **"Solicitar producto ya"** al retirar = crear una venta directa aparte.
-- Cada estado define qué acciones permite (ej.: no se registra la venta de una orden "En reparación").
+- **Cada equipo** de la orden tiene su estado guardado: `pendiente` (en revisión / reparación), `sin_falla`, `arreglado` o `no_arreglable`.
+- **El estado de la orden se calcula** a partir de sus equipos, sus pagos y su venta; no se guarda. En pantalla se dibuja como una pista:
 
 ```mermaid
 flowchart LR
-  R[Recibida] --> E[En reparación]
-  E --> L[Lista]
-  L --> T[Retirada]
-  T --> F[Venta registrada]
-  E --> NA[No arreglable]
-  NA --> D[Dinero devuelto]
-  R --> C[Cancelada]
+  R[Recibida] --> E[En revisión]
+  E --> L[Lista para entregar]
+  L --> T[Entregada: venta registrada]
+  E --> NA[No arreglable: hay que devolver]
+  NA --> F[Finalizada: dinero devuelto]
+  F --> T
 ```
 
-> Los estados exactos y sus transiciones se cierran en el diagrama de clases.
+> El detalle está en el [diagrama de clases v6](../MODULOS/diagrama-clases-modulos-1-a-3-v6.md) (§4).
 
 ---
 
 ## 6. Base de datos y persistencia
 
-**MySQL con InnoDB** (transacciones seguras). Elegido por comodidad del desarrollador.
+**SQLite.** Las operaciones que tocan varias tablas van dentro de `transaction.atomic` (o todo o nada).
+
+**Por qué SQLite en producción:** un solo usuario en una sola PC; no hay que instalar ni mantener un servidor de base de datos en Windows; la base es un archivo, así que el backup y la restauración son simples. Si algún día hubiera varios usuarios a la vez o acceso desde otras PC, se evalúa pasar a otra base (Django lo permite cambiando la configuración).
 
 | Qué | Cómo se guarda |
 |---|---|
-| Estado actual de la orden | Columna `estado` en la tabla `orden` |
-| Historial | Tabla `orden_historial` (orden, estado, fecha). **Solo se agrega, nunca se edita** |
-| Dinero | Tabla `movimiento_caja` (efectivo o transferencia, entrada o salida). El saldo se calcula |
-| Stock | Tabla `movimiento_stock`, misma lógica |
-| Ventas | No se modifican. Un error se corrige con otro registro |
+| Estado de cada equipo | Columna `estado` en `EquipoRecibido` |
+| Estado de la orden | **Se calcula** (no hay columna) |
+| Historial de estados | ⏭️ Etapa 6: tabla que solo se agrega, nunca se edita |
+| Dinero | ⬜ Etapa 4: movimientos de caja por cuenta (efectivo / digital). El saldo se calcula |
+| Stock | ⬜ Etapa 4: movimientos de stock, misma lógica |
+| Ventas | No se modifican. Un error se corrige con otro registro (o se anula una venta rápida cargada por error) |
 
 **Reglas:**
-- Al registrar la venta, **venta + stock + caja se guardan en una sola transacción**: o todo o nada.
-- El dinero se guarda como `DECIMAL`, **nunca** `FLOAT`.
-- **Migración de Excel:** script de importación para precios, stock y compras (opcional, se hace después de tener el modelo de datos).
+- Al registrar la venta, **venta + stock + caja se guardan en una sola transacción**.
+- El dinero se guarda como `DecimalField`, **nunca** `float`.
+- **Migración de Excel:** script de importación para precios, stock y compras (etapa 11).
 
 ---
 
 ## 7. Seguridad (mínima, pero necesaria)
 
-Aunque corra en la PC del local, la orden guarda **PIN y patrones de bloqueo** de los dispositivos de clientes. Si algún día se expone a internet, la seguridad pasa a ser más crítica.
+Aunque corra en la PC del local, la orden guarda **PIN y patrones de bloqueo** de los dispositivos de clientes.
 
 | Medida | Estado |
 |---|---|
 | Login con contraseña guardada con hash | ✅ |
-| HTTPS | ✅ solo si se accede desde internet (en la PC local no hace falta) |
-| **Backups automáticos** (lo más importante), **cifrados** antes de subirlos a Drive | ✅ |
-| Credenciales de ARCA fuera del código | ✅ |
+| Todas las pantallas piden login | ✅ |
+| HTTPS | Solo si algún día se accede desde fuera de la PC. En `localhost` no hace falta |
+| **Backups automáticos** (lo más importante), **cifrados** | ✅ (se arman en la etapa 12) |
+| Clave secreta y credenciales de ARCA fuera del código (variables de entorno) | ✅ |
 
 ---
 
 ## 8. Interfaz de usuario
 
 - **Plantillas de Django + HTMX** (actualiza partes de la pantalla sin JavaScript complejo).
-- **Bootstrap o Tailwind** para un aspecto prolijo sin diseñar desde cero.
-- Posible tema para el panel de admin si se quiere algo más moderno.
+- **CSS propio** en un solo `gmsol.css`, con las variables de la [guía de diseño](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md). Tipografías en archivos locales.
+- La pista de progreso muestra el estado de la orden y solo aparecen los **botones válidos** para ese estado.
+- **Impresión desde el navegador:** la orden en una hoja (para el taller) y el comprobante en media hoja (para el cliente, con el aviso de 30 días). La firma del cliente es en papel.
 
-**La pantalla se arma según el estado de la orden:**
-- Indicador de progreso arriba (Recibida → … → Venta registrada) con el paso actual resaltado.
-- Solo aparecen los **botones válidos** para ese estado (ej.: "Marcar lista", "Registrar retiro", "Registrar venta").
-- La lista de órdenes se filtra por estado (ej.: "Listas para avisar").
-
-**Impresión de la orden:** PDF con dos partes.
-- Parte del empleado.
-- Parte recortable para el cliente: firma del empleado, fecha, nombre del cliente y aviso de que **pasados 30 días no hay reclamos**.
-- La firma del cliente es en papel.
+Las pantallas y decisiones están en [etapa-7-interfaz.md](etapa-7-interfaz.md).
 
 ---
 
-## 9. Servidor / web (todo gratis)
+## 9. Servidor (todo gratis)
 
-**Restricción:** presupuesto $0. Todo el stack tiene que ser gratuito y permitido para uso comercial (es un negocio real).
+**Restricción:** presupuesto $0. Todo tiene que ser gratuito y permitido para uso comercial (es un negocio real).
 
 ### 9.1 ¿Vercel lo resuelve? No
 
 | Motivo | Detalle |
 |---|---|
 | **Uso comercial** | El plan gratis (Hobby) es **solo para uso personal no comercial**. Un negocio real requiere el plan Pro, que ronda los **US$20 por mes** |
-| Encaje técnico | Está pensado sobre todo para sitios y funciones en la nube (Next.js/Node). Django + MySQL no es su caso típico y habría que sumar una base de datos externa aparte |
-
-Usarlo igual violaría sus términos y podrían bloquear el proyecto.
+| Encaje técnico | Está pensado sobre todo para sitios y funciones en la nube (Next.js/Node). Django con una base en un archivo no es su caso |
 
 ### 9.2 Opciones gratis
 
 | Opción | Costo | Pro | Contra |
 |---|---|---|---|
-| **PC del negocio (local)** ✅ elegida | $0 | Sin límites ni cuentas de terceros. Los datos quedan en el local. No expuesta a internet. Sin restricciones de uso comercial | Solo se usa desde el local. Si falla la PC, depende del backup |
-| Oracle Cloud "Always Free" (nube) | $0 | Acceso desde cualquier lugar | Pide tarjeta. Oracle puede recuperar instancias inactivas, redujo lo gratis en junio 2026 y no garantiza el servicio. No recomendable para datos críticos |
+| **PC del negocio (local)** ✅ elegida | $0 | Sin límites ni cuentas de terceros. Los datos quedan en el local. No expuesta a internet | Solo se usa desde el local. Si falla la PC, depende del backup |
+| Oracle Cloud "Always Free" (nube) | $0 | Acceso desde cualquier lugar | Pide tarjeta, puede recuperar instancias inactivas y no garantiza el servicio |
 | Vercel Hobby | $0 | — | **No permite uso comercial** |
 
 ### 9.3 Stack 100% gratuito
@@ -190,34 +176,30 @@ Usarlo igual violaría sus términos y podrían bloquear el proyecto.
 | Pieza | Herramienta | Costo |
 |---|---|---|
 | Framework | Django (código abierto) | $0 |
-| Base de datos | MySQL Community | $0 |
-| Pantallas | HTMX + Bootstrap/Tailwind | $0 |
-| PDF de la orden | Librería de PDF de Python (ej.: WeasyPrint o ReportLab) | $0 |
-| Servidor de la app | Servidor de producción gratuito según el sistema operativo (ej.: Waitress en Windows) | $0 |
-| Backup | Copia automática a Google Drive (15 GB gratis) + copia local en USB | $0 |
+| Base de datos | SQLite (viene con Python) | $0 |
+| Pantallas | HTMX + CSS propio | $0 |
+| Impresión | El navegador | $0 |
+| Servidor de la app | **Waitress** (servidor de producción para Windows) + **WhiteNoise** (archivos estáticos) | $0 |
+| Arranque automático y backups | Programador de tareas de Windows | $0 |
+| Cifrado del backup | 7-Zip (AES-256) | $0 |
 
 ### 9.4 Cómo funciona
 
 ```mermaid
 flowchart LR
-  B[Navegador de la PC] --> D[Django]
-  D --> M[(MySQL)]
+  B[Navegador de la PC] --> D[Django + Waitress]
+  D --> S[(SQLite)]
   D --> I[Impresora]
-  D --> A[ARCA por internet]
-  M --> K[Backup diario cifrado]
-  K --> G[Google Drive 15 GB]
-  K --> U[USB local]
+  D -.-> A[ARCA por internet, etapa 8]
+  S --> K[Backup diario cifrado]
+  K --> U[USB / segundo disco]
 ```
 
-- Django y MySQL corren **en la misma PC** del negocio y se usan desde el navegador (`localhost`).
-- Internet solo se necesita para facturar con ARCA y para subir el backup a Drive.
+- Django corre **en la misma PC** del negocio y se usa desde el navegador (`localhost`).
+- Internet solo hará falta para facturar con ARCA (etapa 8).
 - **El backup es obligatorio:** si la PC falla, es lo único que protege los datos (ver §9.5).
 
-### 9.5 Backups en Google Drive (15 GB gratis)
-
-**¿Alcanzan los 15 GB?** Sí, con margen. La base de un negocio de un solo usuario es chica (del orden de decenas de MB) y comprimida pesa mucho menos. Aun con un backup por día durante años y una política de retención, el uso queda muy por debajo del límite.
-
-**Política de retención propuesta:**
+### 9.5 Backups
 
 | Qué se guarda | Cuánto tiempo |
 |---|---|
@@ -226,23 +208,20 @@ flowchart LR
 | Lo demás | Se borra automáticamente |
 
 **Cómo funciona:**
-1. Una tarea programada del sistema hace el volcado de MySQL (`mysqldump`) cada día.
-2. Se comprime y se **cifra con contraseña** (la base tiene PIN y patrones de bloqueo de clientes).
-3. Se copia a la carpeta sincronizada de Google Drive y a un USB.
+1. Una tarea programada de Windows corre cada día un comando propio de Django que copia la base con la **API de backup de SQLite** (copiar el archivo a mano mientras el sistema está abierto puede dejar una copia dañada).
+2. La copia se comprime y se **cifra con contraseña** con 7-Zip (la base tiene PIN y patrones de bloqueo de clientes).
+3. Se guarda en un USB o en un segundo disco.
 4. Se borran los backups viejos según la retención.
-
-**Ojo con estos puntos:**
 
 | Punto | Detalle |
 |---|---|
-| Espacio compartido | Los 15 GB se comparten entre Drive, Gmail y Fotos de esa cuenta. Conviene usar una **cuenta de Google dedicada** al negocio |
-| Cifrado | Sin cifrar, quien acceda a la cuenta vería datos de clientes |
-| Probar la restauración | Un backup que nunca se probó no es confiable. Probarlo al menos una vez al armar el sistema |
-| Los archivos adjuntos | Si más adelante se guardan fotos o documentos, se suman al espacio |
+| Probar la restauración | Un backup que nunca se probó no es confiable. Probarlo al menos una vez antes de la beta |
+| La contraseña del cifrado | Anotada en papel, fuera de la PC: sin ella el backup no sirve |
+| Google Drive | ⏭️ Más adelante, si se quiere una copia fuera del local (cuenta dedicada al negocio, subiendo solo el archivo cifrado; nunca sincronizar la base en uso) |
 
 ### 9.6 Más adelante (opcional)
 
-Si se necesita acceso desde fuera del local, se pueden evaluar opciones gratuitas de acceso remoto. Se decide cuando haga falta.
+Si se necesita acceso desde fuera del local o desde el celular, se evalúan opciones gratuitas. Se decide cuando haga falta.
 
 ---
 
@@ -250,11 +229,11 @@ Si se necesita acceso desde fuera del local, se pueden evaluar opciones gratuita
 
 | # | Tema |
 |---|---|
-| 1 | Confirmar el sistema operativo de la PC del negocio |
+| 1 | ~~Confirmar el sistema operativo~~ ✅ Windows |
 | 1b | Confirmar que la integración con ARCA no tenga costo (certificado digital y servicios) |
 | 2 | Cómo integrar la facturación con ARCA (directo o mediante un servicio intermedio) |
-| 3 | Diagrama de clases (paso siguiente) |
-| 4 | Modelo de datos y esquema MySQL |
-| 5 | Decidir si se migra a Java (ver §3.2), tras las primeras entidades |
+| 3 | ~~Diagrama de clases~~ ✅ (v6) |
+| 4 | ~~Modelo de datos~~ ✅ (en los modelos de Django; SQLite) |
+| 5 | ~~Decidir si se migra a Java~~ ✅ se sigue con Django |
 | 6 | Pendientes del BPMN v2 (accesorios múltiples, pedido de repuestos, seña 0%, etc.) |
-| 7 | Elegir cómo subir el backup a Drive (carpeta sincronizada con Google Drive para escritorio u otra herramienta gratuita) y crear la cuenta dedicada |
+| 7 | ⏭️ Copia del backup en Google Drive (más adelante) |

@@ -1,7 +1,7 @@
 # Demo mínima de Django (GMSol)
 
 Esta carpeta contiene la demo funcional de gmSolTec. Es un proyecto Django
-con SQLite para desarrollo local. El README principal del repositorio está en
+con SQLite (la misma base que se usa en el local). El README principal del repositorio está en
 [`../README.md`](../README.md); este archivo concentra los comandos que se
 ejecutan dentro de `gmsol_demo/`.
 

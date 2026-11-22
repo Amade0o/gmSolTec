@@ -1,7 +1,7 @@
 # GMSol — Plan del proyecto (v3)
 
 > **Uso:** hoja de ruta corta para cargar como contexto. Los detalles de cada etapa están en sus propios `.md`.
-> **Estado al 18/11/2026:** etapas 1, 2, 3 y casi toda la 7 terminadas, 361 tests pasando. **Lo próximo: la demo y después la etapa 4.**
+> **Estado al 21/11/2026:** etapas 1, 2, 3 y casi toda la 7 terminadas, 361 tests pasando. **Lo próximo: la demo y la etapa 4 (diseño en revisión).** Los fiados (antes 3b) pasan a la beta; GoCuotas queda para después.
 > **Vocabulario:** **Venta** = registro interno que cierra una transacción e impacta stock y caja. **Comprobante ARCA** = documento legal (etapa 8).
 > **Leyenda:** ✅ hecho · 🔄 en curso · ⬜ pendiente · ⏭️ después de la versión final
 
@@ -12,7 +12,7 @@
 | Hito | Cuándo | Qué tiene | Datos | Para qué |
 |---|---|---|---|---|
 | 🎬 **Demo** | **Ahora** (no hay que programar nada más) | Todas las pantallas de órdenes, ventas, devoluciones, clientes, productos y configuración | De prueba (`cargar_datos_prueba`) | Que el dueño la use con casos concretos, ver dónde duda y relevar cómo maneja la caja, el stock y los fiados |
-| 🧪 **Beta** | Al terminar las etapas 4, 10, 11 y 12 | Lo de la demo + caja, stock, impresión, sus datos reales y backups | **Reales**, en paralelo al Excel | Usarla en el día a día sin dejar el Excel. Conviene que dure poco (2 a 4 semanas): cargar todo dos veces cansa |
+| 🧪 **Beta** | Al terminar las etapas 4, 10, 11 y 12 | Lo de la demo + caja, stock, fiados, impresión, sus datos reales y backups | **Reales**, en paralelo al Excel | Usarla en el día a día sin dejar el Excel. Conviene que dure poco (2 a 4 semanas): cargar todo dos veces cansa |
 | 🚀 **Versión final** | Al cerrar los ajustes de la beta (etapa 13) | Lo de la beta, corregido y sin el nombre "demo" | Reales | Deja el Excel. Lo que falta (ARCA, compras, estadísticas) llega como actualizaciones |
 
 **La demo se hace en su PC con Windows**, no en la tuya: sirve también como ensayo de la instalación (Python, impresora, navegador). Al terminar se borra o se deja con datos de prueba, avisándole que no cargue nada real.
@@ -28,19 +28,19 @@
 | | 2 | Orden de trabajo | Orden, equipos, líneas de reparación y de producto, estado calculado | ✅ |
 | | 3 | Pagos y ventas | Métodos de pago y recargos, pagos parciales, ventas, devoluciones | ✅ |
 | | 7 | Pantallas propias | Pasos 7.0 a 7.8 (ver [etapa-7-interfaz.md](../DISEÑO/etapa-7-interfaz.md)). Faltan caja y stock | 🔄 |
-| Beta | 4 | **Caja y movimientos** 👈 | Cuentas efectivo / digital, movimientos de caja y de stock, retiros del dueño, todo en una transacción con la venta. Stock disponible = físico − reservado. Antes de empezar: mirar [Registro.xlsx](../NOTAS_PERSONALES/Registro.xlsx), [notas_respecto_a_pagos.txt](../NOTAS_PERSONALES/notas_respecto_a_pagos.txt) y lo que surja de la demo | ⬜ |
+| Beta | 4 | **Caja, stock y fiados** 👈 | Cajas de efectivo, digital y señas; movimientos de caja y de stock; retiros, gastos y compra de mercadería; corregir y anular con historial; controles automáticos. Diseño en [etapa-4-caja.md](../DISEÑO/etapa-4-caja.md). Antes: renombrar la app `catalogo` (paso 4.0). Fuentes: mirar [Registro.xlsx](../NOTAS_PERSONALES/Registro.xlsx), [notas_respecto_a_pagos.txt](../NOTAS_PERSONALES/notas_respecto_a_pagos.txt) y lo que surja de la demo | ⬜ |
 | | 7 | Pantallas de caja y stock | Junto con la etapa 4 | ⬜ |
 | | 10 | Impresión | Ya imprime la orden y el comprobante desde el navegador. Falta: texto real de las condiciones, "Guardar e imprimir", probar en su impresora | 🔄 |
-| | 11 | Datos iniciales y migración | Su catálogo, precios y stock inicial desde los Excel (script de importación) | ⬜ |
+| | 11 | Datos iniciales y migración | Su catálogo y precios desde los Excel (script de importación). El stock y los saldos iniciales se cargan a mano el día de la instalación | ⬜ |
 | | 12 | Instalación y backups | Ver la sección 4 | ⬜ |
 | Final | 13 | Ajustes de la beta | Correcciones del uso real | ⬜ |
-| Después | 3b | Fiados y pagos diferidos | Venta con saldo pendiente, GoCuotas, tarjeta diferida. **Si en la demo dice que fía seguido, pasa a la beta** | ⏭️ |
-| | 5 | Compras y proveedores | Compras, pagos a proveedores, cuenta corriente | ⏭️ |
+| Después | 3b | GoCuotas y tarjeta diferida | Caja "A cobrar" con fecha de acreditación (ver [etapa-4-caja.md](../DISEÑO/etapa-4-caja.md) §8) | ⏭️ |
+| | 5 | Compras y proveedores | Proveedores, cuenta corriente y estadísticas de compras. Lo mínimo (pagar mercadería y que entre al stock) va en la etapa 4 | ⏭️ |
 | | 6 | Reglas de negocio | Patrones *State* y *Strategy*. Para la beta alcanza con `servicios.py` | ⏭️ |
 | | 8 | ARCA | Comprobante ARCA, opción de facturar o no cada pago digital. Hasta entonces factura a mano | ⏭️ |
 | | 9 | Estadísticas | Por fechas, marcas, modelos, reparaciones, proveedores y clientes | ⏭️ |
 
-**Forma de trabajar:** charla y decisiones → `.md` de diseño → código (lo escribe el desarrollador, guiado) → tests → merge a `main`. Una rama por etapa, creada desde `main`; un commit por paso; se mergea al cerrar la etapa con los tests pasando. **Una demo corta al dueño al cerrar cada etapa.**
+**Forma de trabajar:** charla y decisiones → `.md` de diseño → código (lo escribe el desarrollador, guiado; en la etapa 4, Claude escribe la base y el desarrollador la revisa) → tests → merge a `main`. Una rama por etapa, creada desde `main`; un commit por paso; se mergea al cerrar la etapa con los tests pasando. **Una demo corta al dueño al cerrar cada etapa.**
 
 ---
 
@@ -61,7 +61,7 @@
 | 3 | Costo del repuesto en cada reparación (ganancia) | Etapa 9 |
 | 4 | `Producto.codigo`, `Configuracion` | Sin fecha |
 | 5 | Etiqueta del teléfono | Sin fecha |
-| 6 | Stock insuficiente al registrar la venta | **Etapa 4** |
+| 6 | Stock insuficiente al registrar la venta: ✅ no se vende, con botón "Corregir el stock" | **Etapa 4** |
 | 7 | Reglas de cantidad y precio en la base de datos (hoy son validadores de Django) | Sin fecha |
 | 8 | Margen por categoría | Futuro |
 
@@ -98,7 +98,7 @@ Todo gratis, en su PC, sin depender de internet. Detalle técnico en [stack_tecn
 
 ## Documentos
 
-- Diseño: [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md) · [etapa-7-interfaz.md](../DISEÑO/etapa-7-interfaz.md) · [casos_puntuales_diseño.md](../DISEÑO/casos_puntuales_diseño.md)
+- Diseño: [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md) · [etapa-4-caja.md](../DISEÑO/etapa-4-caja.md) · [etapa-7-interfaz.md](../DISEÑO/etapa-7-interfaz.md) · [casos_puntuales_diseño.md](../DISEÑO/casos_puntuales_diseño.md)
 - Modelo: [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md) · [notas_extra_bpmn.md](../BPMN%20Y%20MODELO/notas_extra_bpmn.md) · [guia-de-diseno-gmsol.md](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md)
 - Clases: [v6 (vigente)](diagrama-clases-modulos-1-a-3-v6.md) · [v5](diagrama-clases-modulos-1-a-3-v5.md) · [v4](diagrama-clases-modulo1y2-orden.md) · [catálogo](diagrama-clases-modulo1-catalogo.md)
 - Notas del dueño: [consigna.md](../NOTAS_PERSONALES/consigna.md)

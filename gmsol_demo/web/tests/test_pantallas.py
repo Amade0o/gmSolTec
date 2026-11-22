@@ -4,11 +4,11 @@ from decimal import Decimal
 from django.contrib.messages import get_messages
 from django.urls import reverse
 
-from catalogo.models import (
+from negocio.models import (
     CategoriaProducto, CategoriaReparacion, Cliente, Devolucion, EquipoRecibido, LineaReparacion,
     OrdenTrabajo, Pago, Producto, Reparacion, Venta,
 )
-from catalogo.servicios import cerrar_orden
+from negocio.servicios import cerrar_orden
 from web.tests.test_inicio import DatosBase
 
 D = Decimal

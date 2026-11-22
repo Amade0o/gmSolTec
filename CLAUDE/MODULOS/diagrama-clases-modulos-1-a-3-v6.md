@@ -2,7 +2,7 @@
 
 > **Uso:** documento autosuficiente para cargar como contexto. **Reemplaza** a la v5 y a [diagrama-clases-modulo1y2-orden.md](diagrama-clases-modulo1y2-orden.md) (v4). Complementa a [BPMN.md](../BPMN%20Y%20MODELO/BPMN.md), [stack_tecnologico.md](../DISEÑO/stack_tecnologico.md) y [0_Plan.md](0_Plan.md).
 > **Estado:** módulos 1 (catálogo) y 2 (orden de trabajo) cerrados. Módulo 3 (pagos y ventas): `MetodoPago`, `Pago`, `Venta`, líneas de venta directa, dinero retenido y **devoluciones** (Fase 5) hechos y con tests. Pruebas manuales en el admin hechas; faltan los fiados y los pagos pendientes de acreditar (Fases 3 y 4, después de la beta). Faltan los módulos 4 y 5 (caja y movimientos, compras).
-> **Código:** las clases del diagrama están en `catalogo/models.py`, salvo `Producto.codigo`, `Proveedor`, `Configuracion`.
+> **Código:** las clases del diagrama están en `negocio/models/` (hasta el 21/11/2026 era `catalogo/models.py`), salvo `Producto.codigo`, `Proveedor`, `Configuracion`.
 > **Vocabulario:** **Venta** = registro interno que cierra una transacción e impacta stock y caja (antes "factura"). **Comprobante ARCA** = documento legal, es otra cosa (etapa 8).
 > **Leyenda:** ✅ decisión del desarrollador · 💡 propuesta (falta confirmar) · ❓ pendiente
 

@@ -3,8 +3,8 @@ from decimal import Decimal
 
 from django.urls import reverse
 
-from catalogo.models import CategoriaProducto, LineaProductoVenta, Pago, Producto
-from catalogo.servicios import vender_directo
+from negocio.models import CategoriaProducto, LineaProductoVenta, Pago, Producto
+from negocio.servicios import vender_directo
 from web.tests.test_pantallas import Base
 
 D = Decimal

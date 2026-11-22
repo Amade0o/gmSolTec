@@ -28,7 +28,7 @@
 | | 2 | Orden de trabajo | Orden, equipos, líneas de reparación y de producto, estado calculado | ✅ |
 | | 3 | Pagos y ventas | Métodos de pago y recargos, pagos parciales, ventas, devoluciones | ✅ |
 | | 7 | Pantallas propias | Pasos 7.0 a 7.8 (ver [etapa-7-interfaz.md](../DISEÑO/etapa-7-interfaz.md)). Faltan caja y stock | 🔄 |
-| Beta | 4 | **Caja, stock y fiados** 👈 | Cajas de efectivo, digital y señas; movimientos de caja y de stock; retiros, gastos y compra de mercadería; corregir y anular con historial; controles automáticos. Diseño en [etapa-4-caja.md](../DISEÑO/etapa-4-caja.md). Antes: renombrar la app `catalogo` (paso 4.0). Fuentes: mirar [Registro.xlsx](../NOTAS_PERSONALES/Registro.xlsx), [notas_respecto_a_pagos.txt](../NOTAS_PERSONALES/notas_respecto_a_pagos.txt) y lo que surja de la demo | ⬜ |
+| Beta | 4 | **Caja, stock y fiados** 👈 | Cajas de efectivo, digital y señas; movimientos de caja y de stock; retiros, gastos y compra de mercadería; corregir y anular con historial; controles automáticos. Diseño en [etapa-4-caja.md](../DISEÑO/etapa-4-caja.md). ✅ Paso 4.0: la app `catalogo` pasó a llamarse `negocio` (21/11/2026). Fuentes: mirar [Registro.xlsx](../NOTAS_PERSONALES/Registro.xlsx), [notas_respecto_a_pagos.txt](../NOTAS_PERSONALES/notas_respecto_a_pagos.txt) y lo que surja de la demo | ⬜ |
 | | 7 | Pantallas de caja y stock | Junto con la etapa 4 | ⬜ |
 | | 10 | Impresión | Ya imprime la orden y el comprobante desde el navegador. Falta: texto real de las condiciones, "Guardar e imprimir", probar en su impresora | 🔄 |
 | | 11 | Datos iniciales y migración | Su catálogo y precios desde los Excel (script de importación). El stock y los saldos iniciales se cargan a mano el día de la instalación | ⬜ |
@@ -36,7 +36,7 @@
 | Final | 13 | Ajustes de la beta | Correcciones del uso real | ⬜ |
 | Después | 3b | GoCuotas y tarjeta diferida | Caja "A cobrar" con fecha de acreditación (ver [etapa-4-caja.md](../DISEÑO/etapa-4-caja.md) §8) | ⏭️ |
 | | 5 | Compras y proveedores | Proveedores, cuenta corriente y estadísticas de compras. Lo mínimo (pagar mercadería y que entre al stock) va en la etapa 4 | ⏭️ |
-| | 6 | Reglas de negocio | Patrones *State* y *Strategy*. Para la beta alcanza con `servicios.py` | ⏭️ |
+| | 6 | Reglas de negocio | Patrones *State* y *Strategy*. Para la beta alcanza con `negocio/servicios/` | ⏭️ |
 | | 8 | ARCA | Comprobante ARCA, opción de facturar o no cada pago digital. Hasta entonces factura a mano | ⏭️ |
 | | 9 | Estadísticas | Por fechas, marcas, modelos, reparaciones, proveedores y clientes | ⏭️ |
 

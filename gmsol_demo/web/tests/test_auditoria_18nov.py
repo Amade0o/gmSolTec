@@ -1,7 +1,7 @@
 """Arreglos de la auditoría del 18/11/2026: ids inválidos, montos negativos, búsqueda por número."""
 from django.urls import reverse
 
-from catalogo.models import Cliente, OrdenTrabajo, Telefono, Venta
+from negocio.models import Cliente, OrdenTrabajo, Telefono, Venta
 from web.tests import test_pantallas
 from web.tests.test_pantallas import Base   # sin tests propios: importarla no los repite
 

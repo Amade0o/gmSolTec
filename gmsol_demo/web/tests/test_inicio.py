@@ -7,11 +7,11 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
-from catalogo.models import (
+from negocio.models import (
     CategoriaReparacion, Cliente, Devolucion, EquipoRecibido, LineaReparacion, Marca, MetodoPago,
     ModeloEquipo, OrdenTrabajo, Pago, Reparacion,
 )
-from catalogo.servicios import cerrar_orden
+from negocio.servicios import cerrar_orden
 from web.templatetags.formato import pesos, pista
 
 D = Decimal

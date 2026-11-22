@@ -85,22 +85,22 @@ python manage.py test
 Por archivo:
 
 ```bash
-python manage.py test catalogo.tests.test_etapa1
-python manage.py test catalogo.tests.test_etapa2
-python manage.py test catalogo.tests.test_etapa3_correcciones
-python manage.py test catalogo.tests.test_etapa3_cierre_orden
-python manage.py test catalogo.tests.test_etapa3_pagos
-python manage.py test catalogo.tests.test_etapa3_devoluciones
-python manage.py test catalogo.tests.test_etapa3_venta_directa
-python manage.py test catalogo.tests.test_etapa3_reporte_manual
-python manage.py test catalogo.tests.test_etapa7_servicios
+python manage.py test negocio.tests.test_etapa1
+python manage.py test negocio.tests.test_etapa2
+python manage.py test negocio.tests.test_etapa3_correcciones
+python manage.py test negocio.tests.test_etapa3_cierre_orden
+python manage.py test negocio.tests.test_etapa3_pagos
+python manage.py test negocio.tests.test_etapa3_devoluciones
+python manage.py test negocio.tests.test_etapa3_venta_directa
+python manage.py test negocio.tests.test_etapa3_reporte_manual
+python manage.py test negocio.tests.test_etapa7_servicios
 python manage.py test web          # todas las pantallas
 ```
 
 Ejemplo de un único test:
 
 ```bash
-python manage.py test catalogo.tests.test_etapa1.ProductoTests.test_margen_se_calcula_con_los_dos_precios
+python manage.py test negocio.tests.test_etapa1.ProductoTests.test_margen_se_calcula_con_los_dos_precios
 ```
 
 Los tests usan una base de datos temporal y no deberían alterar
@@ -118,10 +118,15 @@ Los tests usan una base de datos temporal y no deberían alterar
 
 ## Dónde mirar el código
 
-- [`catalogo/models.py`](./catalogo/models.py): clases y relaciones.
-- [`catalogo/admin.py`](./catalogo/admin.py): pantallas del admin.
-- [`catalogo/servicios.py`](./catalogo/servicios.py): reglas de negocio.
-- [`catalogo/management/commands/cargar_datos_prueba.py`](./catalogo/management/commands/cargar_datos_prueba.py):
-  datos iniciales.
-- [`catalogo/tests/`](./catalogo/tests/): tests automatizados.
+La app `negocio` (antes se llamaba `catalogo`) tiene los datos y las reglas; la app `web`, las pantallas.
+
+- [`negocio/models/`](./negocio/models/): clases y relaciones, un archivo por tema
+  (catálogo, clientes, órdenes, ventas).
+- [`negocio/servicios/`](./negocio/servicios/): reglas de negocio, un archivo por tema
+  (órdenes, pagos, clientes).
+- [`negocio/admin.py`](./negocio/admin.py): pantallas del admin (para correcciones puntuales).
+- [`negocio/management/commands/cargar_datos_prueba.py`](./negocio/management/commands/cargar_datos_prueba.py):
+  datos de prueba.
+- [`negocio/tests/`](./negocio/tests/) y [`web/tests/`](./web/tests/): tests automatizados.
+- [`web/`](./web/): vistas, plantillas y estilos de la interfaz del local.
 - [`config/settings.py`](./config/settings.py): configuración y base SQLite.

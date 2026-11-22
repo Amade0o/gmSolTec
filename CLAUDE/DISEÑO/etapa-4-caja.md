@@ -192,7 +192,7 @@ Sumar pesos de meses distintos da un número engañoso. Propuesta:
 
 ---
 
-## 9. Organización del código ✅
+## 9. Organización del código ✅ hecho (paso 4.0, 21/11/2026)
 
 **Problema:** la app se llama `catalogo`, pero tiene **todo** (órdenes, pagos, ventas, devoluciones) y va a tener la caja y el stock.
 
@@ -200,10 +200,12 @@ Sumar pesos de meses distintos da un número engañoso. Propuesta:
 
 ```
 negocio/
-├── models/       catalogo.py · ordenes.py · pagos.py · caja.py · stock.py
-├── servicios/    ordenes.py · pagos.py · caja.py · stock.py · controles.py
-└── tests/        un archivo por tema
+├── models/       catalogo.py · clientes.py · ordenes.py · ventas.py      (+ caja.py · stock.py en la etapa 4)
+├── servicios/    comun.py · ordenes.py · pagos.py · clientes.py         (+ caja.py · stock.py · controles.py)
+└── tests/        los de las etapas 1 a 7 quedan como estaban; los nuevos van uno por tema
 ```
+
+Cada `__init__.py` vuelve a exportar todo, así el resto del código sigue escribiendo `from negocio.models import Pago` o `servicios.cerrar_orden(...)`. La función privada `_orden_abierta` pasó a llamarse `exigir_orden_abierta` (en `comun.py`), porque ahora la usan varios archivos.
 
 **Es el mejor momento:** todavía no hay datos reales. Las migraciones se rehacen desde cero y se vuelven a cargar los datos de prueba. Los 361 tests tienen que seguir pasando sin cambiar lo que prueban. Va en una rama propia y chica, antes de la caja. Las direcciones (`/catalogo/`) y lo que ve el usuario no cambian.
 
@@ -227,7 +229,7 @@ negocio/
 
 | Paso | Qué | Para probar |
 |---|---|---|
-| 4.0 | Rama chica: renombrar `catalogo` → `negocio` y dividir archivos (§9) | Que todo siga igual y pasen los 361 tests |
+| 4.0 ✅ | Renombrar `catalogo` → `negocio` y dividir archivos (§9). Hecho en la rama `etapa-4-caja` | Pasan los 361 tests |
 | 4.1 | Cajas, `MovimientoCaja`, historial, saldo inicial de ejemplo | Pantalla Caja mínima: saldos y movimientos |
 | 4.2 | Conectar el dinero existente: pagos → Señas, entregar → pase, devoluciones, venta rápida, corregir y anular | Hacer una orden completa y verla en la caja |
 | 4.3 | Retiros, gastos, compra de mercadería, pases, "Conté y hay $X" | Los botones de la caja |

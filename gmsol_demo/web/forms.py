@@ -1,7 +1,7 @@
 """Formularios de las pantallas propias.
 
 Solo validan lo que es de la pantalla (formatos, campos obligatorios).
-Las reglas del negocio las validan los modelos y catalogo/servicios.py.
+Las reglas del negocio las validan los modelos y negocio/servicios/.
 """
 import re
 from decimal import Decimal
@@ -9,7 +9,7 @@ from decimal import Decimal
 from django import forms
 from django.urls import reverse
 
-from catalogo.models import (
+from negocio.models import (
     CategoriaProducto, CategoriaReparacion, Cliente, EquipoRecibido, Marca, LineaProductoOrden, LineaProductoVenta, LineaReparacion, MetodoPago,
     ModeloEquipo, Pago, Producto, Reparacion, TipoEquipo,
 )

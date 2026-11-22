@@ -1,7 +1,7 @@
 """Pantalla del Catálogo (categorías, marcas, modelos, reparaciones, métodos de pago)."""
 from django.urls import reverse
 
-from catalogo.models import CategoriaReparacion, Marca, MetodoPago, ModeloEquipo, Reparacion
+from negocio.models import CategoriaReparacion, Marca, MetodoPago, ModeloEquipo, Reparacion
 from web.views_catalogo import SECCIONES
 from web.tests.test_pantallas import Base
 

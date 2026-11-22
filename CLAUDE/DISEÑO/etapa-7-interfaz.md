@@ -16,8 +16,8 @@ La interfaz que va a usar el dueño todos los días, en la PC del local y, de a 
 
 | # | Decisión | Detalle |
 |---|---|---|
-| 1 | ✅ **App nueva `web`** | Vistas, plantillas y archivos estáticos. `catalogo` sigue siendo solo modelos, servicios y admin |
-| 2 | ✅ **Las vistas no tienen reglas de negocio** | Llaman a funciones de `catalogo/servicios.py` (`cerrar_orden`, `vender_directo` y las nuevas). Así las reglas están en un solo lugar |
+| 1 | ✅ **App nueva `web`** | Vistas, plantillas y archivos estáticos. `negocio` (antes `catalogo`, renombrada el 21/11/2026) tiene solo modelos, servicios y admin |
+| 2 | ✅ **Las vistas no tienen reglas de negocio** | Llaman a funciones de `negocio/servicios/` (`cerrar_orden`, `vender_directo` y las nuevas). Así las reglas están en un solo lugar |
 | 3 | ✅ **CSS propio** | Sin Bootstrap ni Tailwind. Los valores de la guía van como variables CSS: un solo `gmsol.css` en capas (`@layer`), con tamaños en `rem` (ver la sección 8 de la [guía de diseño](../BPMN%20Y%20MODELO/guia-de-diseno-gmsol.md)) |
 | 4 | ✅ **HTMX para lo dinámico** | El resumen de la orden (total, saldo) se recalcula **en el servidor** al cambiar un campo, con la misma lógica de recargos y totales del sistema. Evita duplicar reglas en JavaScript |
 | 5 | ✅ **JavaScript propio solo para el patrón de bloqueo** | La grilla de 9 puntos que guarda `1-5-9-6` (`static/web/js/patron.js`). Sin JS la clave se escribe a mano |
@@ -36,7 +36,7 @@ La interfaz que va a usar el dueño todos los días, en la PC del local y, de a 
 
 ```
 gmsol_demo/
-├── catalogo/               modelos, servicios, admin, tests (ya existe)
+├── negocio/                modelos, servicios, admin, tests (antes se llamaba catalogo/)
 └── web/                    app nueva
     ├── urls.py
     ├── views.py            (se puede dividir en un paquete cuando crezca)
@@ -83,7 +83,7 @@ gmsol_demo/
 
 ---
 
-## 5. Servicios nuevos que van a hacer falta (en `catalogo/servicios.py`)
+## 5. Servicios de la etapa 7 (hoy en `negocio/servicios/`)
 
 | Función | Para qué |
 |---|---|

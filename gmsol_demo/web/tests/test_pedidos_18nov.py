@@ -4,9 +4,9 @@ from decimal import Decimal
 
 from django.urls import reverse
 
-from catalogo.models import Cliente, Devolucion, OrdenTrabajo, Pago, TipoEquipo, Venta
-from catalogo.servicios import registrar_devolucion, vender_directo
-from catalogo.models import LineaProductoVenta
+from negocio.models import Cliente, Devolucion, OrdenTrabajo, Pago, TipoEquipo, Venta
+from negocio.servicios import registrar_devolucion, vender_directo
+from negocio.models import LineaProductoVenta
 from web.templatetags.formato import pista
 from web.tests.test_pantallas import Base
 
@@ -128,7 +128,7 @@ class CatalogoClaroTests(Base):
 
 class VentaYRegistroTests(Base):
     def datos_venta(self, **cambios):
-        from catalogo.models import MetodoPago
+        from negocio.models import MetodoPago
         credito = MetodoPago.objects.create(nombre="Crédito", cuenta="digital", recargo_porcentaje=D("15"))
         datos = {
             "prod-TOTAL_FORMS": "1", "prod-INITIAL_FORMS": "0", "prod-MIN_NUM_FORMS": "1", "prod-MAX_NUM_FORMS": "1000",
@@ -166,7 +166,7 @@ class PedidosDeLaTardeTests(Base):
         self.assertIn(f'<option value="{self.revision.id}" selected>', html)  # la primera sí
 
     def test_revision_no_se_agrega_dos_veces(self):
-        from catalogo.models import LineaReparacion
+        from negocio.models import LineaReparacion
         o = self.orden("1000")
         LineaReparacion.objects.create(equipo=o.equipos.get(), reparacion=self.revision, precio_vendido=D("0"))
         url = reverse("web:orden_detalle", args=[o.id])
@@ -178,8 +178,8 @@ class PedidosDeLaTardeTests(Base):
         self.assertContains(r, "va una sola vez")
 
     def test_registro_dice_el_tipo_y_los_productos_de_la_orden(self):
-        from catalogo.models import LineaProductoOrden
-        from catalogo.servicios import cambiar_estado_equipo, entregar_orden
+        from negocio.models import LineaProductoOrden
+        from negocio.servicios import cambiar_estado_equipo, entregar_orden
         o = self.orden("1000", estado="arreglado")
         LineaProductoOrden.objects.create(orden_trabajo=o, producto=self.cable, cantidad_adquirida=2, precio_vendido=D("100"))
         entregar_orden(o, self.efectivo)

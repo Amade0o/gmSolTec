@@ -18,7 +18,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
-from catalogo.models import CategoriaProducto, CategoriaReparacion, Marca, MetodoPago, ModeloEquipo, Reparacion, TipoEquipo
+from negocio.models import CategoriaProducto, CategoriaReparacion, Marca, MetodoPago, ModeloEquipo, Reparacion, TipoEquipo
 
 from .forms import (
     CategoriaProductoForm, CategoriaReparacionForm, MarcaForm, MetodoPagoForm, ModeloEquipoForm, ModeloRapidoForm,

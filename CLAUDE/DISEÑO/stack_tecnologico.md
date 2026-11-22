@@ -13,7 +13,7 @@
 | Lenguaje y framework | **Python + Django** | ✅ |
 | Base de datos | **SQLite**, también en producción (ver §6) | ✅ |
 | Tipo de app | Web, usada desde el navegador de la PC del local | ✅ |
-| Arquitectura | Monolito en capas; las reglas del negocio en `catalogo/servicios.py` | ✅ |
+| Arquitectura | Monolito en capas; las reglas del negocio en `negocio/servicios/` | ✅ |
 | Estado de la orden | Se **calcula** a partir del estado de cada equipo (ver §5) | ✅ |
 | Pantallas | Plantillas de Django + HTMX + **CSS propio** (sin Bootstrap ni Tailwind) | ✅ |
 | Servidor | **Local, en la PC del negocio con Windows**, con Waitress. Vercel descartado (ver §9) | ✅ |
@@ -59,7 +59,7 @@ El desarrollador **domina Java** y se acordó que, si Django no convencía, se m
 
 | Regla | Para qué |
 |---|---|
-| Reglas del negocio en **funciones propias** (`servicios.py`), no en las vistas | Las pantallas no deciden nada; las reglas están en un solo lugar |
+| Reglas del negocio en **funciones propias** (`negocio/servicios/`), no en las vistas | Las pantallas no deciden nada; las reglas están en un solo lugar |
 | **Esquema claro**, definido en los modelos y las migraciones de Django | La base se entiende sin leer el código |
 | Lógica de estados y flujos **documentada en `.md`** | Sirve de especificación en cualquier lenguaje |
 
@@ -70,7 +70,7 @@ El desarrollador **domina Java** y se acordó que, si Django no convencía, se m
 Monolito en 3 capas:
 
 ```
-Pantallas (app web)  →  Reglas del negocio (catalogo/servicios.py)  →  Base de datos (modelos)
+Pantallas (app web)  →  Reglas del negocio (negocio/servicios/)  →  Base de datos (modelos)
 ```
 
 Las reglas (estados, recargos, registrar ventas, mover caja y stock) viven en la capa del medio. Patrones previstos para la etapa 6 (después de la versión final):

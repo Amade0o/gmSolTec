@@ -5,8 +5,8 @@ from decimal import Decimal
 from django.urls import reverse
 from django.utils import timezone
 
-from catalogo.models import Cliente, LineaProductoVenta, Pago, Telefono, Venta
-from catalogo.servicios import cerrar_orden, vender_directo
+from negocio.models import Cliente, LineaProductoVenta, Pago, Telefono, Venta
+from negocio.servicios import cerrar_orden, vender_directo
 from web.tests.test_pantallas import Base, textos
 
 D = Decimal

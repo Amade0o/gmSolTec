@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.urls import reverse
 
-from catalogo.models import (
+from negocio.models import (
     CategoriaReparacion, Devolucion, LineaReparacion, Marca, ModeloEquipo, Producto, Reparacion, Venta,
 )
 from web.tests.test_pantallas import Base

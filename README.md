@@ -82,20 +82,22 @@ python manage.py test
 Ejecutar cada etapa por separado:
 
 ```bash
-python manage.py test catalogo.tests.test_etapa1
-python manage.py test catalogo.tests.test_etapa2
-python manage.py test catalogo.tests.test_etapa3_correcciones
-python manage.py test catalogo.tests.test_etapa3_cierre_orden
-python manage.py test catalogo.tests.test_etapa3_pagos
-python manage.py test catalogo.tests.test_etapa3_devoluciones
-python manage.py test catalogo.tests.test_etapa3_venta_directa
-python manage.py test catalogo.tests.test_etapa3_reporte_manual
+python manage.py test negocio.tests.test_etapa1
+python manage.py test negocio.tests.test_etapa2
+python manage.py test negocio.tests.test_etapa3_correcciones
+python manage.py test negocio.tests.test_etapa3_cierre_orden
+python manage.py test negocio.tests.test_etapa3_pagos
+python manage.py test negocio.tests.test_etapa3_devoluciones
+python manage.py test negocio.tests.test_etapa3_venta_directa
+python manage.py test negocio.tests.test_etapa3_reporte_manual
+python manage.py test negocio.tests.test_etapa7_servicios
+python manage.py test web          # todas las pantallas
 ```
 
 Para ejecutar un único test, agregar el nombre de la clase y del método:
 
 ```bash
-python manage.py test catalogo.tests.test_etapa1.ProductoTests.test_margen_se_calcula_con_los_dos_precios
+python manage.py test negocio.tests.test_etapa1.ProductoTests.test_margen_se_calcula_con_los_dos_precios
 ```
 
 Django crea una base de datos temporal para los tests; no se modifica

@@ -1,7 +1,7 @@
 """Vistas de la interfaz propia.
 
 Las vistas no tienen reglas de negocio: leen los formularios, llaman a
-catalogo/servicios.py y muestran el resultado. Después de guardar algo se
+negocio/servicios/ y muestran el resultado. Después de guardar algo se
 redirige (así F5 no lo guarda dos veces).
 
 Secciones: Inicio · Órdenes (lista, nueva, detalle, entregar) · Venta rápida ·
@@ -22,13 +22,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from catalogo import servicios
-from catalogo.models import (
+from negocio import servicios
+from negocio.models import (
     EQUIPO_ORDEN_ESTADO_CHOICES, Cliente, Devolucion, EquipoRecibido, LineaProductoOrden,
     CategoriaProducto, LineaReparacion, OrdenTrabajo, Pago, Producto, Reparacion,
     Telefono, Venta,
 )
-from catalogo.servicios import ReglaDeNegocioError
+from negocio.servicios import ReglaDeNegocioError
 
 from .templatetags.formato import pesos
 from .forms import (

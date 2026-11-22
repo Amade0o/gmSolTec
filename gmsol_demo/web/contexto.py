@@ -9,10 +9,12 @@ _TRABAJO = [
     ("ordenes", "web:ordenes", "Órdenes de trabajo", "i-ordenes", {"ordenes", "orden_detalle", "orden_nueva", "orden_entregar"}),
     ("ventas", "web:ventas", "Registro de ventas", "i-ventas", {"ventas", "venta_detalle", "venta_rapida"}),
     ("devoluciones", "web:devoluciones", "Devoluciones", "i-devol", {"devoluciones"}),
+    ("caja", "web:caja", "Caja", "i-caja", {"caja", "movimiento_caja"}),
 ]
 _REGISTROS = [
     ("clientes", "web:clientes", "Clientes", "i-clientes", {"clientes", "cliente_detalle", "cliente_nuevo"}),
     ("productos", "web:productos", "Productos", "i-productos", {"productos", "producto_detalle", "producto_nuevo"}),
+    ("historial", "web:historial", "Historial de cambios", "i-historial", {"historial"}),
 ]
 # "Configuración" (antes "Catálogo"): las listas que se eligen al cargar (tipos de equipo, marcas,
 # modelos, reparaciones, categorías, métodos de pago). Las direcciones siguen siendo /catalogo/.
@@ -20,7 +22,7 @@ _AJUSTES = [
     ("catalogo", "web:catalogo_inicio", "Configuración", "i-catalogo", {"catalogo", "catalogo_inicio", "catalogo_editar"}),
 ]
 PROXIMAMENTE = [
-    ("Caja", "i-caja"), ("Compras y proveedores", "i-compras"),
+    ("Compras y proveedores", "i-compras"),
     ("Estadísticas", "i-stats"), ("Facturación ARCA", "i-arca"),
 ]
 

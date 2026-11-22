@@ -1,0 +1,58 @@
+{% extends "web/base.html" %}
+{% comment %}Un movimiento de caja: sus datos, corregir y anular (solo los cargados a mano) y sus cambios.{% endcomment %}
+{% load formato %}
+{% block titulo %}Movimiento #{{ movimiento.pk }} · Caja{% endblock %}
+{% block contenido %}
+{% url 'web:caja' as u_caja %}{% include "web/parciales/migas.html" with a1=u_caja t1="Caja" actual="Movimiento #"|add:movimiento.pk|stringformat:"s" %}
+<div class="head"><h1>{{ movimiento.descripcion }} <span class="sub">Movimiento #{{ movimiento.pk }}</span></h1></div>
+
+<section class="panel">
+<dl class="datos">
+<div><dt>Caja</dt><dd>{{ movimiento.get_caja_display }}</dd></div>
+<div><dt>{% if movimiento.es_entrada %}Entra{% else %}Sale{% endif %}</dt><dd><b>{{ movimiento.monto|pesos }}</b></dd></div>
+<div><dt>Fecha</dt><dd>{{ movimiento.fecha|date:"j \d\e F \d\e Y, H:i" }}</dd></div>
+<div><dt>Tipo</dt><dd>{{ movimiento.get_tipo_display }}</dd></div>
+{% if movimiento.nota %}<div><dt>Nota</dt><dd>{{ movimiento.nota }}</dd></div>{% endif %}
+</dl>
+{% if movimiento.anulado %}
+<p class="aviso-anulado"><b>Anulado</b> el {{ movimiento.anulado_fecha|date:"j \d\e F, H:i" }}: no suma en la caja.{% if movimiento.anulado_motivo %} Motivo: {{ movimiento.anulado_motivo }}{% endif %}</p>
+{% elif not se_puede_tocar %}
+<p class="ayuda">Este movimiento viene de una orden, una venta o una devolución: se corrige desde ahí.</p>
+{% endif %}
+</section>
+
+{% if se_puede_tocar %}
+<section class="panel">
+<h2>Corregir</h2>
+<p class="ayuda">Si te equivocaste en el monto o en la nota. El valor anterior no se pierde: queda en el historial.</p>
+<form method="post" class="fila-campos" novalidate>{% csrf_token %}
+<input type="hidden" name="accion" value="corregir">
+{% include "web/parciales/errores_form.html" with form=form_corregir %}
+{% include "web/parciales/campo.html" with campo=form_corregir.monto %}
+{% include "web/parciales/campo.html" with campo=form_corregir.nota %}
+<button class="btn pri" type="submit" data-confirmar="¿Cambiar «{{ movimiento.descripcion }}» de {{ movimiento.monto|pesos }} a {monto}? El valor anterior queda en el historial." data-confirmar-si="Sí, guardar la corrección">Guardar la corrección</button>
+</form>
+</section>
+
+<section class="panel">
+<h2>Anular</h2>
+<p class="ayuda">Si este movimiento no tendría que existir (por ejemplo, lo cargaste dos veces). Deja de sumar en la caja, queda tachado y en el historial. No se borra.</p>
+<form method="post" class="fila-campos" novalidate>{% csrf_token %}
+<input type="hidden" name="accion" value="anular">
+{% include "web/parciales/campo.html" with campo=form_anular.motivo %}
+<button class="btn peligro" type="submit" data-confirmar="¿Anular «{{ movimiento.descripcion }}» ({{ movimiento.monto|pesos }}, {{ movimiento.get_caja_display }})? Deja de sumar en la caja." data-confirmar-si="Sí, anular">Anular este movimiento</button>
+</form>
+</section>
+{% endif %}
+
+<section class="panel">
+<h2 id="t-cambios">Cambios de este movimiento</h2>
+{% if cambios %}
+<ol class="linea-tiempo">
+{% for c in cambios %}<li class="{{ c.accion }}"><span class="sec">{{ c.fecha|date:"j M, H:i" }}</span> {{ c.frase }}</li>
+{% endfor %}</ol>
+{% else %}
+<p class="vacio">Sin cambios.</p>
+{% endif %}
+</section>
+{% endblock %}

@@ -2,7 +2,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views, views_catalogo
+from . import views, views_caja, views_catalogo
 
 app_name = "web"
 
@@ -30,6 +30,11 @@ urlpatterns = [
     # Devoluciones: acá se marca que el dinero ya se devolvió
     path("devoluciones/", views.devoluciones, name="devoluciones"),
     path("devoluciones/reparaciones/", views.reparaciones_para_devolver, name="reparaciones_para_devolver"),
+
+    # Caja (etapa 4) e historial de cambios
+    path("caja/", views_caja.caja, name="caja"),
+    path("caja/movimientos/<int:numero>/", views_caja.movimiento_detalle, name="movimiento_caja"),
+    path("historial/", views_caja.historial, name="historial"),
 
     # Clientes
     path("clientes/", views.lista_clientes, name="clientes"),

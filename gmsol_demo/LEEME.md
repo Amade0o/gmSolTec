@@ -94,6 +94,8 @@ python manage.py test negocio.tests.test_etapa3_devoluciones
 python manage.py test negocio.tests.test_etapa3_venta_directa
 python manage.py test negocio.tests.test_etapa3_reporte_manual
 python manage.py test negocio.tests.test_etapa7_servicios
+python manage.py test negocio.tests.test_caja          # caja: reglas y servicios
+python manage.py test negocio.tests.test_caja_al_azar  # caja: cientos de casos al azar
 python manage.py test web          # todas las pantallas
 ```
 
@@ -105,6 +107,20 @@ python manage.py test negocio.tests.test_etapa1.ProductoTests.test_margen_se_cal
 
 Los tests usan una base de datos temporal y no deberían alterar
 `db.sqlite3`.
+
+Herramientas de test (desde la etapa 4): `hypothesis` (casos al azar) y
+`coverage` (qué partes del código recorren los tests). Se instalan con:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+Para ver la cobertura:
+
+```bash
+coverage run --branch --source=negocio,web manage.py test
+coverage report -m
+```
 
 ## Qué probar manualmente
 

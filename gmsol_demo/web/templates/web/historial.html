@@ -1,0 +1,24 @@
+{% extends "web/base.html" %}
+{% comment %}Historial de cambios: todo lo que se cargó, corrigió o anuló, en frases y por día.
+Versión mínima (paso 4.1); en el paso 4.7 se le da el diseño final.{% endcomment %}
+{% load formato %}
+{% block titulo %}Historial de cambios{% endblock %}
+{% block contenido %}
+<div class="head"><h1>Historial de cambios <span class="sub">Todo lo que se cargó, corrigió o anuló. Nada se pierde.</span></h1></div>
+
+<div class="filtros">
+<nav class="segmento" aria-label="Período">{% for clave, texto in periodos %}<a href="?periodo={{ clave }}{% if area %}&amp;area={{ area }}{% endif %}"{% if periodo == clave %} aria-current="page"{% endif %}>{{ texto }}</a>{% endfor %}</nav>
+<nav class="segmento" aria-label="Tema"><a href="?periodo={{ periodo }}"{% if not area %} aria-current="page"{% endif %}>Todo</a>{% for clave, texto in areas %}<a href="?periodo={{ periodo }}&amp;area={{ clave }}"{% if area == clave %} aria-current="page"{% endif %}>{{ texto }}</a>{% endfor %}</nav>
+</div>
+
+{% for dia, cambios in dias %}
+<section class="panel">
+<h2>{{ dia|date:"l j \d\e F" }}</h2>
+<ol class="linea-tiempo">
+{% for c in cambios %}<li class="{{ c.accion }}"><span class="sec">{{ c.fecha|date:"H:i" }}</span> {{ c.frase }}{% if c.movimiento_caja_id %} <a class="enlace" href="{% url 'web:movimiento_caja' c.movimiento_caja_id %}">Ver el movimiento</a>{% endif %}</li>
+{% endfor %}</ol>
+</section>
+{% empty %}
+<p class="vacio">No hay cambios en este período.</p>
+{% endfor %}
+{% endblock %}

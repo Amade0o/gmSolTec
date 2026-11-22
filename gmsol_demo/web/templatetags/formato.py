@@ -1,18 +1,14 @@
 """Filtros de plantilla: pesos argentinos, saldo en palabras, estados y pista de progreso."""
 from django import template
 
+from negocio import formato
+
 register = template.Library()
-
-
-def _numero(valor):
-    """42500 -> '42.500'. 1234.5 -> '1.234,50' (formato argentino)."""
-    texto = f"{abs(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return texto[:-3] if texto.endswith(",00") else texto
 
 
 @register.filter
 def pesos(valor):
-    return f"$ {_numero(valor)}"
+    return formato.pesos(valor)
 
 
 @register.filter

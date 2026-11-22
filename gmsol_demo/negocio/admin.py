@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.forms.models import BaseInlineFormSet
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from .models import Devolucion, CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta, TipoEquipo
+from .models import Cambio, MovimientoCaja, Devolucion, CategoriaProducto, LineaProductoOrden, LineaProductoVenta, Marca, MetodoPago, Pago, Producto, Cliente, Telefono, ModeloEquipo, CategoriaReparacion, Reparacion, OrdenTrabajo, EquipoRecibido, LineaReparacion, Venta, TipoEquipo
 from .servicios import cerrar_orden, ReglaDeNegocioError
 
 #Nota: Un modelo es una clase de django que tambien se va a la base de datos automaticamente
@@ -347,3 +347,32 @@ class VentaAdmin(admin.ModelAdmin):
         if obj is not None and obj.orden_trabajo_id:
             return False        # la venta de una orden no se borra
         return super().has_delete_permission(request, obj)
+
+
+# ---------- Caja e historial (etapa 4): solo para mirar ----------
+# Se cargan, corrigen y anulan desde la pantalla Caja, que pasa por los servicios y deja todo en el
+# historial. Si el admin dejara editarlos, ese control se podría saltear.
+
+class SoloLecturaAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(MovimientoCaja)
+class MovimientoCajaAdmin(SoloLecturaAdmin):
+    list_display = ("fecha", "caja", "tipo", "descripcion", "monto", "anulado")
+    list_filter = ("caja", "tipo", "anulado")
+    search_fields = ("descripcion", "nota")
+
+
+@admin.register(Cambio)
+class CambioAdmin(SoloLecturaAdmin):
+    list_display = ("fecha", "area", "accion", "frase")
+    list_filter = ("area", "accion")
+    search_fields = ("frase",)

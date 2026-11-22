@@ -7,14 +7,21 @@ como ReglaDeNegocioError o como ValidationError (de full_clean).
     ordenes.py    crear, editar, cambiar estados, cerrar y entregar órdenes
     pagos.py      pagos, venta rápida y devoluciones (y anular lo cargado por error)
     clientes.py   clientes y teléfonos
+    caja.py       saldos de las cajas, saldo inicial, corregir y anular movimientos
+    historial.py  anotar en el historial lo que se cargó, corrigió o anuló
 
 Todo se importa acá, así el resto del código sigue usando `from negocio import servicios`
 o `from negocio.servicios import cerrar_orden`.
 """
+from .caja import (
+    anular_movimiento, cargar_saldo_inicial, corregir_movimiento, registrar_movimiento, saldo_de,
+    saldos, tiene_saldo_inicial,
+)
 from .clientes import (
     agregar_telefono, crear_cliente, eliminar_cliente, marcar_telefono_principal, quitar_telefono,
 )
 from .comun import ReglaDeNegocioError, exigir_orden_abierta
+from .historial import anotar
 from .ordenes import (
     agregar_equipo, agregar_producto, agregar_reparacion, cambiar_estado_equipo, cerrar_orden,
     crear_orden, eliminar_orden, entregar_orden, quitar_equipo, quitar_producto, quitar_reparacion,
@@ -35,4 +42,7 @@ __all__ = [
     "registrar_devolucion", "vender_directo",
     "agregar_telefono", "crear_cliente", "eliminar_cliente", "marcar_telefono_principal",
     "quitar_telefono",
+    "anular_movimiento", "cargar_saldo_inicial", "corregir_movimiento", "registrar_movimiento",
+    "saldo_de", "saldos", "tiene_saldo_inicial",
+    "anotar",
 ]

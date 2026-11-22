@@ -1,0 +1,61 @@
+{% extends "web/base.html" %}
+{% comment %}Caja (etapa 4, paso 4.1): saldos de Efectivo y Digital, la caja chica de Señas y los movimientos.
+El saldo es la suma de los movimientos no anulados (negocio/servicios/caja.py). Versión mínima para probar.{% endcomment %}
+{% load formato %}
+{% block titulo %}Caja{% endblock %}
+{% block contenido %}
+<div class="fecha">{% now "l j \d\e F" %}</div>
+<div class="head"><h1>Caja <span class="sub">Cuánta plata hay y por dónde entró o salió</span></h1></div>
+
+<div class="cajas">
+<a class="caja-saldo" href="?caja=efectivo"><span class="caja-nombre">Efectivo</span><b>{{ efectivo|pesos }}</b><span class="ayuda">Billetes del local</span></a>
+<a class="caja-saldo" href="?caja=digital"><span class="caja-nombre">Digital</span><b>{{ digital|pesos }}</b><span class="ayuda">Banco, Mercado Pago y Naranja X, todo junto</span></a>
+<div class="caja-senas">
+<span class="caja-nombre">Señas <span class="ayuda">· plata de órdenes abiertas: no se usa</span></span>
+<b>{{ senas_total|pesos }}</b>
+<span class="caja-senas-detalle"><a href="?caja=senas_efectivo">En efectivo: {{ senas_efectivo|pesos }}</a> · <a href="?caja=senas_digital">En digital: {{ senas_digital|pesos }}</a></span>
+</div>
+</div>
+<p class="ayuda">Cada saldo es la suma de sus movimientos (abajo). Lo anulado se ve tachado y no suma.</p>
+
+{% if form_saldo_inicial %}
+<section class="panel">
+<h2>Cargar el saldo inicial</h2>
+<p class="ayuda">Se hace una sola vez por caja, el día que empezás a usar el sistema: escribí cuánto hay hoy. Las señas no llevan saldo inicial: se forman solas con las órdenes abiertas.</p>
+<form method="post" class="fila-campos" novalidate>{% csrf_token %}
+<input type="hidden" name="accion" value="saldo_inicial">
+{% include "web/parciales/errores_form.html" with form=form_saldo_inicial %}
+{% include "web/parciales/campo.html" with campo=form_saldo_inicial.caja %}
+{% include "web/parciales/campo.html" with campo=form_saldo_inicial.monto %}
+{% include "web/parciales/campo.html" with campo=form_saldo_inicial.nota %}
+<button class="btn pri" type="submit" data-confirmar="¿Guardar {monto} como saldo inicial de {caja}?" data-confirmar-si="Sí, guardar el saldo inicial">Guardar el saldo inicial</button>
+</form>
+</section>
+{% endif %}
+
+<section class="panel">
+<h2 id="t-movimientos">Movimientos</h2>
+<nav class="segmento" aria-label="Ver los movimientos de">
+<a href="{% url 'web:caja' %}"{% if not filtro %} aria-current="page"{% endif %}>Todas las cajas</a>
+{% for clave, nombre in cajas %}<a href="?caja={{ clave }}"{% if filtro == clave %} aria-current="page"{% endif %}>{{ nombre }}</a>{% endfor %}
+</nav>
+{% if movimientos %}
+<div class="tabla-tarjetas"><table aria-labelledby="t-movimientos">
+<thead><tr><th scope="col">Fecha</th><th scope="col">Caja</th><th scope="col">Detalle</th><th scope="col" class="der">Entra</th><th scope="col" class="der">Sale</th><th scope="col"><span class="oculto">Ver</span></th></tr></thead>
+<tbody>
+{% for m in movimientos %}
+<tr{% if m.anulado %} class="tachado"{% endif %}>
+<td class="sec" data-label="Fecha">{{ m.fecha|date:"j M, H:i" }}</td>
+<td data-label="Caja">{{ m.get_caja_display }}</td>
+<td class="cli" data-label="Detalle"><a class="fila-link" href="{% url 'web:movimiento_caja' m.pk %}">{{ m.descripcion }}</a>{% if m.nota %} <span class="sec">· {{ m.nota }}</span>{% endif %}{% if m.anulado %} <span class="sec">(anulado)</span>{% endif %}</td>
+<td class="der entra" data-label="Entra">{% if m.es_entrada %}{{ m.monto|pesos }}{% endif %}</td>
+<td class="der sale" data-label="Sale">{% if not m.es_entrada %}{{ m.monto|pesos }}{% endif %}</td>
+<td class="der"><a class="enlace" href="{% url 'web:movimiento_caja' m.pk %}" tabindex="-1">{% if m.tipo in manuales and not m.anulado %}Ver, corregir o anular{% else %}Ver{% endif %}<span class="oculto"> {{ m.descripcion }}</span></a></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="vacio">{% if filtro %}Esta caja todavía no tiene movimientos.{% else %}Todavía no hay movimientos. Empezá cargando el saldo inicial.{% endif %}</p>
+{% endif %}
+</section>
+{% endblock %}

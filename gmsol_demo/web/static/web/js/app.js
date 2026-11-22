@@ -42,6 +42,23 @@
   // ---------- Confirmar antes de quitar o desactivar ----------
   // Un botón (o formulario) con data-confirmar="¿Quitar…?" pide confirmación.
   // data-confirmar-si cambia el texto del botón que confirma.
+  // La pregunta puede repetir lo que se escribió: {nombre} se cambia por el valor del campo
+  // "nombre" del formulario (de un desplegable, el texto elegido; de un campo "monto", en pesos).
+  // Ej.: data-confirmar="¿Cargar {monto} como saldo inicial de {caja}?"
+  function completarPregunta(pregunta, form) {
+    return pregunta.replace(/\{(\w+)\}/g, function (todo, nombre) {
+      var campo = form.elements[nombre];
+      if (!campo) return todo;
+      if (campo.tagName === "SELECT") return campo.selectedIndex >= 0 ? campo.options[campo.selectedIndex].text : "";
+      if (nombre.indexOf("monto") === 0) {
+        var numero = Number(campo.value);
+        return isFinite(numero) && campo.value !== ""
+          ? "$ " + numero.toLocaleString("es-AR", { maximumFractionDigits: 2 }) : "(sin monto)";
+      }
+      return campo.value;
+    });
+  }
+
   var dialogo = document.getElementById("confirmar");
   if (dialogo && dialogo.showModal) {
     var texto = document.getElementById("confirmar-texto");
@@ -55,7 +72,7 @@
       if (!pregunta || form.dataset.confirmado) return;
       e.preventDefault();
       pendiente = { form: form, boton: boton };
-      texto.textContent = pregunta;
+      texto.textContent = completarPregunta(pregunta, form);
       botonSi.textContent = (boton && boton.dataset.confirmarSi) || form.dataset.confirmarSi || "Sí, seguir";
       dialogo.returnValue = "";
       dialogo.showModal();

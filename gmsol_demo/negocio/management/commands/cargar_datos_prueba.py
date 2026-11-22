@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 from django.core.management.base import BaseCommand
 
+from negocio import servicios
 from negocio.models import (
     CategoriaProducto, CategoriaReparacion, Cliente, Marca, MetodoPago,
     ModeloEquipo, Producto, Reparacion, Telefono,
@@ -73,5 +76,11 @@ class Command(BaseCommand):
             if creado:
                 for numero, principal in telefonos:
                     Telefono.objects.create(cliente=cliente, numero=numero, principal=principal)
+
+        # Saldos iniciales de EJEMPLO (etapa 4). Los reales se cargan el día de la instalación,
+        # desde la pantalla Caja. Solo si esa caja todavía no tiene saldo inicial.
+        for caja, monto in (("efectivo", Decimal("150000")), ("digital", Decimal("420000"))):
+            if not servicios.tiene_saldo_inicial(caja):
+                servicios.cargar_saldo_inicial(caja, monto, nota="Ejemplo de los datos de prueba")
 
         self.stdout.write(self.style.SUCCESS("Datos de prueba cargados."))
